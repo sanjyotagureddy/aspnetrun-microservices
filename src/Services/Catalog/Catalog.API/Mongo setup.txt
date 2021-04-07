@@ -1,3 +1,61 @@
 ﻿docker pull mongo 
 
 docker run -d -p 27017:27017 --name shopping-mongo mongo
+
+#to run docker image in bash
+docker exec -it shopping-mongo /bin/bash
+
+
+ls
+
+mongo
+
+##################################################
+inside mongo image 
+##################################################
+
+show dbs
+use CatalogDb  --> for create db on mongo
+db.createCollection('Products')  --> for create people collection
+
+db.Products.insertMany([{ 'Name':'Asus Laptop','Category':'Computers', 'Summary':'Summary', 'Description':'Description', 'ImageFile':'ImageFile', 'Price':54.93 }, { 'Name':'HP Laptop','Category':'Computers', 'Summary':'Summary', 'Description':'Description', 'ImageFile':'ImageFile', 'Price':88.93 } ])
+
+db.Products.insertMany(
+			[
+			    {
+			        "Name": "Asus Laptop",
+			        "Category": "Computers",
+			        "Summary": "Summary",
+			        "Description": "Description",
+			        "ImageFile": "ImageFile",
+			        "Price": 54.93
+			    },
+			    {
+			        "Name": "HP Laptop",
+			        "Category": "Computers",
+			        "Summary": "Summary",
+			        "Description": "Description",
+			        "ImageFile": "ImageFile",
+			        "Price": 88.93d
+			    }
+			])
+
+db.Products.find({}).pretty()
+db.Products.remove({})
+
+show databases
+show collections
+db.Products.find({}).pretty()
+
+
+
+##########################################################################
+run docker compose file
+
+ docker-compose -f .\docker-compose.yml -f .\docker-compose.override.yml up -d
+
+
+############################################################################
+create GUI for mongo 
+
+docker run -d -p 3000:3000 mongoclient/mongoclient 
