@@ -15,10 +15,21 @@ namespace Catalog.API.Test
         private Mock<IProductRepository> _repository;
         private Mock<ILogger<CatalogController>> _logger;
         private List<Product> _products;
+        private Product _product;
 
         [SetUp]
         public void Setup()
         {
+            _product = new Product()
+            {
+                Category = "A",
+                Id = "123456789987456321123456",
+                Price = 452,
+                Description = "",
+                ImageFile = "",
+                Name = "",
+                Summary = ""
+            };
             _products = new List<Product>()
                     {
                         new Product()
@@ -99,6 +110,53 @@ namespace Catalog.API.Test
                 Assert.AreEqual((int)HttpStatusCode.OK, okResult.StatusCode);
             else
                 Assert.Fail();
+        }
+
+        [TestCase("123456789987456321123456")]
+        [Test]
+        public void GetProductById(string id)
+        {
+            _repository.Setup(p => p.GetProduct(id)).ReturnsAsync(_product);
+            var products = _catalogController.GetProductById(id);
+            if (products.Result.Result is OkObjectResult okResult)
+                Assert.AreEqual((int)HttpStatusCode.OK, okResult.StatusCode);
+            else
+                Assert.Fail();
+        }
+
+        [TestCase("123456789987456321123486")]
+        [TestCase("123456789987456321123494")]
+        [Test]
+        public void GetProductById_NotFound(string id)
+        {
+            _repository.Setup(p => p.GetProduct(id)).ReturnsAsync((Product)null);
+            var products = _catalogController.GetProductById(id);
+            if (products.Result.Result is NotFoundResult okResult)
+                Assert.AreEqual((int)HttpStatusCode.NotFound, okResult.StatusCode);
+            else
+            {
+                Assert.Fail();
+            }
+        }
+
+        [TestCase("A")]
+        [TestCase("B")]
+        [Test]
+        public void GetProductByCategory(string category)
+        {
+            var products = _catalogController.GetProductByCategory(category);
+            if (products.Result.Result is OkObjectResult okResult)
+                Assert.AreEqual((int)HttpStatusCode.OK, okResult.StatusCode);
+        }
+
+        [TestCase("A")]
+        [TestCase("B")]
+        [Test]
+        public void GetProductByName(string name)
+        {
+            var products = _catalogController.GetProductByCategory(name);
+            if (products.Result.Result is OkObjectResult okResult)
+                Assert.AreEqual((int)HttpStatusCode.OK, okResult.StatusCode);
         }
     }
 }
