@@ -46,3 +46,16 @@ db.Products.remove({})
 show databases
 show collections
 db.Products.find({}).pretty()
+
+
+
+##########################################################################
+run docker compose file
+
+ docker-compose -f .\docker-compose.yml -f .\docker-compose.override.yml up -d
+
+
+############################################################################
+create GUI for mongo 
+
+docker run -d -p 3000:3000 mongoclient/mongoclient 
