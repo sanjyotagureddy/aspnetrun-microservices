@@ -7,6 +7,9 @@ services:
   basketdb:
     image: redis:alpine
 
+  discountdb:
+    image: postgres
+
   portainer:
     image: portainer/portainer-ce
 
@@ -25,3 +28,4 @@ services:
 volumes:
   mongo_data:
   portainer_data:
+  postgres_data:
