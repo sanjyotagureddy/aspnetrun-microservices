@@ -20,3 +20,16 @@ set key value
 get key
 set name mehmet
 get name
+
+
+#########################################################
+run docker
+
+docker-compose -f .\docker-compose.yml -f .\docker-compose.override.yml up -d
+
+
+#######################################################
+portainer credentials
+
+admin
+admin1234
