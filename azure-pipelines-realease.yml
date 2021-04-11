@@ -16,14 +16,15 @@ variables:
 
 steps:
 - task: NuGetToolInstaller@1
+  displayName: Acquire NuGetTool Installer
 
 - task: NuGetCommand@2
-  displayName: Restoring NuGets
+  displayName: Restoring NuGet Packages
   inputs:
     restoreSolution: '$(solution)'
 
 - task: VSBuild@1
-  displayName: Building the application
+  displayName: Building solution and creating build artifacts
   inputs:
     solution: '$(solution)'
     msbuildArgs: '/p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:DesktopBuildPackageLocation="$(build.artifactStagingDirectory)\WebApp.zip" /p:DeployIisAppPath="Default Web Site"'
@@ -43,7 +44,7 @@ steps:
 
 # Run all tests with "/p:CollectCoverage=true /p:CoverletOutputFormat=cobertura" to generate the code coverage file
 - task: DotNetCoreCLI@2
-  displayName: dotnet test
+  displayName: Running Tests
   inputs:
     command: test
     arguments: '--configuration $(BuildConfiguration) /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura'
