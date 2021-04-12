@@ -1,12 +1,9 @@
-using System.Net;
 using AutoMapper;
 using Discount.Grpc.Entities;
 using Discount.Grpc.Mapper;
 using Discount.Grpc.Protos;
 using Discount.Grpc.Repositories.Interfaces;
 using Discount.Grpc.Services;
-using Grpc.Core;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
