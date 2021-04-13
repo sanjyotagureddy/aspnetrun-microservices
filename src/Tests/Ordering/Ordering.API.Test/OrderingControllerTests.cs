@@ -1,6 +1,4 @@
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Threading;
 using AutoMapper;
@@ -12,6 +10,9 @@ using NUnit.Framework;
 using Ordering.API.Controllers;
 using Ordering.Application.Contracts.Infrastructure;
 using Ordering.Application.Contracts.Persistence;
+using Ordering.Application.Exceptions;
+using Ordering.Application.Features.Orders.Commands.DeleteCommand;
+using Ordering.Application.Features.Orders.Commands.UpdateOrder;
 using Ordering.Application.Features.Orders.Queries.GetOrdersList;
 using Ordering.Application.Mappings;
 using Ordering.Domain.Entities;
@@ -22,59 +23,57 @@ namespace Ordering.API.Test
     {
         private Mock<IMediator> _mediator;
         private IMapper _mapper;
-        private Mock<ILogger> _logger;
+        private Mock<ILogger<DeleteOrderCommandHandler>> _deleteCommandLogger;
+        private Mock<ILogger<UpdateOrderCommandHandler>> _updateCommandLogger;
         private Mock<IEmailService> _emailMock;
-        private Mock<IOrderRepository> _orderRepoMock;
-        private Mock<IMediator> _mockMediatr;
-        private GetOrdersListQueryHandler _getOrdersListQueryHandler;
+        private readonly Mock<IOrderRepository> _orderRepoMock;
+        private readonly Mock<IMediator> _mockMediatr;
         private OrderController _controller;
 
+        private GetOrdersListQueryHandler _getOrdersListQueryHandler;
+        private DeleteOrderCommandHandler _deleteOrderCommandHandler;
+        private UpdateOrderCommandHandler _updateOrderCommandHandler;
 
-
+        private readonly Order _order;
         private readonly List<Order> _orders;
-        private readonly List<OrdersVm> _orderVms;
+
+        private readonly UpdateOrderCommand _updateOrderCommand;
 
         public Tests()
         {
-            _orders = new List<Order>()
-            {
-                new()
-                {
+            _mediator = new Mock<IMediator>();
+            _emailMock = new Mock<IEmailService>();
+            _orderRepoMock = new Mock<IOrderRepository>();
+            _mockMediatr = new Mock<IMediator>();
+
+            _order = new Order() { UserName = "swn" };
+            _orders = new List<Order>() {
+                new() {
                     UserName = "swn"
                 }
             };
 
-            _orderVms = new List<OrdersVm>()
+            _updateOrderCommand = new UpdateOrderCommand()
             {
-                new()
-                {
-                    UserName = "swn"
-                }
+                UserName = "swn",
+                TotalPrice = 0
             };
         }
 
         [SetUp]
         public void Setup()
         {
-            _mediator = new Mock<IMediator>();
-            _logger = new Mock<ILogger>();
-            _emailMock = new Mock<IEmailService>();
-            _orderRepoMock = new Mock<IOrderRepository>();
-            _mockMediatr = new Mock<IMediator>();
-
             //Mapper
-            var mapperConfig = new MapperConfiguration(
-                mc =>
-                {
-                    mc.AddProfile(new MappingProfile());
-                });
-
+            var mapperConfig = new MapperConfiguration(mc =>
+            {
+                mc.AddProfile(new MappingProfile());
+            });
             _mapper = mapperConfig.CreateMapper();
-
             
 
             //Controller
             _controller = new OrderController(_mockMediatr.Object);
+            _deleteCommandLogger = new Mock<ILogger<DeleteOrderCommandHandler>>();
         }
 
         [Test]
@@ -99,6 +98,51 @@ namespace Ordering.API.Test
                 Assert.Fail();
         }
 
+        [Test]
+        public void UpdateOrder_ReturnNoContent()
+        {
+            _updateCommandLogger = new Mock<ILogger<UpdateOrderCommandHandler>>();
+            _orderRepoMock.Setup(p => p.GetByIdAsync(It.IsAny<int>())).ReturnsAsync(_order);
+
+            //GET QueryHandler
+            _updateOrderCommandHandler = new UpdateOrderCommandHandler(_orderRepoMock.Object, _mapper, _updateCommandLogger.Object);
+            _mockMediatr.Setup(m => m.Send(It.IsAny<UpdateOrderCommand>(), It.IsAny<CancellationToken>()))
+                .Returns(async () =>
+                    await _updateOrderCommandHandler.Handle(new UpdateOrderCommand(),
+                        new CancellationToken()));
+
+
+            _orderRepoMock.Setup(p => p.UpdateAsync(It.IsAny<Order>()));
+            var orders = _controller.UpdateOrder(_updateOrderCommand);
+            if (orders.Result is NoContentResult okObject)
+                Assert.Pass();
+            else
+                Assert.Fail();
+        }
+
+        [Test]
+        [TestCase(2)]
+        public void DeleteOrder_ReturnNoContent(int id)
+        {
+            _deleteCommandLogger = new Mock<ILogger<DeleteOrderCommandHandler>>();
+            _orderRepoMock.Setup(p => p.GetByIdAsync(It.IsAny<int>())).ReturnsAsync(_order);
+            //GET QueryHandler
+            _deleteOrderCommandHandler = new DeleteOrderCommandHandler(_orderRepoMock.Object, _mapper, _deleteCommandLogger.Object);
+            _mockMediatr.Setup(m => m.Send(It.IsAny<DeleteOrderCommand>(), It.IsAny<CancellationToken>()))
+                .Returns(async () =>
+                    await _deleteOrderCommandHandler.Handle(new DeleteOrderCommand(),
+                        new CancellationToken()));
+
+
+            _orderRepoMock.Setup(p => p.DeleteAsync(It.IsAny<Order>()));
+
+            var orders = _controller.DeleteOrder(id);
+            if (orders.Result is NoContentResult okObject)
+                Assert.AreEqual(okObject.StatusCode, (int)HttpStatusCode.NoContent);
+            else
+                Assert.Fail();
+        }
+        
         [Test]
         [TestCase("abc")]
         public void GetOrdersByUserName_NotFound(string userName)
