@@ -1,9 +1,12 @@
 using System.Net;
+using AutoMapper;
 using Basket.API.Controllers;
 using Basket.API.Entities;
 using Basket.API.GrpcServices;
+using Basket.API.Mappings;
 using Basket.API.Repositories.Interfaces;
 using Discount.Grpc.Protos;
+using MassTransit;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using NUnit.Framework;
@@ -14,6 +17,8 @@ namespace Basket.API.Test
     {
         private Mock<IBasketRepository> _repository;
         private Mock<DiscountGrpcService> _grpcService;
+        private Mock<IPublishEndpoint> _publishEndpoint;
+        private IMapper _mapper;
         private Mock<DiscountProtoService.DiscountProtoServiceClient> _mock;
         private BasketController _controller;
         private ShoppingCart _shoppingCart;
@@ -24,8 +29,15 @@ namespace Basket.API.Test
             _mock = new Mock<DiscountProtoService.DiscountProtoServiceClient>();
             _repository = new Mock<IBasketRepository>();
             _grpcService = new Mock<DiscountGrpcService>(_mock.Object);
+            _publishEndpoint = new Mock<IPublishEndpoint>();
+            var mapperConfig = new MapperConfiguration(
+                mc =>
+                {
+                    mc.AddProfile(new BasketProfile());
+                });
 
-            _controller = new BasketController(_repository.Object, _grpcService.Object);
+            _mapper = mapperConfig.CreateMapper();
+            _controller = new BasketController(_repository.Object, _grpcService.Object, _publishEndpoint.Object, _mapper);
 
             _shoppingCart = new ShoppingCart()
             {
