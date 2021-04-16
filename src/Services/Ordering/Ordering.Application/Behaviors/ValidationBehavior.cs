@@ -1,10 +1,10 @@
-﻿using System;
+﻿using FluentValidation;
+using MediatR;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using MediatR;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentValidation;
 using ValidationException = Ordering.Application.Exceptions.ValidationException;
 
 namespace Ordering.Application.Behaviors
@@ -21,7 +21,7 @@ namespace Ordering.Application.Behaviors
         public async Task<TResponse> Handle(TRequest request, CancellationToken cancellationToken,
             RequestHandlerDelegate<TResponse> next)
         {
-            if (!_validators.Any()) 
+            if (!_validators.Any())
                 return await next();
 
             var context = new ValidationContext<TRequest>(request);

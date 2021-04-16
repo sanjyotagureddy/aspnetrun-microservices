@@ -1,6 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using Ordering.Domain.Entities;
+using System.Collections.Generic;
 using System.Threading.Tasks;
-using Ordering.Domain.Entities;
 
 namespace Ordering.Application.Contracts.Persistence
 {
