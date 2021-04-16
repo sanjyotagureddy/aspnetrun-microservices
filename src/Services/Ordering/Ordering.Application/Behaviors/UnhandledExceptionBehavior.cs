@@ -1,9 +1,9 @@
-﻿using System;
-using MediatR;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using Ordering.Application.Exceptions;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Ordering.Application.Behaviors
 {

@@ -1,6 +1,3 @@
-using System.Collections.Generic;
-using System.Net;
-using System.Threading;
 using AutoMapper;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -10,12 +7,14 @@ using NUnit.Framework;
 using Ordering.API.Controllers;
 using Ordering.Application.Contracts.Infrastructure;
 using Ordering.Application.Contracts.Persistence;
-using Ordering.Application.Exceptions;
 using Ordering.Application.Features.Orders.Commands.DeleteCommand;
 using Ordering.Application.Features.Orders.Commands.UpdateOrder;
 using Ordering.Application.Features.Orders.Queries.GetOrdersList;
 using Ordering.Application.Mappings;
 using Ordering.Domain.Entities;
+using System.Collections.Generic;
+using System.Net;
+using System.Threading;
 
 namespace Ordering.API.Test
 {
@@ -69,7 +68,7 @@ namespace Ordering.API.Test
                 mc.AddProfile(new MappingProfile());
             });
             _mapper = mapperConfig.CreateMapper();
-            
+
 
             //Controller
             _controller = new OrderController(_mockMediatr.Object);
@@ -142,7 +141,7 @@ namespace Ordering.API.Test
             else
                 Assert.Fail();
         }
-        
+
         [Test]
         [TestCase("abc")]
         public void GetOrdersByUserName_NotFound(string userName)

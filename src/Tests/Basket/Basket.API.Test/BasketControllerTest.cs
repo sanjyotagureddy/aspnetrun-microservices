@@ -1,4 +1,3 @@
-using System.Net;
 using AutoMapper;
 using Basket.API.Controllers;
 using Basket.API.Entities;
@@ -10,6 +9,7 @@ using MassTransit;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using NUnit.Framework;
+using System.Net;
 
 namespace Basket.API.Test
 {

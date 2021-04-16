@@ -1,16 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Net;
-using Catalog.API.Controllers;
+﻿using Catalog.API.Controllers;
 using Catalog.API.Entities;
 using Catalog.API.Repositories.Interfaces;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using MongoDB.Driver;
 using Moq;
 using NUnit.Framework;
+using System.Collections.Generic;
+using System.Net;
 namespace Catalog.API.Test
 {
     public class CatalogControllerTest
@@ -101,7 +97,7 @@ namespace Catalog.API.Test
             _repository = new Mock<IProductRepository>();
             _repository.Setup(p => p.GetProducts()).ReturnsAsync(_products);
             _logger = new Mock<ILogger<CatalogController>>();
-            
+
             _catalogController = new CatalogController(_repository.Object, _logger.Object);
 
 

@@ -4,7 +4,7 @@ using EventBus.Messages.Events;
 
 namespace Basket.API.Mappings
 {
-    public class BasketProfile: Profile
+    public class BasketProfile : Profile
     {
         public BasketProfile()
         {
