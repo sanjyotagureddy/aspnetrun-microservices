@@ -1,10 +1,10 @@
-﻿using System;
-using System.Threading;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using System;
+using System.Threading;
 
 namespace Discount.Grpc.Extensions
 {
@@ -54,7 +54,7 @@ namespace Discount.Grpc.Extensions
             catch (Exception e)
             {
                 logger.LogError($"{e} - An error occurred while migrating the postgreSQL database");
-                if (retryForAvailability >= 50) 
+                if (retryForAvailability >= 50)
                     return host;
                 retryForAvailability++;
                 Thread.Sleep(2000);

@@ -1,8 +1,9 @@
-﻿using System;
-using MediatR;
+﻿using MediatR;
+using Microsoft.Extensions.Logging;
+using Ordering.Application.Exceptions;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 
 namespace Ordering.Application.Behaviors
 {
@@ -25,7 +26,7 @@ namespace Ordering.Application.Behaviors
             {
                 var requestName = typeof(TRequest).Name;
                 _logger.LogError(ex, $"Application Request: Unhandled Exception for Request {requestName} {request}");
-                throw;
+                throw new UnhandledException(requestName, request);
             }
         }
     }

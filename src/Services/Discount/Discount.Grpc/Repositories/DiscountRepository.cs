@@ -1,10 +1,10 @@
-﻿using System;
-using System.Threading.Tasks;
-using Dapper;
+﻿using Dapper;
 using Discount.Grpc.Entities;
 using Discount.Grpc.Repositories.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
+using System;
+using System.Threading.Tasks;
 
 namespace Discount.Grpc.Repositories
 {

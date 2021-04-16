@@ -1,8 +1,8 @@
-﻿using System.Reflection;
-using FluentValidation;
+﻿using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using Ordering.Application.Behaviors;
+using System.Reflection;
 
 namespace Ordering.Application
 {
