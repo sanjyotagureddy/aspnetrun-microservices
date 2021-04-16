@@ -1,10 +1,10 @@
-using System.Net;
 using Discount.API.Controllers;
 using Discount.API.Entities;
 using Discount.API.Repositories.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using NUnit.Framework;
+using System.Net;
 
 namespace Discount.API.Test
 {
@@ -59,7 +59,7 @@ namespace Discount.API.Test
             var coupon = _controller.GetDiscount(productName);
             if (coupon.Result.Result is OkObjectResult okResult)
             {
-                Assert.AreEqual((int) HttpStatusCode.OK, okResult.StatusCode);
+                Assert.AreEqual((int)HttpStatusCode.OK, okResult.StatusCode);
             }
             else
                 Assert.Fail();

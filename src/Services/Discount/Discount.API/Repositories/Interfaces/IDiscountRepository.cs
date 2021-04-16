@@ -1,5 +1,5 @@
-﻿using System.Threading.Tasks;
-using Discount.API.Entities;
+﻿using Discount.API.Entities;
+using System.Threading.Tasks;
 
 namespace Discount.API.Repositories.Interfaces
 {
