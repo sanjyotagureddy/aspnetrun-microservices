@@ -48,7 +48,7 @@ namespace Discount.Grpc.Test
         public void GetDiscount(string productName)
         {
             _repository.Setup(p => p.GetDiscount(productName)).ReturnsAsync(_coupon);
-            var coupon = _discountService.GetDiscount(new GetDiscountRequest() {ProductName = productName}, null);
+            var coupon = _discountService.GetDiscount(new GetDiscountRequest() { ProductName = productName }, null);
             if (coupon.Result != null)
                 Assert.AreEqual(coupon.Result.Amount, 150);
             else

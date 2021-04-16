@@ -1,12 +1,12 @@
-﻿using System.Collections.Generic;
-using System.Net;
-using Catalog.API.Controllers;
+﻿using Catalog.API.Controllers;
 using Catalog.API.Entities;
 using Catalog.API.Repositories.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
+using System.Collections.Generic;
+using System.Net;
 namespace Catalog.API.Test
 {
     public class CatalogControllerTest
@@ -99,6 +99,10 @@ namespace Catalog.API.Test
             _logger = new Mock<ILogger<CatalogController>>();
 
             _catalogController = new CatalogController(_repository.Object, _logger.Object);
+
+
+            //_repository.Setup(p=>p.CreateProduct(It.IsAny<Pro>())).Returns()
+
         }
 
         [Test]
@@ -157,6 +161,50 @@ namespace Catalog.API.Test
             var products = _catalogController.GetProductByCategory(name);
             if (products.Result.Result is OkObjectResult okResult)
                 Assert.AreEqual((int)HttpStatusCode.OK, okResult.StatusCode);
+        }
+
+        [Test]
+        public void UpdateProduct()
+        {
+            var product = new Product()
+            {
+                Id = "602d2149e773f2a3990b47f5"
+            };
+            _repository.Setup(p => p.UpdateProduct(It.IsAny<Product>())).ReturnsAsync(true);
+            var result = _catalogController.UpdateProduct(product);
+            if (result.Result is OkObjectResult okResult)
+                Assert.AreEqual((int)HttpStatusCode.OK, okResult.StatusCode);
+            else
+                Assert.Fail();
+        }
+
+        [TestCase("602d2149e773f2a3990b47f5")]
+        [Test]
+        public void Delete_ReturnsOkResult_IfDeleteSuccess(string id)
+        {
+            //_productRepository.Setup(p => p.DeleteProduct(id)).ReturnsAsync(true);
+            _repository.Setup(x => x.DeleteProduct(id)).ReturnsAsync(true);
+            var result = _catalogController.DeleteProduct(id);
+
+            if (result.Result is OkObjectResult okResult)
+                Assert.AreEqual((int)HttpStatusCode.OK, okResult.StatusCode);
+            else
+                Assert.Fail();
+        }
+
+        [Test]
+        public void Delete_ThrowsException_IfIdNotFound()
+        {
+            const bool isSucceed = false;
+            const string deleteId = "1234";
+
+            _repository.Setup(x => x.DeleteProduct(It.IsAny<string>())).ReturnsAsync(false);
+
+            // Act
+            var result = _catalogController.DeleteProduct(deleteId);
+
+            // Assert
+            Assert.False(isSucceed); // Asserting that the return type is StatusCodeResult
         }
     }
 }

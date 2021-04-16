@@ -1,16 +1,16 @@
-﻿using System;
+﻿using Microsoft.EntityFrameworkCore;
+using Ordering.Application.Contracts.Persistence;
+using Ordering.Domain.Common;
+using Ordering.Infrastructure.Persistence;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
-using Ordering.Application.Contracts.Persistence;
-using Ordering.Domain.Common;
-using Ordering.Infrastructure.Persistence;
 
 namespace Ordering.Infrastructure.Repositories
 {
-    public class RepositoryBase<T> : IAsyncRepository<T> where T:EntityBase
+    public class RepositoryBase<T> : IAsyncRepository<T> where T : EntityBase
     {
         protected readonly OrderContext DbContext;
 

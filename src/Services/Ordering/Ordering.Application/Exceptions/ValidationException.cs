@@ -17,8 +17,8 @@ namespace Ordering.Application.Exceptions
             : this()
         {
             Errors = failures
-                .GroupBy(e=>e.PropertyName, e =>e.ErrorMessage)
-                .ToDictionary(fg => fg.Key, fg=> fg.ToArray());
+                .GroupBy(e => e.PropertyName, e => e.ErrorMessage)
+                .ToDictionary(fg => fg.Key, fg => fg.ToArray());
         }
 
         public Dictionary<string, string[]> Errors { get; }

@@ -1,5 +1,5 @@
-﻿using System.Threading.Tasks;
-using Basket.API.Entities;
+﻿using Basket.API.Entities;
+using System.Threading.Tasks;
 
 namespace Basket.API.Repositories.Interfaces
 {
