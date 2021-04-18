@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Moq;
 using NUnit.Framework;
 using System.Net;
+using System.Threading.Tasks;
 
 namespace Discount.API.Test
 {
@@ -61,6 +62,19 @@ namespace Discount.API.Test
             {
                 Assert.AreEqual((int)HttpStatusCode.OK, okResult.StatusCode);
             }
+            else
+                Assert.Fail();
+        }
+
+        [TestCase("1")]
+        [TestCase("2")]
+        [Test]
+        public async Task DeleteDiscount(string productName)
+        {
+            _repository.Setup(p => p.DeleteDiscount(productName)).ReturnsAsync(true);
+            var coupon = await _controller.DeleteDiscount(productName);
+            if (coupon.Result is OkObjectResult okResult)
+                Assert.AreEqual((int)HttpStatusCode.OK, okResult.StatusCode);
             else
                 Assert.Fail();
         }
