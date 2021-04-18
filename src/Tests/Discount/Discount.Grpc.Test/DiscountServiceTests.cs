@@ -1,9 +1,12 @@
+using System.Net;
+using System.Threading.Tasks;
 using AutoMapper;
 using Discount.Grpc.Entities;
 using Discount.Grpc.Mapper;
 using Discount.Grpc.Protos;
 using Discount.Grpc.Repositories.Interfaces;
 using Discount.Grpc.Services;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
@@ -53,6 +56,32 @@ namespace Discount.Grpc.Test
                 Assert.AreEqual(coupon.Result.Amount, 150);
             else
                 Assert.Fail();
+        }
+
+        [TestCase("1")]
+        [TestCase("2")]
+        [Test]
+        public async Task DeleteDiscount(string productName)
+        {
+            _repository.Setup(p => p.DeleteDiscount(productName)).ReturnsAsync(true);
+            var coupon =
+                await _discountService.DeleteDiscount(new DeleteDiscountRequest() { ProductName = productName }, null);
+
+            Assert.AreEqual(coupon.Success,true);
+
+        }
+
+        [TestCase("1")]
+        [TestCase("2")]
+        [Test]
+        public async Task DeleteDiscount_False(string productName)
+        {
+            _repository.Setup(p => p.DeleteDiscount(productName)).ReturnsAsync(false);
+            var coupon =
+                await _discountService.DeleteDiscount(new DeleteDiscountRequest() { ProductName = productName }, null);
+
+            Assert.AreNotEqual(coupon.Success,true);
+
         }
     }
 }

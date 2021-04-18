@@ -108,7 +108,7 @@ namespace Catalog.API.Test
         [Test]
         public void GetProducts()
         {
-
+            _repository.Setup(p => p.GetProducts()).ReturnsAsync(_products);
             var products = _catalogController.GetProducts();
             if (products.Result.Result is OkObjectResult okResult)
                 Assert.AreEqual((int)HttpStatusCode.OK, okResult.StatusCode);
@@ -176,6 +176,21 @@ namespace Catalog.API.Test
                 Assert.AreEqual((int)HttpStatusCode.OK, okResult.StatusCode);
             else
                 Assert.Fail();
+        }
+
+        [Test]
+        public void CreateProduct()
+        {
+            var product = new Product()
+            {
+                Id = "602d2149e773f2a3990b47f5"
+            };
+            _repository.Setup(p => p.CreateProduct(It.IsAny<Product>()));
+            var result = _catalogController.CreateProduct(product);
+            if (!(result.Result.Result is CreatedAtRouteResult createdResult))
+                Assert.Fail();
+            else
+                Assert.AreEqual((int)HttpStatusCode.Created, createdResult.StatusCode);
         }
 
         [TestCase("602d2149e773f2a3990b47f5")]
