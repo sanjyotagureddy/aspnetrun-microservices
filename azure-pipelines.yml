@@ -51,6 +51,12 @@ steps:
     projects: '**/*.csproj'
     nobuild: true
 
+#Scan Wwhitesource vulnerabilities 
+- task: WhiteSource@21
+  displayName: 'Whitesource Bolt'
+  inputs:
+    cwd: '$(System.DefaultWorkingDirectory)'
+
 # Generate the report using ReportGenerator (https://github.com/danielpalme/ReportGenerator)
 # First install the tool on the machine, then run it
 - script: |
