@@ -1,6 +1,5 @@
-# Introduction 
-Building Microservices on .Net Ecosystem  [![Build Status](https://dev.azure.com/sanjyotagureddy/aspnetrun-microservices/_apis/build/status/aspnetrun-microservices%20-%20master%20branch?branchName=master)](https://dev.azure.com/sanjyotagureddy/aspnetrun-microservices/_build/latest?definitionId=15&branchName=master)
-
+# Introduction  [![Build Status](https://dev.azure.com/sanjyotagureddy/aspnetrun-microservices/_apis/build/status/aspnetrun-microservices%20-%20master%20branch?branchName=master)](https://dev.azure.com/sanjyotagureddy/aspnetrun-microservices/_build/latest?definitionId=15&branchName=master)
+Building Microservices on .Net Ecosystem 
 
 Used Asp.Net Web API, Docker, RabbitMQ, MassTransit, Grpc, Ocelot API Gateway, MongoDB, Redis, PostgreSQL, SqlServer, Dapper, Entity Framework Core, CQRS and Clean Architecture implementation. Also includes Cross-Cutting concerns like Implementing Centralized Distributed Logging with Elasticsearch, Kibana and SeriLog, use the HealthChecks with Watchdog, Implement Retry and Circuit Breaker patterns with Polly and so on..
 
