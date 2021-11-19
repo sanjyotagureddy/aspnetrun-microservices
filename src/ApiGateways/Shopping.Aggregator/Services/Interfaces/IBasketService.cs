@@ -1,5 +1,5 @@
-﻿using System.Threading.Tasks;
-using Shopping.Aggregator.Models;
+﻿using Shopping.Aggregator.Models;
+using System.Threading.Tasks;
 
 namespace Shopping.Aggregator.Services.Interfaces;
 

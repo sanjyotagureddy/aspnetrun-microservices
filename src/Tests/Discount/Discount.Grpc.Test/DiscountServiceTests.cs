@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using AutoMapper;
 using Discount.Grpc.Entities;
 using Discount.Grpc.Mapper;
@@ -8,6 +7,7 @@ using Discount.Grpc.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
+using System.Threading.Tasks;
 
 namespace Discount.Grpc.Test;
 

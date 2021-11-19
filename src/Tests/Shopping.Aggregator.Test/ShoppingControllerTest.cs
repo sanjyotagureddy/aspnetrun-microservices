@@ -1,12 +1,12 @@
-using System.Collections.Generic;
-using System.Net;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using NUnit.Framework;
 using Shopping.Aggregator.Controllers;
 using Shopping.Aggregator.Models;
 using Shopping.Aggregator.Services.Interfaces;
+using System.Collections.Generic;
+using System.Net;
+using System.Threading.Tasks;
 
 namespace Shopping.Aggregator.Test;
 

@@ -1,9 +1,9 @@
-﻿using System;
-using System.Net;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Shopping.Aggregator.Models;
 using Shopping.Aggregator.Services.Interfaces;
+using System;
+using System.Net;
+using System.Threading.Tasks;
 
 namespace Shopping.Aggregator.Controllers;
 
