@@ -1,22 +1,21 @@
 ﻿using System;
 
-namespace EventBus.Messages.Events
+namespace EventBus.Messages.Events;
+
+public class IntegrationBaseEvent
 {
-    public class IntegrationBaseEvent
+    public Guid Id { get; set; }
+    public DateTime CreationDate { get; set; }
+
+    public IntegrationBaseEvent()
     {
-        public Guid Id { get; set; }
-        public DateTime CreationDate { get; set; }
+        Id = new Guid();
+        CreationDate = DateTime.UtcNow;
+    }
 
-        public IntegrationBaseEvent()
-        {
-            Id = new Guid();
-            CreationDate = DateTime.UtcNow;
-        }
-
-        public IntegrationBaseEvent(Guid id, DateTime creationDate)
-        {
-            Id = id;
-            CreationDate = creationDate;
-        }
+    public IntegrationBaseEvent(Guid id, DateTime creationDate)
+    {
+        Id = id;
+        CreationDate = creationDate;
     }
 }

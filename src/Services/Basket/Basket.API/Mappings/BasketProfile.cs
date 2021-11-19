@@ -2,13 +2,12 @@
 using Basket.API.Entities;
 using EventBus.Messages.Events;
 
-namespace Basket.API.Mappings
+namespace Basket.API.Mappings;
+
+public class BasketProfile : Profile
 {
-    public class BasketProfile : Profile
+    public BasketProfile()
     {
-        public BasketProfile()
-        {
-            CreateMap<BasketCheckout, BasketCheckoutEvent>().ReverseMap();
-        }
+        CreateMap<BasketCheckout, BasketCheckoutEvent>().ReverseMap();
     }
 }

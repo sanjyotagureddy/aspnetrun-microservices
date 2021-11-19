@@ -8,35 +8,34 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Ordering.Application.Features.Orders.Commands.UpdateOrder
+namespace Ordering.Application.Features.Orders.Commands.UpdateOrder;
+
+public class UpdateOrderCommandHandler : IRequestHandler<UpdateOrderCommand>
 {
-    public class UpdateOrderCommandHandler : IRequestHandler<UpdateOrderCommand>
+    private readonly IOrderRepository _orderRepository;
+    private readonly IMapper _mapper;
+    private readonly ILogger<UpdateOrderCommandHandler> _logger;
+
+    public UpdateOrderCommandHandler(IOrderRepository orderRepository, IMapper mapper,
+        ILogger<UpdateOrderCommandHandler> logger)
     {
-        private readonly IOrderRepository _orderRepository;
-        private readonly IMapper _mapper;
-        private readonly ILogger<UpdateOrderCommandHandler> _logger;
+        _orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
+        _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
 
-        public UpdateOrderCommandHandler(IOrderRepository orderRepository, IMapper mapper,
-            ILogger<UpdateOrderCommandHandler> logger)
+    public async Task<Unit> Handle(UpdateOrderCommand request, CancellationToken cancellationToken)
+    {
+        var orderToUpdate = await _orderRepository.GetByIdAsync(request.Id);
+        if (orderToUpdate == null)
         {
-            _orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
-            _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            throw new NotFoundException(nameof(Order), request.Id);
         }
 
-        public async Task<Unit> Handle(UpdateOrderCommand request, CancellationToken cancellationToken)
-        {
-            var orderToUpdate = await _orderRepository.GetByIdAsync(request.Id);
-            if (orderToUpdate == null)
-            {
-                throw new NotFoundException(nameof(Order), request.Id);
-            }
+        _mapper.Map(request, orderToUpdate, typeof(UpdateOrderCommand), typeof(Order));
+        await _orderRepository.UpdateAsync(orderToUpdate);
+        _logger.LogInformation($"Order { orderToUpdate.Id } is successfully updated");
 
-            _mapper.Map(request, orderToUpdate, typeof(UpdateOrderCommand), typeof(Order));
-            await _orderRepository.UpdateAsync(orderToUpdate);
-            _logger.LogInformation($"Order { orderToUpdate.Id } is successfully updated");
-
-            return Unit.Value;
-        }
+        return Unit.Value;
     }
 }

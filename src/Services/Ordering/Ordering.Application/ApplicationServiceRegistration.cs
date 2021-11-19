@@ -4,20 +4,19 @@ using Microsoft.Extensions.DependencyInjection;
 using Ordering.Application.Behaviors;
 using System.Reflection;
 
-namespace Ordering.Application
+namespace Ordering.Application;
+
+public static class ApplicationServiceRegistration
 {
-    public static class ApplicationServiceRegistration
+    public static IServiceCollection AddApplicationServices(this IServiceCollection service)
     {
-        public static IServiceCollection AddApplicationServices(this IServiceCollection service)
-        {
-            service.AddAutoMapper(Assembly.GetExecutingAssembly());
-            service.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
-            service.AddMediatR(Assembly.GetExecutingAssembly());
+        service.AddAutoMapper(Assembly.GetExecutingAssembly());
+        service.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
+        service.AddMediatR(Assembly.GetExecutingAssembly());
 
-            service.AddTransient(typeof(IPipelineBehavior<,>), typeof(UnhandledExceptionBehavior<,>));
-            service.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+        service.AddTransient(typeof(IPipelineBehavior<,>), typeof(UnhandledExceptionBehavior<,>));
+        service.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
-            return service;
-        }
+        return service;
     }
 }
