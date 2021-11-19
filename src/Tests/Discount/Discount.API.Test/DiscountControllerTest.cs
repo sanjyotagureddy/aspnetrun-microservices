@@ -78,4 +78,24 @@ public class DiscountControllerTest
         else
             Assert.Fail();
     }
+
+    [Test]
+    public async Task CreateDiscount()
+    {
+        _repository.Setup(p => p.CreateDiscount(It.IsAny<Coupon>())).ReturnsAsync(true);
+        var coupon = await _controller.CreateDiscount(NewCoupon());
+        if (coupon.Result is CreatedAtRouteResult okResult)
+            Assert.AreEqual((int)HttpStatusCode.Created, okResult.StatusCode);
+        else
+            Assert.Fail();
+    }
+
+    private static Coupon NewCoupon()
+        => new()
+        {
+            Id = 5,
+            Amount = 10,
+            Description = "",
+            ProductName = "AND"
+        };
 }
