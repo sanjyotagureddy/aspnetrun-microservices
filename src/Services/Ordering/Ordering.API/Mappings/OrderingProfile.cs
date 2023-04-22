@@ -6,8 +6,8 @@ namespace Ordering.API.Mappings;
 
 public class OrderingProfile : Profile
 {
-    public OrderingProfile()
-    {
-        CreateMap<CheckoutOrderCommand, BasketCheckoutEvent>().ReverseMap();
-    }
+  public OrderingProfile()
+  {
+    CreateMap<CheckoutOrderCommand, BasketCheckoutEvent>().ReverseMap();
+  }
 }

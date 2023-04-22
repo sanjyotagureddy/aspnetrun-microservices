@@ -9,12 +9,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.0" />
+    <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.1" />
     <PackageReference Include="Grpc.AspNetCore" Version="2.52.0" />
-    <PackageReference Include="MassTransit" Version="8.0.14" />
+    <PackageReference Include="MassTransit" Version="7.3.1" />
     <PackageReference Include="MassTransit.AspNetCore" Version="7.3.1" />
-    <PackageReference Include="MassTransit.RabbitMQ" Version="8.0.14" />
-    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="7.0.4" />
+    <PackageReference Include="MassTransit.RabbitMQ" Version="7.3.1" />
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="7.0.5" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.18.1" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />

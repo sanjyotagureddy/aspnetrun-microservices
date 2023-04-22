@@ -1,9 +1,9 @@
-﻿using Shopping.Aggregator.Models;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
+using Shopping.Aggregator.Models;
 
 namespace Shopping.Aggregator.Services.Interfaces;
 
 public interface IBasketService
 {
-    Task<BasketModel> GetBasket(string userName);
+  Task<BasketModel> GetBasket(string userName);
 }

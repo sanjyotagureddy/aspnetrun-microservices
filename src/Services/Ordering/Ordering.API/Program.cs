@@ -9,23 +9,22 @@ namespace Ordering.API;
 
 public class Program
 {
-    public static void Main(string[] args)
+  public static void Main(string[] args)
+  {
+    var host = CreateHostBuilder(args).Build();
+    host.MigrateDatabase<OrderContext>((context, service) =>
     {
-        var host = CreateHostBuilder(args).Build();
-        host.MigrateDatabase<OrderContext>((context, service) =>
-        {
-            var logger = service.GetService<ILogger<OrderContextSeed>>();
-            OrderContextSeed
-                .SeedAsync(context, logger)
-                .Wait();
-        });
-        host.Run();
-    }
+      var logger = service.GetService<ILogger<OrderContextSeed>>();
+      OrderContextSeed
+        .SeedAsync(context, logger)
+        .Wait();
+    });
+    host.Run();
+  }
 
-    public static IHostBuilder CreateHostBuilder(string[] args) =>
-        Host.CreateDefaultBuilder(args)
-            .ConfigureWebHostDefaults(webBuilder =>
-            {
-                webBuilder.UseStartup<Startup>();
-            });
+  public static IHostBuilder CreateHostBuilder(string[] args)
+  {
+    return Host.CreateDefaultBuilder(args)
+      .ConfigureWebHostDefaults(webBuilder => { webBuilder.UseStartup<Startup>(); });
+  }
 }

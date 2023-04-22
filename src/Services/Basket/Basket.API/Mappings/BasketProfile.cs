@@ -6,8 +6,8 @@ namespace Basket.API.Mappings;
 
 public class BasketProfile : Profile
 {
-    public BasketProfile()
-    {
-        CreateMap<BasketCheckout, BasketCheckoutEvent>().ReverseMap();
-    }
+  public BasketProfile()
+  {
+    CreateMap<BasketCheckout, BasketCheckoutEvent>().ReverseMap();
+  }
 }
