@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Services\Discount\Discount.Grpc\Discount.Grpc.csproj" />
+    <ProjectReference Include="..\..\src\ApiGateways\Shopping.Aggregator\Shopping.Aggregator.csproj" />
   </ItemGroup>
 
 </Project>

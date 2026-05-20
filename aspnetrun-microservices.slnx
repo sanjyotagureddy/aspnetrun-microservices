@@ -5,28 +5,28 @@
     </Project>
   </Folder>
   <Folder Name="/src/ApiGateways/">
-    <Project Path="ApiGateways/OcelotApiGateway/OcelotApiGateway.csproj" />
-    <Project Path="ApiGateways/Shopping.Aggregator/Shopping.Aggregator.csproj" />
+    <Project Path="src/ApiGateways/OcelotApiGateway/OcelotApiGateway.csproj" />
+    <Project Path="src/ApiGateways/Shopping.Aggregator/Shopping.Aggregator.csproj" />
   </Folder>
   <Folder Name="/src/BuildingBlocks/">
-    <Project Path="BuildingBlocks/EventBus.Messages/EventBus.Messages.csproj" />
+    <Project Path="src/BuildingBlocks/EventBus.Messages/EventBus.Messages.csproj" />
   </Folder>
   <Folder Name="/src/Services/" />
   <Folder Name="/src/Services/Basket/">
-    <Project Path="Services/Basket/Basket.API/Basket.API.csproj" />
+    <Project Path="src/Services/Basket/Basket.API/Basket.API.csproj" />
   </Folder>
   <Folder Name="/src/Services/Catalog/">
-    <Project Path="Services/Catalog/Catalog.API/Catalog.API.csproj" />
+    <Project Path="src/Services/Catalog/Catalog.API/Catalog.API.csproj" />
   </Folder>
   <Folder Name="/src/Services/Discount/">
-    <Project Path="Services/Discount/Discount.API/Discount.API.csproj" />
-    <Project Path="Services/Discount/Discount.Grpc/Discount.Grpc.csproj" />
+    <Project Path="src/Services/Discount/Discount.API/Discount.API.csproj" />
+    <Project Path="src/Services/Discount/Discount.Grpc/Discount.Grpc.csproj" />
   </Folder>
   <Folder Name="/src/Services/Ordering/">
-    <Project Path="Services/Ordering/Ordering.API/Ordering.API.csproj" />
-    <Project Path="Services/Ordering/Ordering.Application/Ordering.Application.csproj" />
-    <Project Path="Services/Ordering/Ordering.Domain/Ordering.Domain.csproj" />
-    <Project Path="Services/Ordering/Ordering.Infrastructure/Ordering.Infrastructure.csproj" />
+    <Project Path="src/Services/Ordering/Ordering.API/Ordering.API.csproj" />
+    <Project Path="src/Services/Ordering/Ordering.Application/Ordering.Application.csproj" />
+    <Project Path="src/Services/Ordering/Ordering.Domain/Ordering.Domain.csproj" />
+    <Project Path="src/Services/Ordering/Ordering.Infrastructure/Ordering.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/test/" />
   <Folder Name="/test/ApiGateways/">
