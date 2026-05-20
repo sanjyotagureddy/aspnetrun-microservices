@@ -1,6 +1,10 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+  </Folder>
   <Folder Name="/src/">
-    <Project Path="docker-compose.dcproj">
+    <Project Path="src/docker-compose.dcproj">
       <Build />
     </Project>
   </Folder>
