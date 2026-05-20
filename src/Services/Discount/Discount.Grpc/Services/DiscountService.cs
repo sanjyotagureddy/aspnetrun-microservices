@@ -1,27 +1,17 @@
-﻿using System;
-using System.Threading.Tasks;
-using AutoMapper;
+﻿using AutoMapper;
 using Discount.Grpc.Entities;
 using Discount.Grpc.Protos;
 using Discount.Grpc.Repositories.Interfaces;
 using Grpc.Core;
-using Microsoft.Extensions.Logging;
 
 namespace Discount.Grpc.Services;
 
-public class DiscountService : DiscountProtoService.DiscountProtoServiceBase
+public class DiscountService(IDiscountRepository repository, ILogger<DiscountService> logger, IMapper mapper)
+  : DiscountProtoService.DiscountProtoServiceBase
 {
-  private readonly ILogger<DiscountService> _logger;
-  private readonly IMapper _mapper;
-  private readonly IDiscountRepository _repository;
-
-  public DiscountService(IDiscountRepository repository, ILogger<DiscountService> logger, IMapper mapper)
-  {
-    _repository = repository ?? throw new ArgumentNullException(nameof(repository));
-    _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
-    ;
-  }
+  private readonly ILogger<DiscountService> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+  private readonly IMapper _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+  private readonly IDiscountRepository _repository = repository ?? throw new ArgumentNullException(nameof(repository));
 
   public override async Task<CouponModel> GetDiscount(GetDiscountRequest request, ServerCallContext context)
   {

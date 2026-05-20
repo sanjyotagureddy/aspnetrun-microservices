@@ -1,0 +1,53 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/docker-compose.dcproj">
+      <Build />
+    </Project>
+  </Folder>
+  <Folder Name="/src/ApiGateways/">
+    <Project Path="src/ApiGateways/OcelotApiGateway/OcelotApiGateway.csproj" />
+    <Project Path="src/ApiGateways/Shopping.Aggregator/Shopping.Aggregator.csproj" />
+  </Folder>
+  <Folder Name="/src/BuildingBlocks/">
+    <Project Path="src/BuildingBlocks/EventBus.Messages/EventBus.Messages.csproj" />
+  </Folder>
+  <Folder Name="/src/Services/" />
+  <Folder Name="/src/Services/Basket/">
+    <Project Path="src/Services/Basket/Basket.API/Basket.API.csproj" />
+  </Folder>
+  <Folder Name="/src/Services/Catalog/">
+    <Project Path="src/Services/Catalog/Catalog.API/Catalog.API.csproj" />
+  </Folder>
+  <Folder Name="/src/Services/Discount/">
+    <Project Path="src/Services/Discount/Discount.API/Discount.API.csproj" />
+    <Project Path="src/Services/Discount/Discount.Grpc/Discount.Grpc.csproj" />
+  </Folder>
+  <Folder Name="/src/Services/Ordering/">
+    <Project Path="src/Services/Ordering/Ordering.API/Ordering.API.csproj" />
+    <Project Path="src/Services/Ordering/Ordering.Application/Ordering.Application.csproj" />
+    <Project Path="src/Services/Ordering/Ordering.Domain/Ordering.Domain.csproj" />
+    <Project Path="src/Services/Ordering/Ordering.Infrastructure/Ordering.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/test/" />
+  <Folder Name="/test/ApiGateways/">
+    <Project Path="Tests/Shopping.Aggregator.Test/Shopping.Aggregator.Test.csproj" />
+  </Folder>
+  <Folder Name="/test/Services/" />
+  <Folder Name="/test/Services/Basket/">
+    <Project Path="Tests/Basket/Basket.API.Test/Basket.API.Test.csproj" />
+  </Folder>
+  <Folder Name="/test/Services/Catalog/">
+    <Project Path="Tests/Catalog/Catalog.API.Test/Catalog.API.Test.csproj" />
+  </Folder>
+  <Folder Name="/test/Services/Discount/">
+    <Project Path="Tests/Discount/Discount.API.Test/Discount.API.Test.csproj" />
+    <Project Path="Tests/Discount/Discount.Grpc.Test/Discount.Grpc.Test.csproj" />
+  </Folder>
+  <Folder Name="/test/Services/Ordering/">
+    <Project Path="Tests/Ordering/Ordering.API.Test/Ordering.API.Test.csproj" />
+  </Folder>
+</Solution>

@@ -1,17 +1,10 @@
-﻿using System;
-using System.Threading.Tasks;
-using Discount.Grpc.Protos;
+﻿using Discount.Grpc.Protos;
 
 namespace Basket.API.GrpcServices;
 
-public class DiscountGrpcService
+public class DiscountGrpcService(DiscountProtoService.DiscountProtoServiceClient discountProtoService)
 {
-  private readonly DiscountProtoService.DiscountProtoServiceClient _discountProtoService;
-
-  public DiscountGrpcService(DiscountProtoService.DiscountProtoServiceClient discountProtoService)
-  {
-    _discountProtoService = discountProtoService ?? throw new ArgumentNullException(nameof(discountProtoService));
-  }
+  private readonly DiscountProtoService.DiscountProtoServiceClient _discountProtoService = discountProtoService ?? throw new ArgumentNullException(nameof(discountProtoService));
 
   public async Task<CouponModel> GetDiscount(string productName)
   {

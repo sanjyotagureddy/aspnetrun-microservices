@@ -1,0 +1,24 @@
+# top-most EditorConfig file
+root = true
+
+[*.cs]
+charset = utf-8-bom
+indent_style = space
+indent_size = 4
+end_of_line = crlf
+insert_final_newline = true
+dotnet_sort_system_directives_first = true
+
+# C# code style
+dotnet_style_qualification_for_field = false:suggestion
+dotnet_style_qualification_for_property = false:suggestion
+dotnet_style_qualification_for_method = false:suggestion
+dotnet_style_qualification_for_event = false:suggestion
+
+# prefer var
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_elsewhere = false:suggestion
+
+[*.{cs,csproj}]
+indent_size = 4

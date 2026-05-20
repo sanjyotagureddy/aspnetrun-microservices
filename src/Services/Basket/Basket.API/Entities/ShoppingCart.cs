@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace Basket.API.Entities;
+﻿namespace Basket.API.Entities;
 
 public class ShoppingCart
 {

@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
-using Catalog.API.Entities;
+﻿using Catalog.API.Entities;
 
 namespace Catalog.API.Repositories.Interfaces;
 

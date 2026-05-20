@@ -1,6 +1,4 @@
-﻿using System;
-using System.Net;
-using System.Threading.Tasks;
+﻿using System.Net;
 using AutoMapper;
 using Basket.API.Entities;
 using Basket.API.GrpcServices;
@@ -13,21 +11,17 @@ namespace Basket.API.Controllers;
 
 [Route("api/v1/[controller]")]
 [ApiController]
-public class BasketController : ControllerBase
+public class BasketController(
+  IBasketRepository repository,
+  DiscountGrpcService discountGrpcService,
+  IPublishEndpoint publishEndpoint,
+  IMapper mapper)
+  : ControllerBase
 {
-  private readonly DiscountGrpcService _discountGrpcService;
-  private readonly IMapper _mapper;
-  private readonly IPublishEndpoint _publishEndpoint;
-  private readonly IBasketRepository _repository;
-
-  public BasketController(IBasketRepository repository, DiscountGrpcService discountGrpcService,
-    IPublishEndpoint publishEndpoint, IMapper mapper)
-  {
-    _repository = repository ?? throw new ArgumentNullException(nameof(repository));
-    _discountGrpcService = discountGrpcService ?? throw new ArgumentNullException(nameof(discountGrpcService));
-    _publishEndpoint = publishEndpoint ?? throw new ArgumentNullException(nameof(publishEndpoint));
-    _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
-  }
+  private readonly DiscountGrpcService _discountGrpcService = discountGrpcService ?? throw new ArgumentNullException(nameof(discountGrpcService));
+  private readonly IMapper _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+  private readonly IPublishEndpoint _publishEndpoint = publishEndpoint ?? throw new ArgumentNullException(nameof(publishEndpoint));
+  private readonly IBasketRepository _repository = repository ?? throw new ArgumentNullException(nameof(repository));
 
   [HttpGet("{userName}", Name = "GetBasket")]
   [ProducesResponseType(typeof(ShoppingCart), (int)HttpStatusCode.OK)]

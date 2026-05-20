@@ -1,21 +1,14 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
-using MediatR;
+﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using Ordering.Application.Exceptions;
 
 namespace Ordering.Application.Behaviors;
 
-public class UnhandledExceptionBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+public class UnhandledExceptionBehavior<TRequest, TResponse>(ILogger<TRequest> logger)
+  : IPipelineBehavior<TRequest, TResponse>
   where TRequest : IRequest<TResponse>
 {
-  private readonly ILogger<TRequest> _logger;
-
-  public UnhandledExceptionBehavior(ILogger<TRequest> logger)
-  {
-    _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-  }
+  private readonly ILogger<TRequest> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
   public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next,
     CancellationToken cancellationToken)

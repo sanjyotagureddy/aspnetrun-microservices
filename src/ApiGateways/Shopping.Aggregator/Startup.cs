@@ -1,23 +1,12 @@
-using System;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Shopping.Aggregator.Services;
 using Shopping.Aggregator.Services.Interfaces;
 
 namespace Shopping.Aggregator;
 
-public class Startup
+public class Startup(IConfiguration configuration)
 {
-  public Startup(IConfiguration configuration)
-  {
-    Configuration = configuration;
-  }
-
-  public IConfiguration Configuration { get; }
+  public IConfiguration Configuration { get; } = configuration;
 
   // This method gets called by the runtime. Use this method to add services to the container.
   public void ConfigureServices(IServiceCollection services)

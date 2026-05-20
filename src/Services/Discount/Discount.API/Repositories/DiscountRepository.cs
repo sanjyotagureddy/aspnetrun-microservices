@@ -1,21 +1,13 @@
-﻿using System;
-using System.Threading.Tasks;
-using Dapper;
+﻿using Dapper;
 using Discount.API.Entities;
 using Discount.API.Repositories.Interfaces;
-using Microsoft.Extensions.Configuration;
 using Npgsql;
 
 namespace Discount.API.Repositories;
 
-public class DiscountRepository : IDiscountRepository
+public class DiscountRepository(IConfiguration configuration) : IDiscountRepository
 {
-  private readonly IConfiguration _configuration;
-
-  public DiscountRepository(IConfiguration configuration)
-  {
-    _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-  }
+  private readonly IConfiguration _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
 
   public async Task<Coupon> GetDiscount(string productName)
   {

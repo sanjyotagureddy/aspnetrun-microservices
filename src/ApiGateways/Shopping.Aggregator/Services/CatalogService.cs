@@ -1,21 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Net.Http;
-using System.Threading.Tasks;
-using Shopping.Aggregator.Extensions;
+﻿using Shopping.Aggregator.Extensions;
 using Shopping.Aggregator.Models;
 using Shopping.Aggregator.Services.Interfaces;
 
 namespace Shopping.Aggregator.Services;
 
-public class CatalogService : ICatalogService
+public class CatalogService(HttpClient httpClient) : ICatalogService
 {
-  private readonly HttpClient _httpClient;
-
-  public CatalogService(HttpClient httpClient)
-  {
-    _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-  }
+  private readonly HttpClient _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
 
   public async Task<IEnumerable<CatalogModel>> GetCatalog()
   {

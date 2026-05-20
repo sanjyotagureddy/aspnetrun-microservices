@@ -1,6 +1,4 @@
-﻿using System;
-using System.Net;
-using System.Threading.Tasks;
+﻿using System.Net;
 using Discount.API.Entities;
 using Discount.API.Repositories.Interfaces;
 using Microsoft.AspNetCore.Mvc;
@@ -9,14 +7,9 @@ namespace Discount.API.Controllers;
 
 [Route("api/v1/[controller]")]
 [ApiController]
-public class DiscountController : ControllerBase
+public class DiscountController(IDiscountRepository repository) : ControllerBase
 {
-  private readonly IDiscountRepository _repository;
-
-  public DiscountController(IDiscountRepository repository)
-  {
-    _repository = repository ?? throw new ArgumentNullException(nameof(repository));
-  }
+  private readonly IDiscountRepository _repository = repository ?? throw new ArgumentNullException(nameof(repository));
 
   [HttpGet("{productName}", Name = "GetDiscount")]
   [ProducesResponseType(typeof(Coupon), (int)HttpStatusCode.OK)]

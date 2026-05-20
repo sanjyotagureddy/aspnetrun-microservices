@@ -1,26 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Net;
-using System.Threading.Tasks;
+﻿using System.Net;
 using Catalog.API.Entities;
 using Catalog.API.Repositories.Interfaces;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 
 namespace Catalog.API.Controllers;
 
 [Route("api/v1/[controller]")]
 [ApiController]
-public class CatalogController : ControllerBase
+public class CatalogController(IProductRepository repository, ILogger<CatalogController> logger)
+  : ControllerBase
 {
-  private readonly ILogger<CatalogController> _logger;
-  private readonly IProductRepository _repository;
-
-  public CatalogController(IProductRepository repository, ILogger<CatalogController> logger)
-  {
-    _repository = repository ?? throw new ArgumentNullException(nameof(repository));
-    _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-  }
+  private readonly ILogger<CatalogController> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+  private readonly IProductRepository _repository = repository ?? throw new ArgumentNullException(nameof(repository));
 
   [HttpGet]
   [ProducesResponseType(typeof(IEnumerable<Product>), (int)HttpStatusCode.OK)]
