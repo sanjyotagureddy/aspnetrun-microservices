@@ -1,15 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using MediatR;
+﻿using MediatR;
 
 namespace Ordering.Application.Features.Orders.Queries.GetOrdersList;
 
-public class GetOrdersListQuery : IRequest<List<OrdersVm>>
+public class GetOrdersListQuery(string userName) : IRequest<List<OrdersVm>>
 {
-  public GetOrdersListQuery(string userName)
-  {
-    UserName = userName ?? throw new ArgumentNullException(nameof(userName));
-  }
-
-  public string UserName { get; set; }
+  public string UserName { get; set; } = userName ?? throw new ArgumentNullException(nameof(userName));
 }

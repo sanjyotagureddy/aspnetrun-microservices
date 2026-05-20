@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Net;
+﻿using System.Net;
 using Catalog.API.Controllers;
 using Catalog.API.Entities;
 using Catalog.API.Repositories.Interfaces;

@@ -1,19 +1,11 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Ordering.Domain.Common;
 using Ordering.Domain.Entities;
 
 namespace Ordering.Infrastructure.Persistence;
 
-public class OrderContext : DbContext
+public class OrderContext(DbContextOptions options) : DbContext(options)
 {
-  public OrderContext(DbContextOptions options)
-    : base(options)
-  {
-  }
-
   public DbSet<Order> Orders { get; set; }
 
   public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

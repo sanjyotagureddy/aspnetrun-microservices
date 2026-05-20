@@ -1,21 +1,11 @@
-﻿using System;
+﻿namespace EventBus.Messages.Events;
 
-namespace EventBus.Messages.Events;
-
-public class IntegrationBaseEvent
+public class IntegrationBaseEvent(Guid id, DateTime creationDate)
 {
-  public IntegrationBaseEvent()
+  public IntegrationBaseEvent() : this(Guid.NewGuid(), DateTime.UtcNow)
   {
-    Id = Guid.NewGuid();
-    CreationDate = DateTime.UtcNow;
   }
 
-  public IntegrationBaseEvent(Guid id, DateTime creationDate)
-  {
-    Id = id;
-    CreationDate = creationDate;
-  }
-
-  public Guid Id { get; set; }
-  public DateTime CreationDate { get; set; }
+  public Guid Id { get; set; } = id;
+  public DateTime CreationDate { get; set; } = creationDate;
 }

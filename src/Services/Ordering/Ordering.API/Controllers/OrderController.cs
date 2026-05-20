@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Net;
-using System.Threading.Tasks;
+﻿using System.Net;
 using MediatR;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Ordering.Application.Features.Orders.Commands.CheckoutOrder;
 using Ordering.Application.Features.Orders.Commands.DeleteCommand;
@@ -14,14 +10,9 @@ namespace Ordering.API.Controllers;
 
 [Route("api/v1/[controller]")]
 [ApiController]
-public class OrderController : ControllerBase
+public class OrderController(IMediator mediator) : ControllerBase
 {
-  private readonly IMediator _mediator;
-
-  public OrderController(IMediator mediator)
-  {
-    _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
-  }
+  private readonly IMediator _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
 
   [HttpGet("{userName}", Name = "GetOrder")]
   [ProducesResponseType(typeof(IEnumerable<OrdersVm>), (int)HttpStatusCode.OK)]

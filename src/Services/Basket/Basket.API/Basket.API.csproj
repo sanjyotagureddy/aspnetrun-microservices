@@ -7,11 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" />
+    <PackageReference Include="AutoMapper" />
     <PackageReference Include="Grpc.AspNetCore" />
     <PackageReference Include="MassTransit" />
     <PackageReference Include="MassTransit.AspNetCore" />
     <PackageReference Include="MassTransit.RabbitMQ" />
+    <PackageReference Include="MediatR" />
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
     <PackageReference Include="Newtonsoft.Json" />

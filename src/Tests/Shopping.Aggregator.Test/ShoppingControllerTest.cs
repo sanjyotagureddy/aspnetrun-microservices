@@ -1,6 +1,4 @@
-using System.Collections.Generic;
 using System.Net;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using NUnit.Framework;
@@ -12,22 +10,15 @@ namespace Shopping.Aggregator.Test;
 
 public class ShoppingControllerTest
 {
-  private readonly Mock<IBasketService> _basketService;
-  private readonly Mock<ICatalogService> _catalogService;
-  private readonly Mock<IOrderService> _orderService;
+  private readonly Mock<IBasketService> _basketService = new();
+  private readonly Mock<ICatalogService> _catalogService = new();
+  private readonly Mock<IOrderService> _orderService = new();
 
   private BasketModel _basketModel;
   private CatalogModel _catalogModel;
 
   private ShoppingController _controller;
   private IEnumerable<OrderResponseModel> _orderResponseModel;
-
-  public ShoppingControllerTest()
-  {
-    _catalogService = new Mock<ICatalogService>();
-    _basketService = new Mock<IBasketService>();
-    _orderService = new Mock<IOrderService>();
-  }
 
   [SetUp]
   public void Setup()

@@ -1,5 +1,4 @@
 using System.Net;
-using System.Threading.Tasks;
 using Discount.API.Controllers;
 using Discount.API.Entities;
 using Discount.API.Repositories.Interfaces;

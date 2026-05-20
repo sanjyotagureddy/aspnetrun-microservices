@@ -1,6 +1,4 @@
 using Discount.Grpc.Extensions;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Hosting;
 
 namespace Discount.Grpc;
 

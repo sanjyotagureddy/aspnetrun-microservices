@@ -1,12 +1,16 @@
-using System.Collections.Generic;
 using System.Net;
-using System.Threading;
+
 using AutoMapper;
+
 using MediatR;
+
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+
 using Moq;
+
 using NUnit.Framework;
+
 using Ordering.API.Controllers;
 using Ordering.Application.Contracts.Infrastructure;
 using Ordering.Application.Contracts.Persistence;
@@ -20,144 +24,131 @@ namespace Ordering.API.Test;
 
 public class Tests
 {
-  private readonly Mock<IMediator> _mockMediatr;
+    private readonly Mock<IMediator> _mockMediatr = new();
 
-  private readonly Order _order;
-  private readonly Mock<IOrderRepository> _orderRepoMock;
-  private readonly List<Order> _orders;
-
-  private readonly UpdateOrderCommand _updateOrderCommand;
-  private OrderController _controller;
-  private Mock<ILogger<DeleteOrderCommandHandler>> _deleteCommandLogger;
-  private DeleteOrderCommandHandler _deleteOrderCommandHandler;
-  private Mock<IEmailService> _emailMock;
-
-  private GetOrdersListQueryHandler _getOrdersListQueryHandler;
-  private IMapper _mapper;
-  private Mock<IMediator> _mediator;
-  private Mock<ILogger<UpdateOrderCommandHandler>> _updateCommandLogger;
-  private UpdateOrderCommandHandler _updateOrderCommandHandler;
-
-  public Tests()
+    private readonly Order _order = new() { UserName = "swn" };
+    private readonly Mock<IOrderRepository> _orderRepoMock = new();
+    private readonly List<Order> _orders = new()
   {
-    _mediator = new Mock<IMediator>();
-    _emailMock = new Mock<IEmailService>();
-    _orderRepoMock = new Mock<IOrderRepository>();
-    _mockMediatr = new Mock<IMediator>();
-
-    _order = new Order { UserName = "swn" };
-    _orders = new List<Order>
+    new()
     {
-      new()
-      {
-        UserName = "swn"
-      }
-    };
-
-    _updateOrderCommand = new UpdateOrderCommand
-    {
-      UserName = "swn",
-      TotalPrice = 0
-    };
-  }
-
-  [SetUp]
-  public void Setup()
-  {
-    //Mapper
-    var mapperConfig = new MapperConfiguration(mc => { mc.AddProfile(new MappingProfile()); });
-    _mapper = mapperConfig.CreateMapper();
-
-    //Controller
-    _controller = new OrderController(_mockMediatr.Object);
-    _deleteCommandLogger = new Mock<ILogger<DeleteOrderCommandHandler>>();
-  }
-
-  [Test]
-  [TestCase("swn")]
-  public void GetOrdersByUserName(string userName)
-  {
-    _orderRepoMock.Setup(p => p.GetOrdersByUserName(userName)).ReturnsAsync(_orders);
-    //GET QueryHandler
-    _getOrdersListQueryHandler = new GetOrdersListQueryHandler(_orderRepoMock.Object, _mapper);
-    _mockMediatr.Setup(m => m.Send(It.IsAny<GetOrdersListQuery>(), It.IsAny<CancellationToken>()))
-      .Returns(async () =>
-        await _getOrdersListQueryHandler.Handle(new GetOrdersListQuery(userName),
-          new CancellationToken()));
-
-    var orders = _controller.GetOrdersByUserName(userName);
-    if (orders.Result.Result is OkObjectResult okResult)
-    {
-      Assert.NotNull(orders.Result);
-      Assert.AreEqual((int)HttpStatusCode.OK, okResult.StatusCode);
+      UserName = "swn"
     }
-    else
+  };
+
+    private readonly UpdateOrderCommand _updateOrderCommand = new()
     {
-      Assert.Fail();
+        UserName = "swn",
+        TotalPrice = 0
+    };
+    private OrderController _controller;
+    private Mock<ILogger<DeleteOrderCommandHandler>> _deleteCommandLogger;
+    private DeleteOrderCommandHandler _deleteOrderCommandHandler;
+    private Mock<IEmailService> _emailMock = new();
+
+    private GetOrdersListQueryHandler _getOrdersListQueryHandler;
+    private IMapper _mapper;
+    private Mock<IMediator> _mediator = new();
+    private Mock<ILogger<UpdateOrderCommandHandler>> _updateCommandLogger;
+    private UpdateOrderCommandHandler _updateOrderCommandHandler;
+
+    [SetUp]
+    public void Setup()
+    {
+        //Mapper
+        var mapperConfig = new MapperConfiguration(mc => { mc.AddProfile(new MappingProfile()); }, new LoggerFactory());
+        _mapper = mapperConfig.CreateMapper();
+
+        //Controller
+        _controller = new OrderController(_mockMediatr.Object);
+        _deleteCommandLogger = new Mock<ILogger<DeleteOrderCommandHandler>>();
     }
-  }
 
-  [Test]
-  public void UpdateOrder_ReturnNoContent()
-  {
-    _updateCommandLogger = new Mock<ILogger<UpdateOrderCommandHandler>>();
-    _orderRepoMock.Setup(p => p.GetByIdAsync(It.IsAny<int>())).ReturnsAsync(_order);
+    [Test]
+    [TestCase("swn")]
+    public void GetOrdersByUserName(string userName)
+    {
+        _orderRepoMock.Setup(p => p.GetOrdersByUserName(userName)).ReturnsAsync(_orders);
+        //GET QueryHandler
+        _getOrdersListQueryHandler = new GetOrdersListQueryHandler(_orderRepoMock.Object, _mapper);
+        _mockMediatr.Setup(m => m.Send(It.IsAny<GetOrdersListQuery>(), It.IsAny<CancellationToken>()))
+          .Returns(async () =>
+            await _getOrdersListQueryHandler.Handle(new GetOrdersListQuery(userName),
+              CancellationToken.None));
 
-    //GET QueryHandler
-    _updateOrderCommandHandler =
-      new UpdateOrderCommandHandler(_orderRepoMock.Object, _mapper, _updateCommandLogger.Object);
-    _mockMediatr.Setup(m => m.Send(It.IsAny<UpdateOrderCommand>(), It.IsAny<CancellationToken>()))
-      .Returns(async () =>
-        await _updateOrderCommandHandler.Handle(new UpdateOrderCommand(),
-          new CancellationToken()));
+        var orders = _controller.GetOrdersByUserName(userName);
+        if (orders.Result.Result is OkObjectResult okResult)
+        {
+            Assert.NotNull(orders.Result);
+            Assert.AreEqual((int)HttpStatusCode.OK, okResult.StatusCode);
+        }
+        else
+        {
+            Assert.Fail();
+        }
+    }
 
-    _orderRepoMock.Setup(p => p.UpdateAsync(It.IsAny<Order>()));
-    var orders = _controller.UpdateOrder(_updateOrderCommand);
-    if (orders.Result is NoContentResult okObject)
-      Assert.Pass();
-    else
-      Assert.Fail();
-  }
+    [Test]
+    public void UpdateOrder_ReturnNoContent()
+    {
+        _updateCommandLogger = new Mock<ILogger<UpdateOrderCommandHandler>>();
+        _orderRepoMock.Setup(p => p.GetByIdAsync(It.IsAny<int>())).ReturnsAsync(_order);
 
-  [Test]
-  [TestCase(2)]
-  public void DeleteOrder_ReturnNoContent(int id)
-  {
-    _deleteCommandLogger = new Mock<ILogger<DeleteOrderCommandHandler>>();
-    _orderRepoMock.Setup(p => p.GetByIdAsync(It.IsAny<int>())).ReturnsAsync(_order);
-    //GET QueryHandler
-    _deleteOrderCommandHandler =
-      new DeleteOrderCommandHandler(_orderRepoMock.Object, _mapper, _deleteCommandLogger.Object);
-    _mockMediatr.Setup(m => m.Send(It.IsAny<DeleteOrderCommand>(), It.IsAny<CancellationToken>()))
-      .Returns(async () =>
-        await _deleteOrderCommandHandler.Handle(new DeleteOrderCommand(),
-          new CancellationToken()));
+        //GET QueryHandler
+        _updateOrderCommandHandler =
+          new UpdateOrderCommandHandler(_orderRepoMock.Object, _mapper, _updateCommandLogger.Object);
+        _mockMediatr.Setup(m => m.Send(It.IsAny<UpdateOrderCommand>(), It.IsAny<CancellationToken>()))
+          .Returns(async () =>
+            await _updateOrderCommandHandler.Handle(new UpdateOrderCommand(),
+              CancellationToken.None));
 
-    _orderRepoMock.Setup(p => p.DeleteAsync(It.IsAny<Order>()));
+        _orderRepoMock.Setup(p => p.UpdateAsync(It.IsAny<Order>()));
+        var orders = _controller.UpdateOrder(_updateOrderCommand);
+        if (orders.Result is NoContentResult okObject)
+            Assert.Pass();
+        else
+            Assert.Fail();
+    }
 
-    var orders = _controller.DeleteOrder(id);
-    if (orders.Result is NoContentResult okObject)
-      Assert.AreEqual(okObject.StatusCode, (int)HttpStatusCode.NoContent);
-    else
-      Assert.Fail();
-  }
+    [Test]
+    [TestCase(2)]
+    public void DeleteOrder_ReturnNoContent(int id)
+    {
+        _deleteCommandLogger = new Mock<ILogger<DeleteOrderCommandHandler>>();
+        _orderRepoMock.Setup(p => p.GetByIdAsync(It.IsAny<int>())).ReturnsAsync(_order);
+        //GET QueryHandler
+        _deleteOrderCommandHandler =
+          new DeleteOrderCommandHandler(_orderRepoMock.Object, _mapper, _deleteCommandLogger.Object);
+        _mockMediatr.Setup(m => m.Send(It.IsAny<DeleteOrderCommand>(), It.IsAny<CancellationToken>()))
+          .Returns(async () =>
+            await _deleteOrderCommandHandler.Handle(new DeleteOrderCommand(),
+              CancellationToken.None));
 
-  [Test]
-  [TestCase("abc")]
-  public void GetOrdersByUserName_NotFound(string userName)
-  {
-    _orderRepoMock.Setup(p => p.GetOrdersByUserName(userName)).ReturnsAsync((IEnumerable<Order>)null);
-    //GET QueryHandler
-    _getOrdersListQueryHandler = new GetOrdersListQueryHandler(_orderRepoMock.Object, _mapper);
-    _mockMediatr.Setup(m => m.Send(It.IsAny<GetOrdersListQuery>(), It.IsAny<CancellationToken>()))
-      .Returns(async () =>
-        await _getOrdersListQueryHandler.Handle(new GetOrdersListQuery(userName),
-          new CancellationToken()));
+        _orderRepoMock.Setup(p => p.DeleteAsync(It.IsAny<Order>()));
 
-    var orders = _controller.GetOrdersByUserName(userName);
-    if (orders.Result.Result is OkObjectResult okResult)
-      Assert.IsNull(orders.Result.Value);
-    else
-      Assert.Fail();
-  }
+        var orders = _controller.DeleteOrder(id);
+        if (orders.Result is NoContentResult okObject)
+            Assert.AreEqual(okObject.StatusCode, (int)HttpStatusCode.NoContent);
+        else
+            Assert.Fail();
+    }
+
+    [Test]
+    [TestCase("abc")]
+    public void GetOrdersByUserName_NotFound(string userName)
+    {
+        _orderRepoMock.Setup(p => p.GetOrdersByUserName(userName)).ReturnsAsync((IEnumerable<Order>)null);
+        //GET QueryHandler
+        _getOrdersListQueryHandler = new GetOrdersListQueryHandler(_orderRepoMock.Object, _mapper);
+        _mockMediatr.Setup(m => m.Send(It.IsAny<GetOrdersListQuery>(), It.IsAny<CancellationToken>()))
+          .Returns(async () =>
+            await _getOrdersListQueryHandler.Handle(new GetOrdersListQuery(userName),
+              CancellationToken.None));
+
+        var orders = _controller.GetOrdersByUserName(userName);
+        if (orders.Result.Result is OkObjectResult okResult)
+            Assert.IsNull(orders.Result.Value);
+        else
+            Assert.Fail();
+    }
 }
