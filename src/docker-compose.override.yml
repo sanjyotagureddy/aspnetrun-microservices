@@ -1,5 +1,3 @@
-version: '3.4'
-
 services:
   catalogdb:
     container_name: catalogdb
@@ -69,8 +67,11 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - "DatabaseSettings:ConnectionString=mongodb://catalogdb:27017"
+      - "CacheSettings:UseRedis=true"
+      - "CacheSettings:ConnectionString=basketdb:6379"
     depends_on:
       - catalogdb
+      - basketdb
     ports:
       - "8000:80"
 
