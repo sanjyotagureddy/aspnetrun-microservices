@@ -2,8 +2,10 @@
 
   <PropertyGroup>
     <DockerComposeProjectPath>..\..\..\docker-compose.dcproj</DockerComposeProjectPath>
-    <DockerfileContext>..\..\..</DockerfileContext>
+    <DockerfileContext>..\..\..\..</DockerfileContext>
     <StartupObject>Basket.API.Program</StartupObject>
+    <UserSecretsId>ca2a94eb-9aad-4a95-8dcd-ce33d5d9a223</UserSecretsId>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,7 +22,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\BuildingBlocks\EventBus.Messages\EventBus.Messages.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\EventBus.Messages\Shared.Messaging.csproj" />
+    <ProjectReference Include="..\..\..\SharedKernel\SharedKernel.csproj" />
   </ItemGroup>
 
   <ItemGroup>

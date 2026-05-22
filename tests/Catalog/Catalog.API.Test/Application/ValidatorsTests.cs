@@ -1,11 +1,11 @@
-using Catalog.API.Application.Features.Products.Commands.CreateProduct;
+﻿using Catalog.API.Application.Features.Products.Commands.CreateProduct;
 using Catalog.API.Application.Features.Products.Commands.UpdateProduct;
 using Catalog.API.Application.Features.Products.Validators;
 using Catalog.API.Domain.Entities;
 using FluentAssertions;
 using Xunit;
 
-namespace Catalog.API.Test;
+namespace Catalog.API.Test.Application;
 
 public class ValidatorsTests
 {

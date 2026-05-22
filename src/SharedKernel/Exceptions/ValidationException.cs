@@ -1,6 +1,4 @@
-using SharedKernel.Errors;
-
-namespace SharedKernel.Exceptions;
+﻿namespace SharedKernel.Exceptions;
 
 public class ValidationException : BaseException
 {

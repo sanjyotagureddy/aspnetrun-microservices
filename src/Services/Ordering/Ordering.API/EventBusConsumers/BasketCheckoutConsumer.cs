@@ -1,8 +1,12 @@
 ﻿using AutoMapper;
-using EventBus.Messages.Events;
+
 using MassTransit;
+
 using MediatR;
+
 using Ordering.Application.Features.Orders.Commands.CheckoutOrder;
+
+using Shared.Messaging.Events;
 
 namespace Ordering.API.EventBusConsumers;
 

@@ -9,14 +9,12 @@
     </Project>
   </Folder>
   <Folder Name="/src/.sharedkernel/">
+    <Project Path="src/BuildingBlocks/EventBus.Messages/Shared.Messaging.csproj" />
     <Project Path="src/SharedKernel/SharedKernel.csproj" Id="eb53c7c1-7732-4313-9aac-ff45b5d9116a" />
   </Folder>
-  <Folder Name="/src/ApiGateways/">
+  <Folder Name="/src/api-gateway/">
     <Project Path="src/ApiGateways/OcelotApiGateway/OcelotApiGateway.csproj" />
     <Project Path="src/ApiGateways/Shopping.Aggregator/Shopping.Aggregator.csproj" />
-  </Folder>
-  <Folder Name="/src/BuildingBlocks/">
-    <Project Path="src/BuildingBlocks/EventBus.Messages/EventBus.Messages.csproj" />
   </Folder>
   <Folder Name="/src/Services/" />
   <Folder Name="/src/Services/Basket/">

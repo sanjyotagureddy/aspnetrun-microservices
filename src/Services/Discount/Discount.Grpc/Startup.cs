@@ -1,6 +1,8 @@
 ﻿using Discount.Grpc.Repositories;
 using Discount.Grpc.Repositories.Interfaces;
 using Discount.Grpc.Services;
+using SharedKernel;
+using SharedKernel.Middleware;
 
 namespace Discount.Grpc;
 
@@ -12,7 +14,8 @@ public class Startup
   {
     services.AddScoped<IDiscountRepository, DiscountRepository>();
     services.AddAutoMapper(cfg => { }, typeof(Startup));
-        services.AddGrpc();
+    services.AddGrpc();
+    services.AddHealthChecks();
   }
 
   // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -20,11 +23,16 @@ public class Startup
   {
     if (env.IsDevelopment()) app.UseDeveloperExceptionPage();
 
-    app.UseRouting();
+    app.UseMiddleware<RequestContextMiddleware>();
+    // Global exception handler for the service (returns SharedKernel.Errors.Error payload)
+    app.UseGlobalExceptionHandler(Constants.ServiceCodes.Discount);
+        app.UseRouting();
+
 
     app.UseEndpoints(endpoints =>
     {
       endpoints.MapGrpcService<DiscountService>();
+      endpoints.MapHealthChecks("/health");
 
       endpoints.MapGet("/",
         async context =>

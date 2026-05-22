@@ -1,17 +1,17 @@
-using Catalog.API.Application.Behaviors;
+﻿using Catalog.API.Application.Behaviors;
 using Catalog.API.Application.Contracts.Persistence;
 using Catalog.API.Application.Features.Products.Commands.CreateProduct;
 using Catalog.API.Application.Features.Products.Commands.UpdateProduct;
 using Catalog.API.Application.Features.Products.Validators;
 using Catalog.API.Infrastructure.Persistence;
 using Catalog.API.Infrastructure.Persistence.Repositories;
-using Catalog.API.Middleware;
 using FluentValidation;
 using MediatR;
 using Microsoft.OpenApi;
-using SharedKernel.Web;
 using SharedKernel;
+using SharedKernel.Errors;
 using SharedKernel.Middleware;
+using SharedKernel.Web;
 
 namespace Catalog.API;
 
@@ -23,13 +23,14 @@ public class Startup(IConfiguration configuration)
     public void ConfigureServices(IServiceCollection services)
     {
         services.AddControllers();
+        services.AddHealthChecks();
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<Startup>());
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
         services.AddTransient<IValidator<CreateProductCommand>, CreateProductCommandValidator>();
         services.AddTransient<IValidator<UpdateProductCommand>, UpdateProductCommandValidator>();
 
         var useRedis = Configuration.GetValue<bool>("CacheSettings:UseRedis");
-        var redisConnectionString = Configuration.GetValue<string>("CacheSettings:ConnectionString");
+        var redisConnectionString = Configuration.GetValue<string>("CacheSettings:ConnectionString") ?? throw Errors.ServerSide.ConfigurationMissing("Missing Redis connection string.");
         if (useRedis && !string.IsNullOrWhiteSpace(redisConnectionString))
         {
             services.AddStackExchangeRedisCache(options => { options.Configuration = redisConnectionString; });
@@ -55,6 +56,8 @@ public class Startup(IConfiguration configuration)
             app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Catalog.API v1"));
         }
 
+        app.UseMiddleware<RequestContextMiddleware>();
+
         // Global exception handler for the service (returns SharedKernel.Errors.Error payload)
         app.UseGlobalExceptionHandler(Constants.ServiceCodes.Catalog);
 
@@ -63,6 +66,10 @@ public class Startup(IConfiguration configuration)
 
         app.UseAuthorization();
 
-        app.UseEndpoints(endpoints => { endpoints.MapDiscoveredEndpoints(); });
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapHealthChecks("/health");
+            endpoints.MapDiscoveredEndpoints();
+        });
     }
 }

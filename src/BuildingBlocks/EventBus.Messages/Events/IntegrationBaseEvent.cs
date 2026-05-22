@@ -1,4 +1,4 @@
-﻿namespace EventBus.Messages.Events;
+﻿namespace Shared.Messaging.Events;
 
 public class IntegrationBaseEvent(Guid id, DateTime creationDate)
 {

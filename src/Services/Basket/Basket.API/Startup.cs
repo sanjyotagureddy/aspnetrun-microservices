@@ -1,11 +1,11 @@
-using Basket.API.GrpcServices;
+﻿using Basket.API.GrpcServices;
 using Basket.API.Repositories;
 using Basket.API.Repositories.Interfaces;
-
 using Discount.Grpc.Protos;
-
 using MassTransit;
 using Microsoft.OpenApi;
+using SharedKernel;
+using SharedKernel.Middleware;
 
 namespace Basket.API;
 
@@ -38,6 +38,7 @@ public class Startup(IConfiguration configuration)
         });
 
         services.AddControllers();
+        services.AddHealthChecks();
         services.AddSwaggerGen(c => { c.SwaggerDoc("v1", new OpenApiInfo { Title = "Basket.API", Version = "v1" }); });
     }
 
@@ -50,11 +51,19 @@ public class Startup(IConfiguration configuration)
             app.UseSwagger();
             app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Basket.API v1"));
         }
+        app.UseMiddleware<RequestContextMiddleware>();
+        // Global exception handler for the service (returns SharedKernel.Errors.Error payload)
+        app.UseGlobalExceptionHandler(Constants.ServiceCodes.Basket);
+
 
         app.UseRouting();
 
         app.UseAuthorization();
 
-        app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapHealthChecks("/health");
+            endpoints.MapControllers();
+        });
     }
 }

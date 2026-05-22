@@ -1,4 +1,4 @@
-using Catalog.API.Application.Contracts.Persistence;
+﻿using Catalog.API.Application.Contracts.Persistence;
 using Catalog.API.Application.Features.Products.Commands.CreateProduct;
 using Catalog.API.Application.Features.Products.Commands.DeleteProduct;
 using Catalog.API.Application.Features.Products.Commands.UpdateProduct;
@@ -9,7 +9,7 @@ using FluentAssertions;
 using Moq;
 using Xunit;
 
-namespace Catalog.API.Test;
+namespace Catalog.API.Test.Application;
 
 public class HandlersTests
 {

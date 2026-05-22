@@ -1,4 +1,4 @@
-using Catalog.API.Infrastructure.Persistence;
+﻿using Catalog.API.Infrastructure.Persistence;
 using Catalog.API.Infrastructure.Persistence.Models;
 using FluentAssertions;
 using MongoDB.Bson.Serialization;
@@ -6,7 +6,7 @@ using MongoDB.Driver;
 using Moq;
 using Xunit;
 
-namespace Catalog.API.Test;
+namespace Catalog.API.Test.Infrastructure;
 
 public class CatalogContextSeedTests
 {

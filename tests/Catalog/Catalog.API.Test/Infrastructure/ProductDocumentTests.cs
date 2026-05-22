@@ -1,9 +1,9 @@
-using Catalog.API.Domain.Entities;
+﻿using Catalog.API.Domain.Entities;
 using Catalog.API.Infrastructure.Persistence.Models;
 using FluentAssertions;
 using Xunit;
 
-namespace Catalog.API.Test;
+namespace Catalog.API.Test.Infrastructure;
 
 public class ProductDocumentTests
 {

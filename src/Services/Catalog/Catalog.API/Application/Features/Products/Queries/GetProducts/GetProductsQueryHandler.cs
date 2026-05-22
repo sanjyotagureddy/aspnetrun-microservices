@@ -1,4 +1,4 @@
-using Catalog.API.Application.Contracts.Persistence;
+﻿using Catalog.API.Application.Contracts.Persistence;
 using Catalog.API.Domain.Entities;
 using MediatR;
 

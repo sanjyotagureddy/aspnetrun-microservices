@@ -4,9 +4,7 @@ using Catalog.API.Application.Features.Products.Commands.UpdateProduct;
 using Catalog.API.Application.Features.Products.Queries.GetProductById;
 using Catalog.API.Application.Features.Products.Queries.GetProducts;
 using Catalog.API.Domain.Entities;
-
 using MediatR;
-
 using SharedKernel.Web;
 
 namespace Catalog.API.Endpoints;

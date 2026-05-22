@@ -1,4 +1,5 @@
 ﻿using FluentValidation;
+using FluentValidation.Results;
 using MediatR;
 using SharedKernel;
 using SharedKernel.Errors;
@@ -20,8 +21,8 @@ internal sealed class ValidationBehavior<TRequest, TResponse>(IEnumerable<IValid
         }
 
         var context = new ValidationContext<TRequest>(request);
-        var validationResults = await Task.WhenAll(_validators.Select(validator => validator.ValidateAsync(context, cancellationToken)));
-        var failures = validationResults.SelectMany(result => result.Errors).Where(error => error is not null).ToArray();
+        ValidationResult[] validationResults = await Task.WhenAll(_validators.Select(validator => validator.ValidateAsync(context, cancellationToken)));
+        ValidationFailure[] failures = validationResults.SelectMany(result => result.Errors).Where(error => error is not null).ToArray();
 
         if (failures.Length > 0)
         {

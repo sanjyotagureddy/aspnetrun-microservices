@@ -1,11 +1,16 @@
 ﻿using System.Net;
+
 using AutoMapper;
+
 using Basket.API.Entities;
 using Basket.API.GrpcServices;
 using Basket.API.Repositories.Interfaces;
-using EventBus.Messages.Events;
+
 using MassTransit;
+
 using Microsoft.AspNetCore.Mvc;
+
+using Shared.Messaging.Events;
 
 namespace Basket.API.Controllers;
 
