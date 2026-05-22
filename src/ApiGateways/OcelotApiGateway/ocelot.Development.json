@@ -2,7 +2,7 @@
     "Routes": [
         //Catalog API
         {
-            "DownstreamPathTemplate": "/api/v1/Catalog",
+            "DownstreamPathTemplate": "/api/v1/catalog/products",
             "DownstreamScheme": "http",
             "DownstreamHostAndPorts": [
                 {
@@ -10,12 +10,12 @@
                     "Port": "80"
                 }
             ],
-            "UpstreamPathTemplate": "/Catalog",
-            "UpstreamHttpMethod": [ "GET", "POST", "PUT" ],
+            "UpstreamPathTemplate": "/catalog/products",
+            "UpstreamHttpMethod": [ "GET", "POST" ],
             "FileCacheOptions": { "TtlSeconds": 30 }
         },
         {
-            "DownstreamPathTemplate": "/api/v1/Catalog/{id}",
+            "DownstreamPathTemplate": "/api/v1/catalog/products/{id}",
             "DownstreamScheme": "http",
             "DownstreamHostAndPorts": [
                 {
@@ -23,32 +23,8 @@
                     "Port": "80"
                 }
             ],
-            "UpstreamPathTemplate": "/Catalog/{id}",
+            "UpstreamPathTemplate": "/catalog/products/{id}",
             "UpstreamHttpMethod": [ "GET", "DELETE" ]
-        },
-        {
-            "DownstreamPathTemplate": "/api/v1/Catalog/GetProductByCategory/{category}",
-            "DownstreamScheme": "http",
-            "DownstreamHostAndPorts": [
-                {
-                    "Host": "catalog.api",
-                    "Port": "80"
-                }
-            ],
-            "UpstreamPathTemplate": "/Catalog/GetProductByCategory/{category}",
-            "UpstreamHttpMethod": [ "GET" ]
-        },
-        {
-            "DownstreamPathTemplate": "/api/v1/Catalog/GetProductByName/{name}",
-            "DownstreamScheme": "http",
-            "DownstreamHostAndPorts": [
-                {
-                    "Host": "catalog.api",
-                    "Port": "80"
-                }
-            ],
-            "UpstreamPathTemplate": "/Catalog/GetProductByName/{name}",
-            "UpstreamHttpMethod": [ "GET" ]
         },
         //Basket API
         {
