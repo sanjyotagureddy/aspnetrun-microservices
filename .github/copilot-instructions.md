@@ -82,18 +82,13 @@ Guidance for Copilot / Automated Assistants
 - Do not introduce new project-level dependencies that break the declared project dependency rules.
 - Prefer small, incremental changes and include a minimal migration plan if structural changes are proposed.
 
-Skills (compact, machine-friendly)
-- `.github/skills/architecture.SKILL.md` — architectural rules, VSA, CQRS, module extraction checklist
-- `.github/skills/project-dependencies.SKILL.md` — allowed project types and enforcement
-- `.github/skills/naming.SKILL.md` — naming and conventions
-- `.github/skills/coding.SKILL.md` — coding rules (async, DI, mapping)
-- `.github/skills/design-patterns.SKILL.md` — patterns, reusability, sagas
-- `.github/skills/testing.SKILL.md` — test pyramid and coverage enforcement
-- `.github/skills/ci.SKILL.md` — CI pipeline rules and artifacts
+Instruction sources (compact)
+- `.github/instructions/` — canonical repository instruction documents. Use these files as the source of truth for architecture, coding, CI, testing and project-dependency guidance.
 
 Automated assistant usage
-- Read the corresponding `SKILL.md` for quick, machine-friendly rules and then consult the `docs/` file for complete rationale and examples.
-- When making changes that affect architecture, update both the `docs/` and `SKILL` artifacts and propose an ADR in `docs/architectural-decisions.md`.
+- Read the corresponding instruction file under `.github/instructions/` for quick, machine-friendly rules and then consult the `docs/` files for complete rationale and examples.
+- You may now delete the legacy `.github/skills/` SKILL.md files — they were copied into VS Code prompts and the `.github/instructions/` directory; keep only `.github/instructions/` as the repo canonical source.
+- When making changes that affect architecture, update the matching instruction file and propose an ADR in `docs/architectural-decisions.md`.
 
 Onboarding and future enforcement
 - Add CI enforcement and automated checks incrementally: formatting/analyzers → unit tests → coverage gate → secret scanning.

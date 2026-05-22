@@ -8,6 +8,9 @@
       <Build />
     </Project>
   </Folder>
+  <Folder Name="/src/.sharedkernel/">
+    <Project Path="src/SharedKernel/SharedKernel.csproj" Id="eb53c7c1-7732-4313-9aac-ff45b5d9116a" />
+  </Folder>
   <Folder Name="/src/ApiGateways/">
     <Project Path="src/ApiGateways/OcelotApiGateway/OcelotApiGateway.csproj" />
     <Project Path="src/ApiGateways/Shopping.Aggregator/Shopping.Aggregator.csproj" />

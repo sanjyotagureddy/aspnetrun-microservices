@@ -1,3 +1,14 @@
+root = true
+
+[*.cs]
+indent_style = space
+indent_size = 4
+charset = utf-8-bom
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{cs,csproj}]
+dotnet_sort_system_directives_first = true
 # top-most EditorConfig file
 root = true
 
