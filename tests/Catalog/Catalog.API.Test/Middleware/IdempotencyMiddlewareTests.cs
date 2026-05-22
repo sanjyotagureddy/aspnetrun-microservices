@@ -1,13 +1,16 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
-using Catalog.API.Middleware;
+
 using FluentAssertions;
+
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Distributed;
+
 using Moq;
+using SharedKernel.Middleware;
 using Xunit;
 
-namespace Catalog.API.Test;
+namespace Catalog.API.Test.Middleware;
 
 public class IdempotencyMiddlewareTests
 {

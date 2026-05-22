@@ -83,6 +83,50 @@ docker-compose -f docker-compose.yml -f docker-compose.override.yml up -d
 ```
 3. Wait for docker compose all microservices. That’s it! (some microservices need extra time to work so please wait if not worked in first shut)
 
+If you already created the old Postgres volume with `/var/lib/postgresql/data`, remove that volume once before starting again so the new `/var/lib/postgresql` mount is used cleanly.
+
+### Optional: Add local host aliases (Windows)
+If you want stable local host names for all services in this repo, run the hosts update script from an **elevated** PowerShell window (Run as Administrator):
+
+```powershell
+cd E:\Projects\aspnetrun-microservices
+.\scripts\update-hosts.ps1
+```
+
+This adds aliases like:
+- `catalog.aspnetrun.local`
+- `basket.aspnetrun.local`
+- `discount.aspnetrun.local`
+- `ordering.aspnetrun.local`
+- `gateway.aspnetrun.local`
+- `aggregator.aspnetrun.local`
+
+To map aliases to your Docker host IP instead of localhost, run:
+
+```powershell
+.\scripts\update-hosts.ps1 -IpAddress 192.168.31.47
+```
+
+The script is idempotent and keeps a timestamped backup of your hosts file.
+
+Or add this block manually to your hosts file:
+
+```txt
+# BEGIN aspnetrun-microservices
+127.0.0.1 aspnetrun.local
+127.0.0.1 catalog.aspnetrun.local
+127.0.0.1 basket.aspnetrun.local
+127.0.0.1 discount.aspnetrun.local
+127.0.0.1 discountgrpc.aspnetrun.local
+127.0.0.1 ordering.aspnetrun.local
+127.0.0.1 gateway.aspnetrun.local
+127.0.0.1 aggregator.aspnetrun.local
+127.0.0.1 rabbitmq.aspnetrun.local
+127.0.0.1 pgadmin.aspnetrun.local
+127.0.0.1 portainer.aspnetrun.local
+# END aspnetrun-microservices
+```
+
 4. You can **launch microservices** as below urls:
 
 * **Catalog API -> http://host.docker.internal:8000/swagger/index.html**

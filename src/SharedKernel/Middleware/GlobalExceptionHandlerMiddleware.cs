@@ -1,9 +1,4 @@
-using System.Text.Json;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
-using SharedKernel.Errors;
-
-namespace SharedKernel.Middleware;
+﻿namespace SharedKernel.Middleware;
 public sealed class GlobalExceptionHandlerMiddleware(RequestDelegate next, ILogger<GlobalExceptionHandlerMiddleware> logger, string serviceCode)
 {
     private readonly RequestDelegate _next = next ?? throw new ArgumentNullException(nameof(next));
@@ -43,7 +38,7 @@ public sealed class GlobalExceptionHandlerMiddleware(RequestDelegate next, ILogg
         {
             statusCode = 500;
             var infos = new List<Info>();
-            var cur = ex;
+            Exception cur = ex;
             while (cur != null)
             {
                 infos.Add(new Info(SharedKernel.Constants.CommonErrorCodes.Unknown, cur.Message ?? string.Empty));

@@ -1,6 +1,4 @@
-using SharedKernel.Errors;
-
-namespace SharedKernel.Exceptions;
+﻿namespace SharedKernel.Exceptions;
 
 /// <summary>
 /// Base exception type for services. Carries an HTTP status, a composed error code
@@ -37,7 +35,7 @@ public class BaseException : Exception
 
         if (innerExceptions != null)
         {
-            foreach (var ex in innerExceptions)
+            foreach (Exception ex in innerExceptions)
             {
                 if (ex is not null)
                 {

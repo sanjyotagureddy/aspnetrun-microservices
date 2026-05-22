@@ -1,4 +1,6 @@
-using Microsoft.OpenApi;
+﻿using Microsoft.OpenApi;
+using SharedKernel;
+using SharedKernel.Middleware;
 using Shopping.Aggregator.Services;
 using Shopping.Aggregator.Services.Interfaces;
 
@@ -21,6 +23,7 @@ public class Startup(IConfiguration configuration)
       c.BaseAddress = new Uri(Configuration["ApiSettings:OrderingUrl"]));
 
     services.AddControllers();
+    services.AddHealthChecks();
     services.AddSwaggerGen(c =>
     {
       c.SwaggerDoc("v1", new OpenApiInfo { Title = "Shopping.Aggregator", Version = "v1" });
@@ -37,10 +40,18 @@ public class Startup(IConfiguration configuration)
       app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Shopping.Aggregator v1"));
     }
 
-    app.UseRouting();
+    app.UseMiddleware<RequestContextMiddleware>();
+    // Global exception handler for the service (returns SharedKernel.Errors.Error payload)
+    app.UseGlobalExceptionHandler(Constants.ServiceCodes.ShoppingAggregator);
+
+        app.UseRouting();
 
     app.UseAuthorization();
 
-    app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
+    app.UseEndpoints(endpoints =>
+    {
+      endpoints.MapHealthChecks("/health");
+      endpoints.MapControllers();
+    });
   }
 }

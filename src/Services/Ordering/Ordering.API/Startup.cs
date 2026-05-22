@@ -1,12 +1,10 @@
-using EventBus.Messages.Common;
-
-using MassTransit;
-
+﻿using MassTransit;
 using Microsoft.OpenApi;
-
 using Ordering.API.EventBusConsumers;
 using Ordering.Application;
 using Ordering.Infrastructure;
+using SharedKernel;
+using SharedKernel.Middleware;
 
 namespace Ordering.API;
 
@@ -32,12 +30,13 @@ public class Startup(IConfiguration configuration)
             config.UsingRabbitMq((ctx, cfg) =>
         {
             cfg.Host(Configuration["EventBusSettings:HostAddress"]);
-            cfg.ReceiveEndpoint(EventBusConstants.BasketCheckoutQueue,
+            cfg.ReceiveEndpoint(Constants.EventBusConstants.BasketCheckoutQueue,
           c => { c.ConfigureConsumer<BasketCheckoutConsumer>(ctx); });
         });
         });
 
         services.AddControllers();
+        services.AddHealthChecks();
         services.AddSwaggerGen(c => { c.SwaggerDoc("v1", new OpenApiInfo { Title = "Ordering.API", Version = "v1" }); });
     }
 
@@ -51,10 +50,17 @@ public class Startup(IConfiguration configuration)
             app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Ordering.API v1"));
         }
 
+        app.UseMiddleware<RequestContextMiddleware>();
+        // Global exception handler for the service (returns SharedKernel.Errors.Error payload)
+        app.UseGlobalExceptionHandler(Constants.ServiceCodes.Ordering);
         app.UseRouting();
 
         app.UseAuthorization();
 
-        app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapHealthChecks("/health");
+            endpoints.MapControllers();
+        });
     }
 }

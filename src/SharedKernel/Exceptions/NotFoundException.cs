@@ -1,9 +1,7 @@
-namespace SharedKernel.Exceptions;
+﻿namespace SharedKernel.Exceptions;
 
 using System;
 using System.Collections.Generic;
-using SharedKernel;
-using SharedKernel.Errors;
 
 /// <summary>
 /// Common exception types that derive from <see cref="BaseException"/>.

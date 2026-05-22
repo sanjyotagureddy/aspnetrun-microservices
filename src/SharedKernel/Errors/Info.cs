@@ -1,17 +1,7 @@
-namespace SharedKernel.Errors;
+﻿namespace SharedKernel.Errors;
 
-public sealed record Info
+public sealed record Info(string Code, string Description)
 {
-    public string Code { get; }
-
-    public string Description { get; }
-
-    public Info(string code, string description)
-    {
-        Code = code;
-        Description = description;
-    }
-
     public Info() : this(string.Empty, string.Empty)
     {
     }

@@ -1,4 +1,4 @@
-using Discount.API.Repositories;
+﻿using Discount.API.Repositories;
 using Discount.API.Repositories.Interfaces;
 using Microsoft.OpenApi;
 
@@ -14,6 +14,7 @@ public class Startup(IConfiguration configuration)
     services.AddScoped<IDiscountRepository, DiscountRepository>();
 
     services.AddControllers();
+    services.AddHealthChecks();
     services.AddSwaggerGen(c => { c.SwaggerDoc("v1", new OpenApiInfo { Title = "Discount.API", Version = "v1" }); });
   }
 
@@ -31,6 +32,10 @@ public class Startup(IConfiguration configuration)
 
     app.UseAuthorization();
 
-    app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
+    app.UseEndpoints(endpoints =>
+    {
+      endpoints.MapHealthChecks("/health");
+      endpoints.MapControllers();
+    });
   }
 }

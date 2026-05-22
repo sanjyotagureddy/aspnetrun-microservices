@@ -1,9 +1,9 @@
-using System.Text.Json;
-using Microsoft.Extensions.Caching.Distributed;
+﻿using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Primitives;
 
-namespace Catalog.API.Middleware;
+namespace SharedKernel.Middleware;
 
-internal sealed class IdempotencyMiddleware(RequestDelegate next, IDistributedCache cache)
+public sealed class IdempotencyMiddleware(RequestDelegate next, IDistributedCache cache)
 {
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
 
@@ -18,7 +18,7 @@ internal sealed class IdempotencyMiddleware(RequestDelegate next, IDistributedCa
             return;
         }
 
-        if (!context.Request.Headers.TryGetValue("Idempotency-Key", out var key) || string.IsNullOrWhiteSpace(key))
+        if (!context.Request.Headers.TryGetValue("Idempotency-Key", out StringValues key) || string.IsNullOrWhiteSpace(key))
         {
             await _next(context);
             return;
@@ -28,7 +28,7 @@ internal sealed class IdempotencyMiddleware(RequestDelegate next, IDistributedCa
         var cachedResponse = await _cache.GetAsync(cacheKey, context.RequestAborted);
         if (cachedResponse is not null)
         {
-            var entry = JsonSerializer.Deserialize<CachedResponse>(cachedResponse, SerializerOptions);
+            CachedResponse? entry = JsonSerializer.Deserialize<CachedResponse>(cachedResponse, SerializerOptions);
             if (entry is not null)
             {
                 context.Response.StatusCode = entry.StatusCode;
@@ -48,7 +48,7 @@ internal sealed class IdempotencyMiddleware(RequestDelegate next, IDistributedCa
             }
         }
 
-        var originalBody = context.Response.Body;
+        Stream originalBody = context.Response.Body;
         await using var buffer = new MemoryStream();
         context.Response.Body = buffer;
 

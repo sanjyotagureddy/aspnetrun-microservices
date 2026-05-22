@@ -1,13 +1,13 @@
-using Catalog.API.Application.Behaviors;
+﻿using Catalog.API.Application.Behaviors;
 using FluentAssertions;
 using FluentValidation;
 using FluentValidation.Results;
 using MediatR;
 using Moq;
-using SharedKernelValidationException = SharedKernel.Exceptions.ValidationException;
 using Xunit;
+using SharedKernelValidationException = SharedKernel.Exceptions.ValidationException;
 
-namespace Catalog.API.Test;
+namespace Catalog.API.Test.Application;
 
 public class ValidationBehaviorTests
 {

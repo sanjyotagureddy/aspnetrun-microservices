@@ -1,4 +1,4 @@
-using Catalog.API.Domain.Entities;
+﻿using Catalog.API.Domain.Entities;
 using Catalog.API.Infrastructure.Persistence;
 using Catalog.API.Infrastructure.Persistence.Models;
 using Catalog.API.Infrastructure.Persistence.Repositories;
@@ -9,7 +9,7 @@ using MongoDB.Driver;
 using Moq;
 using Xunit;
 
-namespace Catalog.API.Test;
+namespace Catalog.API.Test.Infrastructure;
 
 public class ProductRepositoryTests
 {

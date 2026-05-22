@@ -1,4 +1,4 @@
-using Catalog.API.Infrastructure.Persistence.Models;
+﻿using Catalog.API.Infrastructure.Persistence.Models;
 using MongoDB.Driver;
 
 namespace Catalog.API.Infrastructure.Persistence;

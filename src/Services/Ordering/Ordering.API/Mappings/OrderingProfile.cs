@@ -1,6 +1,8 @@
 ﻿using AutoMapper;
-using EventBus.Messages.Events;
+
 using Ordering.Application.Features.Orders.Commands.CheckoutOrder;
+
+using Shared.Messaging.Events;
 
 namespace Ordering.API.Mappings;
 

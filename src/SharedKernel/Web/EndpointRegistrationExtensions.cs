@@ -19,10 +19,10 @@ public static class EndpointRegistrationExtensions
     /// <param name="app">The endpoint route builder used to define API routes.</param>
     public static void MapDiscoveredEndpoints(this IEndpointRouteBuilder app)
     {
-        var environment = app.ServiceProvider.GetRequiredService<IHostEnvironment>();
-        var currentScope = EndpointScopeResolver.Resolve(environment.EnvironmentName);
+        IHostEnvironment environment = app.ServiceProvider.GetRequiredService<IHostEnvironment>();
+        EndpointScope currentScope = EndpointScopeResolver.Resolve(environment.EnvironmentName);
 
-        var endpointTypes = AppDomain.CurrentDomain
+        Type[] endpointTypes = AppDomain.CurrentDomain
             .GetAssemblies()
             .Where(assembly => !assembly.IsDynamic)
             .SelectMany(assembly =>
@@ -43,10 +43,10 @@ public static class EndpointRegistrationExtensions
             .OrderBy(type => type.FullName)
             .ToArray();
 
-        using var scope = app.ServiceProvider.CreateScope();
-        var serviceProvider = scope.ServiceProvider;
+        using IServiceScope scope = app.ServiceProvider.CreateScope();
+        IServiceProvider serviceProvider = scope.ServiceProvider;
 
-        foreach (var endpointType in endpointTypes)
+        foreach (Type endpointType in endpointTypes)
         {
             var endpoint = (IEndpoint)ActivatorUtilities.CreateInstance(serviceProvider, endpointType);
             endpoint.MapEndpoints(app);
@@ -55,7 +55,7 @@ public static class EndpointRegistrationExtensions
 
     private static bool IsEndpointEnabledForScope(Type endpointType, EndpointScope currentScope)
     {
-        var endpointScope = endpointType.GetCustomAttribute<EndpointScopeAttribute>();
+        EndpointScopeAttribute endpointScope = endpointType.GetCustomAttribute<EndpointScopeAttribute>();
         return endpointScope is null || endpointScope.Includes(currentScope);
     }
 }
