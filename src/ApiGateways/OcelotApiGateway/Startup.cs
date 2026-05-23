@@ -1,9 +1,12 @@
-﻿using Ocelot.Cache.CacheManager;
+﻿using System.Diagnostics.CodeAnalysis;
+
+using Ocelot.Cache.CacheManager;
 using Ocelot.DependencyInjection;
 using Ocelot.Middleware;
 
 namespace OcelotApiGateway;
 
+[ExcludeFromCodeCoverage]
 public class Startup
 {
   // This method gets called by the runtime. Use this method to add services to the container.

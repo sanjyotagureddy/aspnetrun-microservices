@@ -1,9 +1,12 @@
-﻿using Discount.API.Repositories;
+﻿using System.Diagnostics.CodeAnalysis;
+
+using Discount.API.Repositories;
 using Discount.API.Repositories.Interfaces;
 using Microsoft.OpenApi;
 
 namespace Discount.API;
 
+[ExcludeFromCodeCoverage]
 public class Startup(IConfiguration configuration)
 {
   public IConfiguration Configuration { get; } = configuration;

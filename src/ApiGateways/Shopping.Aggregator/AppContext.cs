@@ -1,8 +1,11 @@
-﻿using SharedKernel.Context;
+﻿using System.Diagnostics.CodeAnalysis;
+
+using SharedKernel.Context;
 
 namespace Shopping.Aggregator;
 
 /// <inheritdoc />
+[ExcludeFromCodeCoverage]
 public class AppContext(string serviceName) : RequestContext(serviceName)
 {
     public new static AppContext Current

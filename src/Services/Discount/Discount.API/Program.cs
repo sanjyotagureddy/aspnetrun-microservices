@@ -1,7 +1,10 @@
+using System.Diagnostics.CodeAnalysis;
+
 using Discount.API.Extensions;
 
 namespace Discount.API;
 
+[ExcludeFromCodeCoverage]
 public class Program
 {
   public static void Main(string[] args)

@@ -1,8 +1,11 @@
+using System.Diagnostics.CodeAnalysis;
+
 using SharedKernel.Context;
 
 namespace Basket.API;
 
 /// <inheritdoc />
+[ExcludeFromCodeCoverage]
 public class AppContext(string serviceName) : RequestContext(serviceName)
 {
     public new static AppContext Current

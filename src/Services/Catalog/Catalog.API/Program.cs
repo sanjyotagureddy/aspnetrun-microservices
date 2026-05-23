@@ -1,5 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Catalog.API;
 
+[ExcludeFromCodeCoverage]
 public class Program
 {
   public static void Main(string[] args)

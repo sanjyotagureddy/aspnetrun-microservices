@@ -1,16 +1,18 @@
-﻿using SharedKernel.Context;
+﻿using System.Diagnostics.CodeAnalysis;
+using SharedKernel.Context;
 using SharedKernel.Middleware;
 
-namespace Ordering.API;
+namespace Shopping.Aggregator.Middlewares;
 
 /// <summary>
-/// Ordering API request context middleware.
+/// Shopping aggregator request context middleware.
 /// </summary>
+[ExcludeFromCodeCoverage]
 public sealed class RequestContextMiddleware(RequestDelegate next, IHostEnvironment environment, IEnumerable<IRequestContextEnricher> enrichers)
     : RequestContextMiddlewareBase(next, environment, enrichers)
 {
     protected override RequestContext CreateRequestContext(HttpContext httpContext, string serviceName)
     {
-        return Ordering.Domain.AppContext.FromHttpContext(httpContext, serviceName);
+        return AppContext.FromHttpContext(httpContext, serviceName);
     }
 }

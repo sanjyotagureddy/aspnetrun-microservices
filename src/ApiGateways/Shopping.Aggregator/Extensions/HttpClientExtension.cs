@@ -12,6 +12,6 @@ public static class HttpClientExtension
     var dataAsString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
     return JsonSerializer.Deserialize<T>(dataAsString,
-      new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+      new JsonSerializerOptions { PropertyNameCaseInsensitive = true, });
   }
 }

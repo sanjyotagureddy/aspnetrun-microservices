@@ -28,7 +28,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Extensions\" />
+    <Folder Include="Middlewares\Extensions\" />
   </ItemGroup>
 
 </Project>

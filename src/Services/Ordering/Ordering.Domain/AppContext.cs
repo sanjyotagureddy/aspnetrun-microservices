@@ -1,9 +1,12 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using System.Diagnostics.CodeAnalysis;
+
+using Microsoft.AspNetCore.Http;
 using SharedKernel.Context;
 
 namespace Ordering.Domain;
 
 /// <inheritdoc />
+[ExcludeFromCodeCoverage]
 public class AppContext(string serviceName) : RequestContext(serviceName)
 {
     public new static AppContext Current

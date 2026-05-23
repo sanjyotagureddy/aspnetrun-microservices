@@ -1,4 +1,6 @@
-﻿using Catalog.API.Application.Behaviors;
+﻿using System.Diagnostics.CodeAnalysis;
+
+using Catalog.API.Application.Behaviors;
 using Catalog.API.Application.Contracts.Persistence;
 using Catalog.API.Application.Features.Products.Commands.CreateProduct;
 using Catalog.API.Application.Features.Products.Commands.UpdateProduct;
@@ -15,6 +17,7 @@ using SharedKernel.Web;
 
 namespace Catalog.API;
 
+[ExcludeFromCodeCoverage]
 public class Startup(IConfiguration configuration)
 {
     public IConfiguration Configuration { get; } = configuration;

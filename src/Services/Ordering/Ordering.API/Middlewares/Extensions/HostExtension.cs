@@ -1,7 +1,7 @@
 ﻿using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
-namespace Ordering.API.Extensions;
+namespace Ordering.API.Middlewares.Extensions;
 
 public static class HostExtension
 {

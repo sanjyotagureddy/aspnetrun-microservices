@@ -1,6 +1,9 @@
-﻿using MassTransit;
+﻿using System.Diagnostics.CodeAnalysis;
+
+using MassTransit;
 using Microsoft.OpenApi;
 using Ordering.API.EventBusConsumers;
+using Ordering.API.Middlewares;
 using Ordering.Application;
 using Ordering.Infrastructure;
 using SharedKernel;
@@ -8,6 +11,7 @@ using SharedKernel.Middleware;
 
 namespace Ordering.API;
 
+[ExcludeFromCodeCoverage]
 public class Startup(IConfiguration configuration)
 {
     public IConfiguration Configuration { get; } = configuration;
@@ -19,7 +23,7 @@ public class Startup(IConfiguration configuration)
         services.AddApplicationServices();
         services.AddInfrastructureServices(Configuration);
 
-        services.AddAutoMapper(cfg => { }, typeof(Startup));
+        services.AddAutoMapper(_ => { }, typeof(Startup));
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<Startup>());
         services.AddScoped<BasketCheckoutConsumer>();
 

@@ -1,4 +1,6 @@
-﻿using Discount.Grpc.Mapper;
+﻿using System.Diagnostics.CodeAnalysis;
+
+using Discount.Grpc.Mapper;
 using Discount.Grpc.Repositories;
 using Discount.Grpc.Repositories.Interfaces;
 using Discount.Grpc.Services;
@@ -7,6 +9,7 @@ using SharedKernel.Middleware;
 
 namespace Discount.Grpc;
 
+[ExcludeFromCodeCoverage]
 public class Startup
 {
   // This method gets called by the runtime. Use this method to add services to the container.
@@ -15,7 +18,7 @@ public class Startup
   {
     services.AddLogging();
     services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<Startup>());
-    services.AddAutoMapper(cfg => { }, typeof(DiscountProfile));
+    services.AddAutoMapper(_ => { }, typeof(DiscountProfile));
     services.AddSingleton<IDiscountConnectionFactory, DiscountConnectionFactory>();
     services.AddScoped<ICouponRepository, CouponRepository>();
     services.AddSingleton<IDiscountDatabaseInitializer, DiscountDatabaseInitializer>();

@@ -10,6 +10,7 @@ using MassTransit;
 using Microsoft.OpenApi;
 using SharedKernel;
 using SharedKernel.Middleware;
+using SharedKernel.Web;
 
 namespace Basket.API;
 
@@ -43,7 +44,7 @@ public class Startup(IConfiguration configuration)
                         config.UsingRabbitMq((_, cfg) => { cfg.Host(Configuration["EventBusSettings:HostAddress"] ?? throw new InvalidOperationException("EventBusSettings:HostAddress is missing.")); });
         });
 
-        services.AddControllers();
+        services.AddEndpointsApiExplorer();
         services.AddHealthChecks();
         services.AddSwaggerGen(c => { c.SwaggerDoc("v1", new OpenApiInfo { Title = "Basket.API", Version = "v1" }); });
     }
@@ -69,7 +70,7 @@ public class Startup(IConfiguration configuration)
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapHealthChecks("/health");
-            endpoints.MapControllers();
+            endpoints.MapDiscoveredEndpoints();
         });
     }
 }
