@@ -34,7 +34,7 @@ Provide a **clear and concise** summary of the changes and why they were made. R
 ## ✅ Pre-Merge Checklist
 
 ### Build, Tests & Quality
-- [ ] Branch targets the correct base and is up-to-date with `main`.
+- [ ] Branch targets the correct base and is up-to-date with `master`.
 - [ ] Code builds locally: `dotnet build`.
 - [ ] All unit tests pass locally: `dotnet test`.
 - [ ] Integration tests / contract tests updated and passing where relevant.
