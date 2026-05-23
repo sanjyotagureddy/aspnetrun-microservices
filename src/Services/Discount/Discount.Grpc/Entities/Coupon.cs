@@ -1,9 +1,13 @@
-﻿namespace Discount.Grpc.Entities;
+﻿using SharedKernel.Domain.Entities;
 
-public class Coupon
+namespace Discount.Grpc.Entities;
+
+public sealed class Coupon : Entity<int>
 {
-  public int Id { get; set; }
-  public string ProductName { get; set; }
-  public string Description { get; set; }
+
+  public string ProductName { get; set; } = string.Empty;
+
+  public string Description { get; set; } = string.Empty;
+
   public int Amount { get; set; }
 }

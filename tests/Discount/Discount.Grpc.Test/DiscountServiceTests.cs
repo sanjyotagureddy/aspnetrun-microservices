@@ -1,82 +1,158 @@
 using AutoMapper;
-
+using Discount.Grpc.Application.Features.Discounts.Commands.CreateDiscount;
+using Discount.Grpc.Application.Features.Discounts.Commands.DeleteDiscount;
+using Discount.Grpc.Application.Features.Discounts.Commands.UpdateDiscount;
+using Discount.Grpc.Application.Features.Discounts.Queries.GetDiscount;
 using Discount.Grpc.Entities;
 using Discount.Grpc.Mapper;
 using Discount.Grpc.Protos;
-using Discount.Grpc.Repositories.Interfaces;
 using Discount.Grpc.Services;
-
+using Grpc.Core;
+using MediatR;
 using Microsoft.Extensions.Logging;
-
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-
 using NUnit.Framework;
 
 namespace Discount.Grpc.Test;
 
 public class DiscountServiceTests
 {
-    private Coupon _coupon;
-    private DiscountService _discountService;
-    private Mock<ILogger<DiscountService>> _logger;
-    private IMapper _mapper;
-    private Mock<IDiscountRepository> _repository;
-
-    [SetUp]
-    public void Setup()
+    private static IMapper CreateMapper()
     {
-        _logger = new Mock<ILogger<DiscountService>>();
+        var mapperConfiguration = new MapperConfiguration(
+            configuration => configuration.AddProfile(new DiscountProfile()),
+            NullLoggerFactory.Instance);
+        return mapperConfiguration.CreateMapper();
+    }
 
-        var mapperConfig = new MapperConfiguration(
-          mc => { mc.AddProfile(new DiscountProfile()); }, new LoggerFactory());
+    [Test]
+    public async Task GetDiscount_ReturnsMappedCoupon()
+    {
+        var mediator = new Mock<IMediator>();
+        var logger = new Mock<ILogger<DiscountService>>();
+        var mapper = CreateMapper();
+        var coupon = new Coupon { Id = 1, ProductName = "IPhone X", Description = "IPhone Discount", Amount = 150 };
 
-        _mapper = mapperConfig.CreateMapper();
-        _repository = new Mock<IDiscountRepository>();
-        _discountService = new DiscountService(_repository.Object, _logger.Object, _mapper);
+        mediator.Setup(mediator => mediator.Send(
+                It.Is<GetDiscountQuery>(query => query.ProductName == "IPhone X"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(coupon);
 
-        _coupon = new Coupon
+        var service = new DiscountService(mediator.Object, logger.Object, mapper);
+
+        var result = await service.GetDiscount(new GetDiscountRequest { ProductName = "IPhone X" }, null!);
+
+        Assert.That(result.ProductName, Is.EqualTo(coupon.ProductName));
+        Assert.That(result.Discription, Is.EqualTo(coupon.Description));
+        Assert.That(result.Amount, Is.EqualTo(coupon.Amount));
+        mediator.Verify(mediator => mediator.Send(
+                It.Is<GetDiscountQuery>(query => query.ProductName == "IPhone X"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Test]
+    public void GetDiscount_ThrowsNotFoundWhenCouponMissing()
+    {
+        var mediator = new Mock<IMediator>();
+        var logger = new Mock<ILogger<DiscountService>>();
+        var mapper = CreateMapper();
+
+        mediator.Setup(mediator => mediator.Send(It.IsAny<GetDiscountQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Coupon?)null);
+
+        var service = new DiscountService(mediator.Object, logger.Object, mapper);
+
+        var exception = Assert.ThrowsAsync<RpcException>(() =>
+            service.GetDiscount(new GetDiscountRequest { ProductName = "Missing" }, null!));
+
+        Assert.That(exception!.StatusCode, Is.EqualTo(StatusCode.NotFound));
+    }
+
+    [Test]
+    public async Task CreateDiscount_MapsRequestAndReturnsCreatedCoupon()
+    {
+        var mediator = new Mock<IMediator>();
+        var logger = new Mock<ILogger<DiscountService>>();
+        var mapper = CreateMapper();
+        var coupon = new Coupon { Id = 3, ProductName = "Pixel", Description = "Phone Discount", Amount = 50 };
+
+        mediator.Setup(mediator => mediator.Send(
+                It.Is<CreateDiscountCommand>(command =>
+                    command.Coupon.ProductName == coupon.ProductName &&
+                    command.Coupon.Description == coupon.Description &&
+                    command.Coupon.Amount == coupon.Amount),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(coupon);
+
+        var service = new DiscountService(mediator.Object, logger.Object, mapper);
+
+        var result = await service.CreateDiscount(new CreateDiscountRequest
         {
-            Id = 1,
-            Amount = 150,
-            ProductName = "TempDataAttribute",
-            Description = ""
-        };
+            Coupon = new CouponModel
+            {
+                ProductName = coupon.ProductName,
+                Discription = coupon.Description,
+                Amount = coupon.Amount
+            }
+        }, null!);
+
+        Assert.That(result.ProductName, Is.EqualTo(coupon.ProductName));
+        Assert.That(result.Discription, Is.EqualTo(coupon.Description));
+        Assert.That(result.Amount, Is.EqualTo(coupon.Amount));
     }
 
-    [TestCase("swn")]
-    [TestCase("abc")]
     [Test]
-    public void GetDiscount(string productName)
+    public async Task UpdateDiscount_MapsRequestAndReturnsUpdatedCoupon()
     {
-        _repository.Setup(p => p.GetDiscount(productName)).ReturnsAsync(_coupon);
-        var coupon = _discountService.GetDiscount(new GetDiscountRequest { ProductName = productName }, null);
-        if (coupon.Result != null)
-            Assert.AreEqual(coupon.Result.Amount, 150);
-        else
-            Assert.Fail();
+        var mediator = new Mock<IMediator>();
+        var logger = new Mock<ILogger<DiscountService>>();
+        var mapper = CreateMapper();
+        var coupon = new Coupon { Id = 3, ProductName = "Pixel", Description = "Updated Discount", Amount = 75 };
+
+        mediator.Setup(mediator => mediator.Send(
+                It.Is<UpdateDiscountCommand>(command =>
+                    command.Coupon.ProductName == coupon.ProductName &&
+                    command.Coupon.Description == coupon.Description &&
+                    command.Coupon.Amount == coupon.Amount),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(coupon);
+
+        var service = new DiscountService(mediator.Object, logger.Object, mapper);
+
+        var result = await service.UpdateDiscount(new UpdateDiscountRequest
+        {
+            Coupon = new CouponModel
+            {
+                Id = coupon.Id,
+                ProductName = coupon.ProductName,
+                Discription = coupon.Description,
+                Amount = coupon.Amount
+            }
+        }, null!);
+
+        Assert.That(result.ProductName, Is.EqualTo(coupon.ProductName));
+        Assert.That(result.Discription, Is.EqualTo(coupon.Description));
+        Assert.That(result.Amount, Is.EqualTo(coupon.Amount));
     }
 
-    [TestCase("1")]
-    [TestCase("2")]
     [Test]
-    public async Task DeleteDiscount(string productName)
+    public async Task DeleteDiscount_ReturnsMediatorResult()
     {
-        _repository.Setup(p => p.DeleteDiscount(productName)).ReturnsAsync(true);
-        var coupon =
-          await _discountService.DeleteDiscount(new DeleteDiscountRequest { ProductName = productName }, null);
+        var mediator = new Mock<IMediator>();
+        var logger = new Mock<ILogger<DiscountService>>();
+        var mapper = CreateMapper();
 
-        Assert.AreEqual(coupon.Success, true);
-    }
+        mediator.Setup(mediator => mediator.Send(
+                It.Is<DeleteDiscountCommand>(command => command.ProductName == "Pixel"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
 
-    [TestCase("1")]
-    [TestCase("2")]
-    [Test]
-    public async Task DeleteDiscount_False(string productName)
-    {
-        _repository.Setup(p => p.DeleteDiscount(productName)).ReturnsAsync(false);
-        var coupon =
-          await _discountService.DeleteDiscount(new DeleteDiscountRequest { ProductName = productName }, null);
+        var service = new DiscountService(mediator.Object, logger.Object, mapper);
 
-        Assert.AreNotEqual(coupon.Success, true);
+        var result = await service.DeleteDiscount(new DeleteDiscountRequest { ProductName = "Pixel" }, null!);
+
+        Assert.That(result.Success, Is.True);
     }
 }

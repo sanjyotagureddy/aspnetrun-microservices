@@ -5,6 +5,7 @@
     <DockerfileContext>..\..\..\..</DockerfileContext>
     <UserSecretsId>6434127b-e961-45ad-8fa8-2a39cbb60c3c</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
