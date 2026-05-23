@@ -1,5 +1,4 @@
-using Discount.Grpc;
-using Discount.Grpc.Repositories.Interfaces;
+﻿using Discount.Grpc.Repositories.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Moq;

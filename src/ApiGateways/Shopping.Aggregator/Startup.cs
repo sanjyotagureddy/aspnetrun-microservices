@@ -1,5 +1,6 @@
 ﻿using Microsoft.OpenApi;
 using SharedKernel;
+using SharedKernel.Errors;
 using SharedKernel.Middleware;
 using Shopping.Aggregator.Services;
 using Shopping.Aggregator.Services.Interfaces;
@@ -14,13 +15,13 @@ public class Startup(IConfiguration configuration)
   public void ConfigureServices(IServiceCollection services)
   {
     services.AddHttpClient<ICatalogService, CatalogService>(c =>
-      c.BaseAddress = new Uri(Configuration["ApiSettings:CatalogUrl"]));
+      c.BaseAddress = new Uri(Configuration["ApiSettings:CatalogUrl"] ?? throw Errors.ServerSide.ConfigurationMissing("Missing CatalogUrl")));
 
     services.AddHttpClient<IBasketService, BasketService>(c =>
-      c.BaseAddress = new Uri(Configuration["ApiSettings:BasketUrl"]));
+      c.BaseAddress = new Uri(Configuration["ApiSettings:BasketUrl"] ?? throw Errors.ServerSide.ConfigurationMissing("Missing BasketUrl")));
 
     services.AddHttpClient<IOrderService, OrderService>(c =>
-      c.BaseAddress = new Uri(Configuration["ApiSettings:OrderingUrl"]));
+      c.BaseAddress = new Uri(Configuration["ApiSettings:OrderingUrl"] ?? throw Errors.ServerSide.ConfigurationMissing("Missing OrderingUrl")));
 
     services.AddControllers();
     services.AddHealthChecks();

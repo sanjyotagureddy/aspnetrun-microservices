@@ -2,7 +2,6 @@
 using Discount.Grpc.Repositories;
 using Discount.Grpc.Repositories.Interfaces;
 using Discount.Grpc.Services;
-using MediatR;
 using SharedKernel;
 using SharedKernel.Middleware;
 

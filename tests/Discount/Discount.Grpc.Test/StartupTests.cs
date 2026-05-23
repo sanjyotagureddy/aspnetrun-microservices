@@ -1,8 +1,7 @@
-using Discount.Grpc.Application.Features.Discounts.Commands.CreateDiscount;
+﻿using Discount.Grpc.Application.Features.Discounts.Commands.CreateDiscount;
 using Discount.Grpc.Application.Features.Discounts.Commands.DeleteDiscount;
 using Discount.Grpc.Application.Features.Discounts.Commands.UpdateDiscount;
 using Discount.Grpc.Application.Features.Discounts.Queries.GetDiscount;
-using Discount.Grpc;
 using Discount.Grpc.Entities;
 using Discount.Grpc.Repositories.Interfaces;
 using MediatR;

@@ -1,5 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Basket.API;
 
+[ExcludeFromCodeCoverage]
 public class Program
 {
   public static void Main(string[] args)
