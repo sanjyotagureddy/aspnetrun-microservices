@@ -1,12 +1,17 @@
-﻿using Microsoft.OpenApi;
+﻿using System.Diagnostics.CodeAnalysis;
+
+using Microsoft.OpenApi;
 using SharedKernel;
 using SharedKernel.Errors;
 using SharedKernel.Middleware;
+using Shopping.Aggregator.Middlewares;
 using Shopping.Aggregator.Services;
 using Shopping.Aggregator.Services.Interfaces;
+using SharedKernel.Web;
 
 namespace Shopping.Aggregator;
 
+[ExcludeFromCodeCoverage]
 public class Startup(IConfiguration configuration)
 {
   public IConfiguration Configuration { get; } = configuration;
@@ -23,7 +28,7 @@ public class Startup(IConfiguration configuration)
     services.AddHttpClient<IOrderService, OrderService>(c =>
       c.BaseAddress = new Uri(Configuration["ApiSettings:OrderingUrl"] ?? throw Errors.ServerSide.ConfigurationMissing("Missing OrderingUrl")));
 
-    services.AddControllers();
+    services.AddEndpointsApiExplorer();
     services.AddHealthChecks();
     services.AddSwaggerGen(c =>
     {
@@ -52,7 +57,7 @@ public class Startup(IConfiguration configuration)
     app.UseEndpoints(endpoints =>
     {
       endpoints.MapHealthChecks("/health");
-      endpoints.MapControllers();
+      endpoints.MapDiscoveredEndpoints();
     });
   }
 }

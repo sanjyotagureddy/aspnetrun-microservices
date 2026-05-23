@@ -1,5 +1,8 @@
+﻿using System.Diagnostics.CodeAnalysis;
+
 namespace OcelotApiGateway;
 
+[ExcludeFromCodeCoverage]
 public class Program
 {
   public static void Main(string[] args)

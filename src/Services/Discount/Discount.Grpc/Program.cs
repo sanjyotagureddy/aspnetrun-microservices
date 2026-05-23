@@ -1,7 +1,10 @@
+using System.Diagnostics.CodeAnalysis;
+
 using Discount.Grpc.Extensions;
 
 namespace Discount.Grpc;
 
+[ExcludeFromCodeCoverage]
 public class Program
 {
   internal static Func<string[], IHostBuilder> HostBuilderFactory { get; set; } = CreateHostBuilder;

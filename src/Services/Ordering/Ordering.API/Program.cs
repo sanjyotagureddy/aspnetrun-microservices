@@ -1,8 +1,11 @@
-using Ordering.API.Extensions;
+﻿using System.Diagnostics.CodeAnalysis;
+
+using Ordering.API.Middlewares.Extensions;
 using Ordering.Infrastructure.Persistence;
 
 namespace Ordering.API;
 
+[ExcludeFromCodeCoverage]
 public class Program
 {
   public static void Main(string[] args)
