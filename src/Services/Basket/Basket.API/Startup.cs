@@ -1,6 +1,10 @@
-﻿using Basket.API.GrpcServices;
-using Basket.API.Repositories;
-using Basket.API.Repositories.Interfaces;
+﻿using System.Diagnostics.CodeAnalysis;
+
+using Basket.API.Application.Contracts.Infrastructure;
+using Basket.API.Application.Contracts.Persistence;
+using Basket.API.Infrastructure.Messaging;
+using Basket.API.Infrastructure.Persistence;
+using Basket.API.Infrastructure.Services;
 using Discount.Grpc.Protos;
 using MassTransit;
 using Microsoft.OpenApi;
@@ -9,6 +13,7 @@ using SharedKernel.Middleware;
 
 namespace Basket.API;
 
+[ExcludeFromCodeCoverage]
 public class Startup(IConfiguration configuration)
 {
     public IConfiguration Configuration { get; } = configuration;
@@ -22,19 +27,20 @@ public class Startup(IConfiguration configuration)
             options.Configuration = Configuration.GetValue<string>("CacheSettings:ConnectionString");
         });
 
-        // General Configuration
+        // CQRS and application contracts
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<Startup>());
         services.AddScoped<IBasketRepository, BasketRepository>();
-        services.AddAutoMapper(cfg => { }, typeof(Startup));
+        services.AddScoped<IDiscountService, DiscountGrpcService>();
+        services.AddScoped<IBasketCheckoutPublisher, BasketCheckoutPublisher>();
 
         // Grpc Configuration
-        services.AddGrpcClient<DiscountProtoService.DiscountProtoServiceClient>
-          (o => o.Address = new Uri(Configuration["GrpcSettings:DiscountUrl"]));
-        services.AddScoped<DiscountGrpcService>();
+                services.AddGrpcClient<DiscountProtoService.DiscountProtoServiceClient>
+                    (o => o.Address = new Uri(Configuration["GrpcSettings:DiscountUrl"] ?? throw new InvalidOperationException("GrpcSettings:DiscountUrl is missing.")));
 
         // MassTransit-RabbitMQ Configuration
         services.AddMassTransit(config =>
         {
-            config.UsingRabbitMq((ctx, cfg) => { cfg.Host(Configuration["EventBusSettings:HostAddress"]); });
+                        config.UsingRabbitMq((_, cfg) => { cfg.Host(Configuration["EventBusSettings:HostAddress"] ?? throw new InvalidOperationException("EventBusSettings:HostAddress is missing.")); });
         });
 
         services.AddControllers();

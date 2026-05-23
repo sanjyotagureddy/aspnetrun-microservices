@@ -1,4 +1,4 @@
-﻿using SharedKernel.Context;
+using SharedKernel.Context;
 
 namespace Basket.API;
 
@@ -9,7 +9,7 @@ public class AppContext(string serviceName) : RequestContext(serviceName)
     {
         get
         {
-            RequestContext? current = RequestContextScope.Current;
+            RequestContext current = RequestContextScope.Current;
             return current as AppContext ?? FromRequestContext(current);
         }
     }

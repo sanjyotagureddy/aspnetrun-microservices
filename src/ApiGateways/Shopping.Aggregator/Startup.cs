@@ -1,6 +1,7 @@
 ﻿using Microsoft.OpenApi;
 using SharedKernel;
 using SharedKernel.Middleware;
+using Shopping.Aggregator.Middleware;
 using Shopping.Aggregator.Services;
 using Shopping.Aggregator.Services.Interfaces;
 
