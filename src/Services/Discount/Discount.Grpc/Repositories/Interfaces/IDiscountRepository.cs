@@ -2,13 +2,13 @@
 
 namespace Discount.Grpc.Repositories.Interfaces;
 
-public interface IDiscountRepository
+public interface ICouponRepository
 {
-  Task<Coupon> GetDiscount(string productName);
+  Task<Coupon?> GetByProductNameAsync(string productName, CancellationToken cancellationToken);
 
-  Task<bool> CreateDiscount(Coupon coupon);
+  Task<bool> CreateAsync(Coupon coupon, CancellationToken cancellationToken);
 
-  Task<bool> UpdateDiscount(Coupon coupon);
+  Task<bool> UpdateAsync(Coupon coupon, CancellationToken cancellationToken);
 
-  Task<bool> DeleteDiscount(string productName);
+  Task<bool> DeleteAsync(string productName, CancellationToken cancellationToken);
 }
