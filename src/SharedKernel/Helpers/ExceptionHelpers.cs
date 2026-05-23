@@ -10,22 +10,22 @@ internal static class ExceptionHelpers
     {
         var normalizedPath = (callerFilePath ?? string.Empty).Replace('/', '\\').ToLowerInvariant();
 
-        if (normalizedPath.Contains("\\src\\services\\catalog\\") || normalizedPath.Contains("\\tests\\catalog\\"))
+        if (normalizedPath.Contains(@"\src\services\catalog\") || normalizedPath.Contains(@"\tests\catalog\"))
             return Constants.ServiceCodes.Catalog;
 
-        if (normalizedPath.Contains("\\src\\services\\basket\\") || normalizedPath.Contains("\\tests\\basket\\"))
+        if (normalizedPath.Contains(@"\src\services\basket\") || normalizedPath.Contains(@"\tests\basket\"))
             return Constants.ServiceCodes.Basket;
 
-        if (normalizedPath.Contains("\\src\\services\\discount\\") || normalizedPath.Contains("\\tests\\discount\\"))
+        if (normalizedPath.Contains(@"\src\services\discount\") || normalizedPath.Contains(@"\tests\discount\"))
             return Constants.ServiceCodes.Discount;
 
-        if (normalizedPath.Contains("\\src\\services\\ordering\\") || normalizedPath.Contains("\\tests\\ordering\\"))
+        if (normalizedPath.Contains(@"\src\services\ordering\") || normalizedPath.Contains(@"\tests\ordering\"))
             return Constants.ServiceCodes.Ordering;
 
-        if (normalizedPath.Contains("\\src\\apigateways\\shopping.aggregator\\") || normalizedPath.Contains("\\tests\\shopping.aggregator\\"))
+        if (normalizedPath.Contains(@"\src\apigateways\shopping.aggregator\") || normalizedPath.Contains(@"\tests\shopping.aggregator\"))
             return Constants.ServiceCodes.ShoppingAggregator;
 
-        if (normalizedPath.Contains("\\src\\apigateways\\ocelotapigateway\\") || normalizedPath.Contains("\\tests\\ocelotapigateway\\"))
+        if (normalizedPath.Contains(@"\src\apigateways\ocelotapigateway\") || normalizedPath.Contains(@"\tests\ocelotapigateway\"))
             return Constants.ServiceCodes.ApiGateway;
 
         return ResolveFromAssemblyName(Assembly.GetEntryAssembly()?.GetName().Name)

@@ -1,5 +1,4 @@
-using Ordering.Domain;
-using SharedKernel.Context;
+﻿using SharedKernel.Context;
 using SharedKernel.Middleware;
 
 namespace Ordering.API;
