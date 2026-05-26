@@ -1,8 +1,8 @@
-﻿using Ordering.Domain.Common;
+﻿using SharedKernel.Domain.Entities;
 
 namespace Ordering.Domain.Entities;
 
-public class Order : EntityBase
+public class Order : AuditableEntity<int>
 {
   public string UserName { get; set; }
   public decimal TotalPrice { get; set; }

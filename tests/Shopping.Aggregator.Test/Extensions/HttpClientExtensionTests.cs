@@ -2,17 +2,16 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 
-using NUnit.Framework;
-
 using Shopping.Aggregator.Extensions;
 using Shopping.Aggregator.Models;
 using Shopping.Aggregator.Test.TestHelpers;
+using Xunit;
 
 namespace Shopping.Aggregator.Test.Extensions;
 
 public class HttpClientExtensionTests
 {
-  [Test]
+  [Fact]
   public async Task ReadContentAs_Returns_DeserializedPayload()
   {
     var response = new HttpResponseMessage(HttpStatusCode.OK)
@@ -22,21 +21,21 @@ public class HttpClientExtensionTests
 
     BasketModel basket = await response.ReadContentAs<BasketModel>();
 
-    Assert.That(basket.UserName, Is.EqualTo("swn"));
-    Assert.That(basket.TotalPrice, Is.EqualTo(1100));
+    Assert.Equal("swn", basket.UserName);
+    Assert.Equal(1100, basket.TotalPrice);
   }
 
-  [Test]
-  public void ReadContentAs_Throws_When_ResponseIsNotSuccess()
+  [Fact]
+  public async Task ReadContentAs_Throws_When_ResponseIsNotSuccess()
   {
     var response = new HttpResponseMessage(HttpStatusCode.BadGateway)
     {
       ReasonPhrase = "Bad Gateway"
     };
 
-    var ex = Assert.ThrowsAsync<ApplicationException>(async () => await response.ReadContentAs<BasketModel>());
+    var ex = await Assert.ThrowsAsync<ApplicationException>(async () => await response.ReadContentAs<BasketModel>());
 
-    Assert.That(ex!.Message, Does.Contain("Something went wrong calling the API"));
-    Assert.That(ex.Message, Does.Contain("Bad Gateway"));
+    Assert.Contains("Something went wrong calling the API", ex.Message);
+    Assert.Contains("Bad Gateway", ex.Message);
   }
 }

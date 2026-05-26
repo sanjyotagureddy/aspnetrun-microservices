@@ -1,4 +1,4 @@
-using AutoMapper;
+﻿using AutoMapper;
 using Discount.Grpc.Application.Features.Discounts.Commands.CreateDiscount;
 using Discount.Grpc.Application.Features.Discounts.Commands.DeleteDiscount;
 using Discount.Grpc.Application.Features.Discounts.Commands.UpdateDiscount;
@@ -12,7 +12,7 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using NUnit.Framework;
+using Xunit;
 
 namespace Discount.Grpc.Test;
 
@@ -26,7 +26,7 @@ public class DiscountServiceTests
         return mapperConfiguration.CreateMapper();
     }
 
-    [Test]
+    [Fact]
     public async Task GetDiscount_ReturnsMappedCoupon()
     {
         var mediator = new Mock<IMediator>();
@@ -43,17 +43,17 @@ public class DiscountServiceTests
 
         var result = await service.GetDiscount(new GetDiscountRequest { ProductName = "IPhone X" }, null!);
 
-        Assert.That(result.ProductName, Is.EqualTo(coupon.ProductName));
-        Assert.That(result.Discription, Is.EqualTo(coupon.Description));
-        Assert.That(result.Amount, Is.EqualTo(coupon.Amount));
+        Assert.Equal(coupon.ProductName, result.ProductName);
+        Assert.Equal(coupon.Description, result.Discription);
+        Assert.Equal(coupon.Amount, result.Amount);
         mediator.Verify(mediator => mediator.Send(
                 It.Is<GetDiscountQuery>(query => query.ProductName == "IPhone X"),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
-    [Test]
-    public void GetDiscount_ThrowsNotFoundWhenCouponMissing()
+    [Fact]
+    public async Task GetDiscount_ThrowsNotFoundWhenCouponMissingAsync()
     {
         var mediator = new Mock<IMediator>();
         var logger = new Mock<ILogger<DiscountService>>();
@@ -64,13 +64,13 @@ public class DiscountServiceTests
 
         var service = new DiscountService(mediator.Object, logger.Object, mapper);
 
-        var exception = Assert.ThrowsAsync<RpcException>(() =>
+        var exception = await Assert.ThrowsAsync<RpcException>(() =>
             service.GetDiscount(new GetDiscountRequest { ProductName = "Missing" }, null!));
 
-        Assert.That(exception!.StatusCode, Is.EqualTo(StatusCode.NotFound));
+        Assert.Equal(StatusCode.NotFound, exception?.StatusCode);
     }
 
-    [Test]
+    [Fact]
     public async Task CreateDiscount_MapsRequestAndReturnsCreatedCoupon()
     {
         var mediator = new Mock<IMediator>();
@@ -98,12 +98,12 @@ public class DiscountServiceTests
             }
         }, null!);
 
-        Assert.That(result.ProductName, Is.EqualTo(coupon.ProductName));
-        Assert.That(result.Discription, Is.EqualTo(coupon.Description));
-        Assert.That(result.Amount, Is.EqualTo(coupon.Amount));
+        Assert.Equal(coupon.ProductName, result.ProductName);
+        Assert.Equal(coupon.Description, result.Discription);
+        Assert.Equal(coupon.Amount, result.Amount);
     }
 
-    [Test]
+    [Fact]
     public async Task UpdateDiscount_MapsRequestAndReturnsUpdatedCoupon()
     {
         var mediator = new Mock<IMediator>();
@@ -132,12 +132,12 @@ public class DiscountServiceTests
             }
         }, null!);
 
-        Assert.That(result.ProductName, Is.EqualTo(coupon.ProductName));
-        Assert.That(result.Discription, Is.EqualTo(coupon.Description));
-        Assert.That(result.Amount, Is.EqualTo(coupon.Amount));
+        Assert.Equal(coupon.ProductName, result.ProductName);
+        Assert.Equal(coupon.Description, result.Discription);
+        Assert.Equal(coupon.Amount, result.Amount);
     }
 
-    [Test]
+    [Fact]
     public async Task DeleteDiscount_ReturnsMediatorResult()
     {
         var mediator = new Mock<IMediator>();
@@ -153,6 +153,6 @@ public class DiscountServiceTests
 
         var result = await service.DeleteDiscount(new DeleteDiscountRequest { ProductName = "Pixel" }, null!);
 
-        Assert.That(result.Success, Is.True);
+        Assert.True(result.Success);
     }
 }

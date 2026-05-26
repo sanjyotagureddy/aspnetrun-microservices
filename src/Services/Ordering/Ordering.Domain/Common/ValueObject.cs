@@ -1,6 +1,9 @@
-﻿namespace Ordering.Domain.Common;
+﻿using System.Diagnostics.CodeAnalysis;
+
+namespace Ordering.Domain.Common;
 
 // Learn more: https://docs.microsoft.com/en-us/dotnet/standard/microservices-architecture/microservice-ddd-cqrs-patterns/implement-value-objects
+[ExcludeFromCodeCoverage]
 public abstract class ValueObject
 {
   protected static bool EqualOperator(ValueObject left, ValueObject right)

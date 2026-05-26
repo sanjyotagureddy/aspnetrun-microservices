@@ -1,13 +1,12 @@
 using Discount.Grpc.Repositories;
 using Microsoft.Extensions.Configuration;
-using NUnit.Framework;
+using Xunit;
 
 namespace Discount.Grpc.Test;
 
-[TestFixture]
 public class DiscountConnectionFactoryTests
 {
-  [Test]
+  [Fact]
   public void CreateConnection_ReturnsNpgsqlConnectionWhenConfigured()
   {
     var configuration = BuildConfiguration("Host=localhost;Database=discount;Username=postgres;Password=postgres");
@@ -15,10 +14,10 @@ public class DiscountConnectionFactoryTests
 
     var connection = factory.CreateConnection();
 
-    Assert.That(connection.GetType().Name, Does.Contain("NpgsqlConnection"));
+    Assert.Contains("NpgsqlConnection", connection.GetType().Name);
   }
 
-  [Test]
+  [Fact]
   public void CreateConnection_ThrowsWhenConnectionStringIsMissing()
   {
     var configuration = BuildConfiguration(null);
@@ -26,10 +25,10 @@ public class DiscountConnectionFactoryTests
 
     var exception = Assert.Throws<InvalidOperationException>(() => factory.CreateConnection());
 
-    Assert.That(exception!.Message, Does.Contain("DatabaseSettings:ConnectionString"));
+    Assert.Contains("DatabaseSettings:ConnectionString", exception!.Message);
   }
 
-  [Test]
+  [Fact]
   public void Constructor_ThrowsWhenConfigurationIsNull()
   {
     Assert.Throws<ArgumentNullException>(() => new DiscountConnectionFactory(null!));

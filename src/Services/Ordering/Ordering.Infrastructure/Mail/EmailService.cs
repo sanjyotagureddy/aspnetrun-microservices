@@ -3,20 +3,20 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Ordering.Application.Contracts.Infrastructure;
 using Ordering.Application.Models;
-using SendGrid;
+using System.Net;
 using SendGrid.Helpers.Mail;
 
 namespace Ordering.Infrastructure.Mail;
 
-public class EmailService(IOptions<EmailSettings> emailSettings, ILogger<EmailService> logger)
+public class EmailService(IOptions<EmailSettings> emailSettings, ILogger<EmailService> logger, ISendGridClientWrapper clientWrapper)
   : IEmailService
 {
-  public EmailSettings EmailSettings { get; } = emailSettings.Value ?? throw new ArgumentNullException(nameof(emailSettings));
+  public EmailSettings EmailSettings { get; } = emailSettings.Value;
   public ILogger<EmailService> Logger { get; } = logger ?? throw new ArgumentNullException(nameof(logger));
+  public ISendGridClientWrapper ClientWrapper { get; } = clientWrapper ?? throw new ArgumentNullException(nameof(clientWrapper));
 
-  public async Task<bool> SendEmail(Email email)
+  public async Task<bool> SendEmail(Email email, CancellationToken cancellationToken = default)
   {
-    var client = new SendGridClient(EmailSettings.ApiKey);
     var subject = email.Subject;
     var to = new EmailAddress(email.To);
     var emailBody = email.Body;
@@ -27,12 +27,13 @@ public class EmailService(IOptions<EmailSettings> emailSettings, ILogger<EmailSe
       Name = EmailSettings.FromName
     };
 
-    var sendGridMessage = MailHelper.CreateSingleEmail(from, to, subject, emailBody, emailBody);
-    var response = await client.SendEmailAsync(sendGridMessage);
+    SendGridMessage sendGridMessage = MailHelper.CreateSingleEmail(from, to, subject, emailBody, emailBody);
+
+    HttpStatusCode status = await ClientWrapper.SendEmailAsync(sendGridMessage, cancellationToken);
 
     Logger.LogInformation("Email sent.");
 
-    if (response.StatusCode == HttpStatusCode.Accepted || response.StatusCode == HttpStatusCode.OK)
+    if (status is HttpStatusCode.Accepted or HttpStatusCode.OK)
       return true;
 
     Logger.LogError("Email sending failed.");

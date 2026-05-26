@@ -3,14 +3,13 @@ using Discount.Grpc.Repositories.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Moq;
-using NUnit.Framework;
+using Xunit;
 
 namespace Discount.Grpc.Test;
 
-[TestFixture]
 public class HostExtensionsTests
 {
-  [Test]
+  [Fact]
   public void MigrateDatabase_RetriesOnceWhenInitializerFails()
   {
     var initializer = new Mock<IDiscountDatabaseInitializer>();
@@ -36,11 +35,11 @@ public class HostExtensionsTests
 
     var result = host.MigrateDatabase<HostExtensionsTests>(retryDelay: TimeSpan.Zero);
 
-    Assert.That(result, Is.SameAs(host));
-    Assert.That(attempts, Is.EqualTo(2));
+    Assert.Same(host, result);
+    Assert.Equal(2, attempts);
   }
 
-  [Test]
+  [Fact]
   public void MigrateDatabase_UsesDefaultsWhenRetryArgumentsAreMissing()
   {
     var initializer = new Mock<IDiscountDatabaseInitializer>();
@@ -56,11 +55,11 @@ public class HostExtensionsTests
 
     var result = host.MigrateDatabase<HostExtensionsTests>(retry: null, retryDelay: null);
 
-    Assert.That(result, Is.SameAs(host));
+    Assert.Same(host, result);
     initializer.Verify(initializer => initializer.Initialize(), Times.Once);
   }
 
-  [Test]
+  [Fact]
   public void MigrateDatabase_SleepsAndRetriesWithCustomDelay()
   {
     var initializer = new Mock<IDiscountDatabaseInitializer>();
@@ -86,11 +85,11 @@ public class HostExtensionsTests
 
     var result = host.MigrateDatabase<HostExtensionsTests>(retryDelay: TimeSpan.FromMilliseconds(1));
 
-    Assert.That(result, Is.SameAs(host));
-    Assert.That(attempts, Is.EqualTo(2));
+    Assert.Same(host, result);
+    Assert.Equal(2, attempts);
   }
 
-  [Test]
+  [Fact]
   public void MigrateDatabase_ReturnsImmediatelyAfterRetryLimit()
   {
     var initializer = new Mock<IDiscountDatabaseInitializer>();
@@ -106,7 +105,7 @@ public class HostExtensionsTests
 
     var result = host.MigrateDatabase<HostExtensionsTests>(retry: 50, retryDelay: TimeSpan.Zero);
 
-    Assert.That(result, Is.SameAs(host));
+    Assert.Same(host, result);
     initializer.Verify(initializer => initializer.Initialize(), Times.Once);
   }
 }

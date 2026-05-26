@@ -4,18 +4,18 @@ using Discount.API.Entities;
 using Discount.API.Repositories.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
-using NUnit.Framework;
+using Xunit;
 
 namespace Discount.API.Test;
 
 public class DiscountControllerTest
 {
-  private DiscountController _controller;
-  private Coupon _coupon, _couponNoDiscount;
-  private Mock<IDiscountRepository> _repository;
+  private readonly DiscountController _controller;
+  private readonly Coupon _coupon;
+  private readonly Coupon _couponNoDiscount;
+  private readonly Mock<IDiscountRepository> _repository;
 
-  [SetUp]
-  public void Setup()
+  public DiscountControllerTest()
   {
     _repository = new Mock<IDiscountRepository>();
     _controller = new DiscountController(_repository.Object);
@@ -37,54 +37,50 @@ public class DiscountControllerTest
     };
   }
 
-  [TestCase("1")]
-  [TestCase("2")]
-  [Test]
-  public void GetDiscount(string productName)
+  [Theory]
+  [InlineData("1")]
+  [InlineData("2")]
+  public async Task GetDiscount(string productName)
   {
     _repository.Setup(p => p.GetDiscount(productName)).ReturnsAsync(_coupon);
-    var coupon = _controller.GetDiscount(productName);
-    if (coupon.Result.Result is OkObjectResult okResult)
-      Assert.AreEqual((int)HttpStatusCode.OK, okResult.StatusCode);
-    else
-      Assert.Fail();
+    var coupon = await _controller.GetDiscount(productName);
+
+    var okResult = Assert.IsType<OkObjectResult>(coupon.Result);
+    Assert.Equal((int)HttpStatusCode.OK, okResult.StatusCode);
   }
 
-  [TestCase("5e")]
-  [TestCase("62")]
-  [Test]
-  public void GetDiscount_NoDiscount(string productName)
+  [Theory]
+  [InlineData("5e")]
+  [InlineData("62")]
+  public async Task GetDiscount_NoDiscount(string productName)
   {
     _repository.Setup(p => p.GetDiscount(productName)).ReturnsAsync(_couponNoDiscount);
-    var coupon = _controller.GetDiscount(productName);
-    if (coupon.Result.Result is OkObjectResult okResult)
-      Assert.AreEqual((int)HttpStatusCode.OK, okResult.StatusCode);
-    else
-      Assert.Fail();
+    var coupon = await _controller.GetDiscount(productName);
+
+    var okResult = Assert.IsType<OkObjectResult>(coupon.Result);
+    Assert.Equal((int)HttpStatusCode.OK, okResult.StatusCode);
   }
 
-  [TestCase("1")]
-  [TestCase("2")]
-  [Test]
+  [Theory]
+  [InlineData("1")]
+  [InlineData("2")]
   public async Task DeleteDiscount(string productName)
   {
     _repository.Setup(p => p.DeleteDiscount(productName)).ReturnsAsync(true);
     var coupon = await _controller.DeleteDiscount(productName);
-    if (coupon.Result is OkObjectResult okResult)
-      Assert.AreEqual((int)HttpStatusCode.OK, okResult.StatusCode);
-    else
-      Assert.Fail();
+
+    var okResult = Assert.IsType<OkObjectResult>(coupon.Result);
+    Assert.Equal((int)HttpStatusCode.OK, okResult.StatusCode);
   }
 
-  [Test]
+  [Fact]
   public async Task CreateDiscount()
   {
     _repository.Setup(p => p.CreateDiscount(It.IsAny<Coupon>())).ReturnsAsync(true);
     var coupon = await _controller.CreateDiscount(NewCoupon());
-    if (coupon.Result is CreatedAtRouteResult okResult)
-      Assert.AreEqual((int)HttpStatusCode.Created, okResult.StatusCode);
-    else
-      Assert.Fail();
+
+    var createdResult = Assert.IsType<CreatedAtRouteResult>(coupon.Result);
+    Assert.Equal((int)HttpStatusCode.Created, createdResult.StatusCode);
   }
 
   private static Coupon NewCoupon()

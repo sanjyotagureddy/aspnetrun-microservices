@@ -1,13 +1,12 @@
 using Discount.Grpc.Entities;
 using Discount.Grpc.Repositories;
-using NUnit.Framework;
+using Xunit;
 
 namespace Discount.Grpc.Test;
 
-[TestFixture]
 public class DiscountRepositoryTests
 {
-  [Test]
+  [Fact]
   public async Task GetByProductNameAsync_ReturnsCouponWhenFound()
   {
     using var database = new TestDoubles.SqliteCouponDatabase();
@@ -18,13 +17,13 @@ public class DiscountRepositoryTests
 
     var result = await repository.GetByProductNameAsync("IPhone X", CancellationToken.None);
 
-    Assert.That(result, Is.Not.Null);
-    Assert.That(result!.ProductName, Is.EqualTo("IPhone X"));
-    Assert.That(result.Description, Is.EqualTo("IPhone Discount"));
-    Assert.That(result.Amount, Is.EqualTo(150));
+    Assert.NotNull(result);
+    Assert.Equal("IPhone X", result!.ProductName);
+    Assert.Equal("IPhone Discount", result.Description);
+    Assert.Equal(150, result.Amount);
   }
 
-  [Test]
+  [Fact]
   public async Task GetByProductNameAsync_ReturnsNullWhenMissing()
   {
     using var database = new TestDoubles.SqliteCouponDatabase();
@@ -34,10 +33,10 @@ public class DiscountRepositoryTests
 
     var result = await repository.GetByProductNameAsync("Missing", CancellationToken.None);
 
-    Assert.That(result, Is.Null);
+    Assert.Null(result);
   }
 
-  [Test]
+  [Fact]
   public async Task CreateAsync_InsertsCoupon()
   {
     using var database = new TestDoubles.SqliteCouponDatabase();
@@ -47,12 +46,12 @@ public class DiscountRepositoryTests
 
     var created = await repository.CreateAsync(coupon, CancellationToken.None);
 
-    Assert.That(created, Is.True);
-    Assert.That(database.Count(), Is.EqualTo(1));
-    Assert.That(database.Find("Pixel"), Is.Not.Null);
+    Assert.True(created);
+    Assert.Equal(1, database.Count());
+    Assert.NotNull(database.Find("Pixel"));
   }
 
-  [Test]
+  [Fact]
   public async Task UpdateAsync_UpdatesCoupon()
   {
     using var database = new TestDoubles.SqliteCouponDatabase();
@@ -63,14 +62,14 @@ public class DiscountRepositoryTests
 
     var updated = await repository.UpdateAsync(coupon, CancellationToken.None);
 
-    Assert.That(updated, Is.True);
+    Assert.True(updated);
     var result = database.Find("Pixel 9");
-    Assert.That(result, Is.Not.Null);
-    Assert.That(result!.Description, Is.EqualTo("Updated"));
-    Assert.That(result.Amount, Is.EqualTo(80));
+    Assert.NotNull(result);
+    Assert.Equal("Updated", result!.Description);
+    Assert.Equal(80, result.Amount);
   }
 
-  [Test]
+  [Fact]
   public async Task DeleteAsync_RemovesCoupon()
   {
     using var database = new TestDoubles.SqliteCouponDatabase();
@@ -80,7 +79,7 @@ public class DiscountRepositoryTests
 
     var deleted = await repository.DeleteAsync("Pixel", CancellationToken.None);
 
-    Assert.That(deleted, Is.True);
-    Assert.That(database.Find("Pixel"), Is.Null);
+    Assert.True(deleted);
+    Assert.Null(database.Find("Pixel"));
   }
 }

@@ -14,7 +14,6 @@ public class UpdateOrderCommandValidator : AbstractValidator<UpdateOrderCommand>
     RuleFor(p => p.EmailAddress)
       .NotEmpty().WithMessage("{EmailAddress} is required.")
       .EmailAddress().WithMessage("{EmailAddress} is not a valid email address.");
-    ;
 
     RuleFor(p => p.TotalPrice)
       .NotEmpty().WithMessage("{TotalPrice} is required.")

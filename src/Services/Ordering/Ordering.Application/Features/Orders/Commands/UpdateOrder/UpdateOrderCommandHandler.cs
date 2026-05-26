@@ -19,13 +19,11 @@ public class UpdateOrderCommandHandler(IOrderRepository orderRepository, IMapper
 
     public async Task Handle(UpdateOrderCommand request, CancellationToken cancellationToken)
     {
-        var orderToUpdate = await _orderRepository.GetByIdAsync(request.Id);
+      var orderToUpdate = await _orderRepository.GetByIdAsync(request.Id, cancellationToken);
         if (orderToUpdate == null) throw new NotFoundException(nameof(Order), request.Id);
 
         _mapper.Map(request, orderToUpdate, typeof(UpdateOrderCommand), typeof(Order));
-        await _orderRepository.UpdateAsync(orderToUpdate);
-        _logger.LogInformation($"Order {orderToUpdate.Id} is successfully updated");
-
-        return;
+      await _orderRepository.UpdateAsync(orderToUpdate, cancellationToken);
+        _logger.LogInformation("Order {OrderId} was updated successfully", orderToUpdate.Id);
     }
 }

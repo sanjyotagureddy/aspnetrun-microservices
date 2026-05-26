@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+
 using Ordering.Domain.Entities;
 
 namespace Ordering.Infrastructure.Persistence;

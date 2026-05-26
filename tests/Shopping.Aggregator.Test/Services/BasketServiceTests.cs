@@ -1,16 +1,15 @@
 using System.Net;
 
-using NUnit.Framework;
-
 using Shopping.Aggregator.Models;
 using Shopping.Aggregator.Services;
 using Shopping.Aggregator.Test.TestHelpers;
+using Xunit;
 
 namespace Shopping.Aggregator.Test.Services;
 
 public class BasketServiceTests
 {
-  [Test]
+  [Fact]
   public async Task GetBasket_CallsBasketEndpoint_AndReturnsBasket()
   {
     var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.JsonResponse(new BasketModel { UserName = "swn", TotalPrice = 25 }));
@@ -22,10 +21,10 @@ public class BasketServiceTests
 
     BasketModel basket = await service.GetBasket("swn");
 
-    Assert.That(handler.Requests, Has.Count.EqualTo(1));
-    Assert.That(handler.Requests[0].Method, Is.EqualTo(HttpMethod.Get));
-    Assert.That(handler.Requests[0].RequestUri!.PathAndQuery, Is.EqualTo("/api/v1/Basket/swn"));
-    Assert.That(basket.UserName, Is.EqualTo("swn"));
-    Assert.That(basket.TotalPrice, Is.EqualTo(25));
+    Assert.Single(handler.Requests);
+    Assert.Equal(HttpMethod.Get, handler.Requests[0].Method);
+    Assert.Equal("/api/v1/Basket/swn", handler.Requests[0].RequestUri!.PathAndQuery);
+    Assert.Equal("swn", basket.UserName);
+    Assert.Equal(25, basket.TotalPrice);
   }
 }

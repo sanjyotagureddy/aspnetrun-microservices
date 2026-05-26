@@ -1,12 +1,11 @@
 using Discount.Grpc.Repositories;
-using NUnit.Framework;
+using Xunit;
 
 namespace Discount.Grpc.Test;
 
-[TestFixture]
 public class DiscountDatabaseInitializerTests
 {
-  [Test]
+  [Fact]
   public void Initialize_CreatesAndSeedsCoupons()
   {
     using var database = new TestDoubles.SqliteCouponDatabase();
@@ -14,8 +13,8 @@ public class DiscountDatabaseInitializerTests
 
     initializer.Initialize();
 
-    Assert.That(database.Count(), Is.EqualTo(2));
-    Assert.That(database.Find("IPhone X"), Is.Not.Null);
-    Assert.That(database.Find("Samsung 10"), Is.Not.Null);
+    Assert.Equal(2, database.Count());
+    Assert.NotNull(database.Find("IPhone X"));
+    Assert.NotNull(database.Find("Samsung 10"));
   }
 }

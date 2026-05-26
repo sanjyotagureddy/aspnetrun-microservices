@@ -1,8 +1,11 @@
-﻿using Microsoft.Data.SqlClient;
+﻿using System.Diagnostics.CodeAnalysis;
+
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ordering.API.Middlewares.Extensions;
 
+[ExcludeFromCodeCoverage]
 public static class HostExtension
 {
   public static IHost MigrateDatabase<TContext>(this IHost host, Action<TContext,
