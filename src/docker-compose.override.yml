@@ -114,7 +114,7 @@ services:
     container_name: ordering.api
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - "ConnectionStrings:OrderingConnectionString=server=orderdb;Database=OrderDb;User Id=sa;Password=SwN12345678;"
+      - "ConnectionStrings:OrderingConnectionString=server=orderdb;Database=OrderDb;User Id=sa;Password=SwN12345678;TrustServerCertificate=True"
       - "EventBusSettings:HostAddress=amqp://guest:guest@rabbitmq:5672"
     depends_on:
       - orderdb

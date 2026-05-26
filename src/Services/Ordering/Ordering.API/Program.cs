@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 
 using Ordering.API.Middlewares.Extensions;
+using Ordering.Infrastructure;
 using Ordering.Infrastructure.Persistence;
 
 namespace Ordering.API;

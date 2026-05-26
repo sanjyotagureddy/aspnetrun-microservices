@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
+
 using Ordering.Application.Contracts.Persistence;
 using Ordering.Domain.Entities;
-using Ordering.Infrastructure.Persistence;
 
 namespace Ordering.Infrastructure.Repositories;
 

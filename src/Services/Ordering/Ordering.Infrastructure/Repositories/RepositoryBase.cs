@@ -1,7 +1,9 @@
 ﻿using System.Linq.Expressions;
+
 using Microsoft.EntityFrameworkCore;
+
 using Ordering.Application.Contracts.Persistence;
-using Ordering.Infrastructure.Persistence;
+
 using SharedKernel.Domain.Entities;
 
 namespace Ordering.Infrastructure.Repositories;

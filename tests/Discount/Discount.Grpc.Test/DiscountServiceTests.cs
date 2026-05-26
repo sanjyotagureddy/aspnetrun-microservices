@@ -53,7 +53,7 @@ public class DiscountServiceTests
     }
 
     [Fact]
-    public void GetDiscount_ThrowsNotFoundWhenCouponMissing()
+    public async Task GetDiscount_ThrowsNotFoundWhenCouponMissingAsync()
     {
         var mediator = new Mock<IMediator>();
         var logger = new Mock<ILogger<DiscountService>>();
@@ -67,7 +67,7 @@ public class DiscountServiceTests
         var exception = await Assert.ThrowsAsync<RpcException>(() =>
             service.GetDiscount(new GetDiscountRequest { ProductName = "Missing" }, null!));
 
-        Assert.Equal(StatusCode.NotFound, exception?.Result?.StatusCode);
+        Assert.Equal(StatusCode.NotFound, exception?.StatusCode);
     }
 
     [Fact]
