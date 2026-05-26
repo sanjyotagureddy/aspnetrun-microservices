@@ -9,15 +9,14 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Http;
 using Moq;
-using NUnit.Framework;
+using Xunit;
 using System.Text;
 
 namespace Discount.Grpc.Test;
 
-[TestFixture]
 public class StartupTests
 {
-  [Test]
+  [Fact]
   public void ConfigureServices_RegistersMediatorAndInfrastructureServices()
   {
     var startup = new Startup();
@@ -28,13 +27,13 @@ public class StartupTests
 
     using var provider = services.BuildServiceProvider();
 
-    Assert.That(provider.GetRequiredService<IMediator>(), Is.Not.Null);
-    Assert.That(provider.GetRequiredService<ICouponRepository>().GetType().Name, Does.Contain("CouponRepository"));
-    Assert.That(provider.GetRequiredService<IDiscountConnectionFactory>(), Is.Not.Null);
-    Assert.That(provider.GetRequiredService<IDiscountDatabaseInitializer>(), Is.Not.Null);
+    Assert.NotNull(provider.GetRequiredService<IMediator>());
+    Assert.Contains("CouponRepository", provider.GetRequiredService<ICouponRepository>().GetType().Name);
+    Assert.NotNull(provider.GetRequiredService<IDiscountConnectionFactory>());
+    Assert.NotNull(provider.GetRequiredService<IDiscountDatabaseInitializer>());
   }
 
-  [Test]
+  [Fact]
   public async Task Mediator_ExecutesRegisteredCQRSHandlers()
   {
     var startup = new Startup();
@@ -63,13 +62,13 @@ public class StartupTests
     var updateResult = await mediator.Send(new UpdateDiscountCommand(coupon));
     var deleteResult = await mediator.Send(new DeleteDiscountCommand("IPhone X"));
 
-    Assert.That(queryResult, Is.EqualTo(coupon));
-    Assert.That(createResult, Is.EqualTo(coupon));
-    Assert.That(updateResult, Is.EqualTo(coupon));
-    Assert.That(deleteResult, Is.True);
+    Assert.Equal(coupon, queryResult);
+    Assert.Equal(coupon, createResult);
+    Assert.Equal(coupon, updateResult);
+    Assert.True(deleteResult);
   }
 
-  [Test]
+  [Fact]
   public void Configure_BuildsPipelineWithoutThrowing()
   {
     var startup = new Startup();
@@ -83,10 +82,11 @@ public class StartupTests
     var environment = new Mock<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>();
     environment.SetupGet(environment => environment.EnvironmentName).Returns(Microsoft.Extensions.Hosting.Environments.Development);
 
-    Assert.DoesNotThrow(() => startup.Configure(app, environment.Object));
+    var exception = Record.Exception(() => startup.Configure(app, environment.Object));
+    Assert.Null(exception);
   }
 
-  [Test]
+  [Fact]
   public async Task WriteDefaultResponseAsync_WritesGrpcClientGuidance()
   {
     var context = new DefaultHttpContext();
@@ -99,7 +99,7 @@ public class StartupTests
     using var reader = new StreamReader(responseStream, Encoding.UTF8);
     var body = await reader.ReadToEndAsync();
 
-    Assert.That(body, Does.Contain("gRPC client"));
+    Assert.Contains("gRPC client", body);
   }
 
   private static IConfiguration BuildConfiguration()

@@ -23,15 +23,15 @@ public class CheckoutOrderCommandHandler(
   public async Task<int> Handle(CheckoutOrderCommand request, CancellationToken cancellationToken)
   {
     var orderEntity = _mapper.Map<Order>(request);
-    var newOrder = await _orderRepository.AddAsync(orderEntity);
-    _logger.LogInformation($"Order {newOrder.Id} is successfully created");
+    var newOrder = await _orderRepository.AddAsync(orderEntity, cancellationToken);
+    _logger.LogInformation("Order {OrderId} was created successfully", newOrder.Id);
 
-    await SendEmail(newOrder);
+    await SendEmail(newOrder, cancellationToken);
 
     return newOrder.Id;
   }
 
-  private async Task SendEmail(Order newOrder)
+  private async Task SendEmail(Order newOrder, CancellationToken cancellationToken)
   {
     var email = new Email
     {
@@ -42,11 +42,11 @@ public class CheckoutOrderCommandHandler(
 
     try
     {
-      await _emailService.SendEmail(email);
+      await _emailService.SendEmail(email, cancellationToken);
     }
     catch (Exception ex)
     {
-      _logger.LogError($"Order {newOrder.Id} failed due to an error with the mail service: {ex.Message}");
+      _logger.LogError(ex, "Order {OrderId} failed due to an error with the mail service", newOrder.Id);
     }
   }
 }

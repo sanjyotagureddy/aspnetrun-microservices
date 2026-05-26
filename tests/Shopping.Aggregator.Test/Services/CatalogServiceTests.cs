@@ -1,14 +1,13 @@
-using NUnit.Framework;
-
 using Shopping.Aggregator.Models;
 using Shopping.Aggregator.Services;
 using Shopping.Aggregator.Test.TestHelpers;
+using Xunit;
 
 namespace Shopping.Aggregator.Test.Services;
 
 public class CatalogServiceTests
 {
-  [Test]
+  [Fact]
   public async Task GetCatalog_CallsCollectionEndpoint()
   {
     var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.JsonResponse(new List<CatalogModel>
@@ -20,11 +19,11 @@ public class CatalogServiceTests
 
     IEnumerable<CatalogModel> catalog = await service.GetCatalog();
 
-    Assert.That(handler.Requests[0].RequestUri!.PathAndQuery, Is.EqualTo("/api/v1/catalog/products"));
-    Assert.That(catalog, Has.Count.EqualTo(1));
+    Assert.Equal("/api/v1/catalog/products", handler.Requests[0].RequestUri!.PathAndQuery);
+    Assert.Single(catalog);
   }
 
-  [Test]
+  [Fact]
   public async Task GetCatalogByCategory_EncodesCategoryInQueryString()
   {
     var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.JsonResponse(new List<CatalogModel>()));
@@ -33,10 +32,10 @@ public class CatalogServiceTests
 
     await service.GetCatalogByCategory("home appliances");
 
-    Assert.That(handler.Requests[0].RequestUri!.PathAndQuery, Is.EqualTo("/api/v1/catalog/products?category=home%20appliances"));
+    Assert.Equal("/api/v1/catalog/products?category=home%20appliances", handler.Requests[0].RequestUri!.PathAndQuery);
   }
 
-  [Test]
+  [Fact]
   public async Task GetProductByName_EncodesNameInQueryString()
   {
     var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.JsonResponse(new List<CatalogModel>()));
@@ -45,10 +44,10 @@ public class CatalogServiceTests
 
     await service.GetProductByName("folding chair");
 
-    Assert.That(handler.Requests[0].RequestUri!.PathAndQuery, Is.EqualTo("/api/v1/catalog/products?name=folding%20chair"));
+    Assert.Equal("/api/v1/catalog/products?name=folding%20chair", handler.Requests[0].RequestUri!.PathAndQuery);
   }
 
-  [Test]
+  [Fact]
   public async Task GetCatalogById_CallsItemEndpoint()
   {
     var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.JsonResponse(new CatalogModel { Id = "abc", Name = "Phone" }));
@@ -57,7 +56,7 @@ public class CatalogServiceTests
 
     CatalogModel catalog = await service.GetCatalog("abc");
 
-    Assert.That(handler.Requests[0].RequestUri!.PathAndQuery, Is.EqualTo("/api/v1/catalog/products/abc"));
-    Assert.That(catalog.Id, Is.EqualTo("abc"));
+    Assert.Equal("/api/v1/catalog/products/abc", handler.Requests[0].RequestUri!.PathAndQuery);
+    Assert.Equal("abc", catalog.Id);
   }
 }

@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Ordering.Domain.Common;
 using Ordering.Domain.Entities;
+using SharedKernel.Domain.Entities;
 
 namespace Ordering.Infrastructure.Persistence;
 
@@ -10,17 +10,15 @@ public class OrderContext(DbContextOptions options) : DbContext(options)
 
   public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
   {
-    foreach (var entry in ChangeTracker.Entries<EntityBase>())
+    foreach (var entry in ChangeTracker.Entries<AuditableEntity<int>>())
       switch (entry.State)
       {
         case EntityState.Added:
-          entry.Entity.CreatedDate = DateTime.Now;
-          entry.Entity.CreatedBy = "swn";
+          entry.Entity.SetCreated("swn");
           break;
 
         case EntityState.Modified:
-          entry.Entity.LastModifiedDate = DateTime.Now;
-          entry.Entity.LastModifiedBy = "swn";
+          entry.Entity.SetLastModified("swn");
           break;
       }
 

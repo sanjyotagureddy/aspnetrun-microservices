@@ -2,22 +2,21 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Moq;
-using NUnit.Framework;
+using Xunit;
 
 namespace Discount.Grpc.Test;
 
-[TestFixture]
 public class ProgramTests
 {
-  [Test]
+  [Fact]
   public void CreateHostBuilder_ReturnsHostBuilder()
   {
     var hostBuilder = Program.CreateHostBuilder(Array.Empty<string>());
 
-    Assert.That(hostBuilder, Is.Not.Null);
+    Assert.NotNull(hostBuilder);
   }
 
-  [Test]
+  [Fact]
   public void Main_UsesInjectedHostBuilderAndRunner()
   {
     var initializer = new Mock<IDiscountDatabaseInitializer>();

@@ -8,6 +8,7 @@ using Ordering.Application;
 using Ordering.Infrastructure;
 using SharedKernel;
 using SharedKernel.Middleware;
+using SharedKernel.Web;
 
 namespace Ordering.API;
 
@@ -39,7 +40,7 @@ public class Startup(IConfiguration configuration)
         });
         });
 
-        services.AddControllers();
+        services.AddEndpointsApiExplorer();
         services.AddHealthChecks();
         services.AddSwaggerGen(c => { c.SwaggerDoc("v1", new OpenApiInfo { Title = "Ordering.API", Version = "v1" }); });
     }
@@ -64,7 +65,7 @@ public class Startup(IConfiguration configuration)
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapHealthChecks("/health");
-            endpoints.MapControllers();
+            endpoints.MapDiscoveredEndpoints();
         });
     }
 }

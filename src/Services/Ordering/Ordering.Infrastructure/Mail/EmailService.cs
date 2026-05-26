@@ -11,10 +11,10 @@ namespace Ordering.Infrastructure.Mail;
 public class EmailService(IOptions<EmailSettings> emailSettings, ILogger<EmailService> logger)
   : IEmailService
 {
-  public EmailSettings EmailSettings { get; } = emailSettings.Value ?? throw new ArgumentNullException(nameof(emailSettings));
+  public EmailSettings EmailSettings { get; } = emailSettings.Value;
   public ILogger<EmailService> Logger { get; } = logger ?? throw new ArgumentNullException(nameof(logger));
 
-  public async Task<bool> SendEmail(Email email)
+  public async Task<bool> SendEmail(Email email, CancellationToken cancellationToken = default)
   {
     var client = new SendGridClient(EmailSettings.ApiKey);
     var subject = email.Subject;
@@ -28,7 +28,7 @@ public class EmailService(IOptions<EmailSettings> emailSettings, ILogger<EmailSe
     };
 
     var sendGridMessage = MailHelper.CreateSingleEmail(from, to, subject, emailBody, emailBody);
-    var response = await client.SendEmailAsync(sendGridMessage);
+    var response = await client.SendEmailAsync(sendGridMessage, cancellationToken);
 
     Logger.LogInformation("Email sent.");
 

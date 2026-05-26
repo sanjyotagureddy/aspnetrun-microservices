@@ -1,9 +1,9 @@
 using Moq;
-using NUnit.Framework;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Shopping.Aggregator.Endpoints;
 using Shopping.Aggregator.Models;
 using Shopping.Aggregator.Services.Interfaces;
+using Xunit;
 
 namespace Shopping.Aggregator.Test;
 
@@ -17,8 +17,7 @@ public class ShoppingEndpointTest
   private CatalogModel _catalogModel;
   private IEnumerable<OrderResponseModel> _orderResponseModel;
 
-  [SetUp]
-  public void Setup()
+  public ShoppingEndpointTest()
   {
     _basketService.Reset();
     _catalogService.Reset();
@@ -60,8 +59,8 @@ public class ShoppingEndpointTest
     };
   }
 
-  [Test]
-  [TestCase("swn")]
+  [Theory]
+  [InlineData("swn")]
   public async Task GetShopping_Returns_ShoppingModel_WithEnrichedBasketAsync(string userName)
   {
     _basketService.Setup(c => c.GetBasket(userName)).ReturnsAsync(_basketModel);
@@ -74,26 +73,26 @@ public class ShoppingEndpointTest
       _orderService.Object,
       userName);
 
-    Assert.That(result, Is.Not.Null);
+    Assert.NotNull(result);
 
     var shoppingModel = result.Value;
-    Assert.That(shoppingModel, Is.Not.Null);
-    Assert.That(shoppingModel!.UserName, Is.EqualTo(userName));
-    Assert.That(shoppingModel.BasketWithProducts, Is.SameAs(_basketModel));
-    Assert.That(shoppingModel.Orders, Is.SameAs(_orderResponseModel));
+    Assert.NotNull(shoppingModel);
+    Assert.Equal(userName, shoppingModel!.UserName);
+    Assert.Same(_basketModel, shoppingModel.BasketWithProducts);
+    Assert.Same(_orderResponseModel, shoppingModel.Orders);
 
     var item = shoppingModel.BasketWithProducts.Items.Single();
-    Assert.That(item.ProductName, Is.EqualTo(_catalogModel.Name));
-    Assert.That(item.Category, Is.EqualTo(_catalogModel.Category));
-    Assert.That(item.Summary, Is.EqualTo(_catalogModel.Summary));
-    Assert.That(item.Description, Is.EqualTo(_catalogModel.Description));
-    Assert.That(item.ImageFile, Is.EqualTo(_catalogModel.ImageFile));
+    Assert.Equal(_catalogModel.Name, item.ProductName);
+    Assert.Equal(_catalogModel.Category, item.Category);
+    Assert.Equal(_catalogModel.Summary, item.Summary);
+    Assert.Equal(_catalogModel.Description, item.Description);
+    Assert.Equal(_catalogModel.ImageFile, item.ImageFile);
     _basketService.Verify(c => c.GetBasket(userName), Times.Once);
     _catalogService.Verify(p => p.GetCatalog(_basketModel.Items[0].ProductId), Times.Once);
     _orderService.Verify(p => p.GetOrdersByUserName(userName), Times.Once);
   }
 
-  [Test]
+  [Fact]
   public async Task GetShopping_Enriches_EachBasketItemAsync()
   {
     _basketModel.Items.Add(new BasketItemExtendedModel
@@ -125,10 +124,10 @@ public class ShoppingEndpointTest
       "swn");
 
     var shoppingModel = result.Value;
-    Assert.That(shoppingModel, Is.Not.Null);
-    Assert.That(shoppingModel!.BasketWithProducts.Items, Has.Count.EqualTo(2));
-    Assert.That(shoppingModel.BasketWithProducts.Items[0].ProductName, Is.EqualTo(_catalogModel.Name));
-    Assert.That(shoppingModel.BasketWithProducts.Items[1].ProductName, Is.EqualTo("Tablet"));
+    Assert.NotNull(shoppingModel);
+    Assert.Equal(2, shoppingModel!.BasketWithProducts.Items.Count);
+    Assert.Equal(_catalogModel.Name, shoppingModel.BasketWithProducts.Items[0].ProductName);
+    Assert.Equal("Tablet", shoppingModel.BasketWithProducts.Items[1].ProductName);
     _catalogService.Verify(p => p.GetCatalog(It.IsAny<string>()), Times.Exactly(2));
   }
 }
