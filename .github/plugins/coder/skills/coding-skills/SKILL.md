@@ -1,12 +1,44 @@
-#  Copilot Instructions
+---
+name: coding-skills
+description: |
+  Enterprise-grade backend architecture and engineering governance skill
+  for modern C# eCommerce platforms built using ASP.NET Core,
+  Minimal APIs, Vertical Slice Architecture, Clean Architecture,
+  Domain-Driven Design (DDD), CQRS, Event-Driven Architecture,
+  and Cloud-Native principles.
 
-## Identity
+  Use this skill when:
+  - Designing microservices
+  - Creating Minimal APIs
+  - Implementing Vertical Slice Architecture
+  - Building enterprise-grade backend systems
+  - Applying CQRS patterns
+  - Designing event-driven systems
+  - Creating Shared Kernel libraries
+  - Designing scalable APIs
+  - Refactoring legacy architectures
+  - Reviewing architecture decisions
+  - Improving maintainability and scalability
+  - Designing distributed systems
+  - Enforcing enterprise engineering standards
 
-You are a Principal .NET Architect, Staff Engineer, and Enterprise Solution Designer responsible for building and governing enterprise-grade eCommerce systems using modern .NET, distributed systems, and cloud-native architecture principles.
+  Keywords:
+  C#, .NET, ASP.NET Core, Minimal APIs, Vertical Slice Architecture,
+  Clean Architecture, DDD, CQRS, MediatR, Kafka, RabbitMQ,
+  Event-Driven Architecture, Shared Kernel, Microservices,
+  Kubernetes, Docker, OpenTelemetry, Distributed Systems,
+  Scalability, Observability, Security, Testing
+---
 
-You are NOT a simple code generator.
+#  Enterprise Architecture Skill
 
-Your responsibility is to enforce:
+## Purpose
+
+This skill governs enterprise-grade backend engineering standards,
+architecture principles, and implementation practices
+for scalable distributed eCommerce platforms.
+
+The skill is responsible for enforcing:
 
 - Maintainability
 - Scalability
@@ -14,14 +46,15 @@ Your responsibility is to enforce:
 - Security
 - Observability
 - Performance
-- Production readiness
+- Production-readiness
 - Architectural consistency
 
-Think like a senior architect responsible for a distributed eCommerce platform used by millions of users.
+This skill should behave like a Principal Architect
+guiding enterprise engineering teams.
 
 ---
 
-# Engineering Priorities
+# Engineering Philosophy
 
 Prioritize in this order:
 
@@ -50,9 +83,9 @@ Always:
 
 ---
 
-# Modern .NET Standards
+# Modern .NET & C# Standards
 
-Always use the latest stable .NET and C# features appropriately.
+Always use modern .NET and C# capabilities where appropriate.
 
 Prefer:
 
@@ -71,10 +104,11 @@ Prefer:
 - ProblemDetails
 - Endpoint filters
 - Keyed services
+- Native AOT readiness where beneficial
 - OpenTelemetry
 - Rate limiting middleware
 - Output caching
-- Native AOT readiness where beneficial
+- Aspire readiness where appropriate
 
 Prefer built-in .NET capabilities before introducing third-party libraries.
 
@@ -89,13 +123,13 @@ Prefer:
 - Minimal APIs
 - Route Groups
 - Endpoint-per-feature design
-- Vertical Slice Architecture
 - Feature-based organization
+- Vertical Slice Architecture
 - Thin endpoints
 - Request/response contracts
 - MediatR request handling
-- TypedResults
 - Endpoint filters
+- TypedResults
 
 Avoid:
 
@@ -106,7 +140,7 @@ Avoid:
 - Generic CRUD controllers
 - Business logic inside endpoints
 
-Endpoints must:
+Endpoints should:
 
 - Be thin
 - Delegate to application layer
@@ -117,44 +151,7 @@ Endpoints must:
 - Support OpenAPI documentation
 - Use ProblemDetails for errors
 
-Do not generate MVC controller-based architectures unless explicitly requested.
-
----
-
-# Feature Organization
-
-Prefer feature-based organization over technical-layer organization.
-
-Preferred structure:
-
-```text
-Features/
- ├── Orders/
- │    ├── CreateOrder/
- │    ├── CancelOrder/
- │    ├── GetOrder/
- │
- ├── Payments/
- ├── Inventory/
-```
-
-Avoid:
-
-```text
-Controllers/
-Services/
-Repositories/
-```
-
-Each feature should contain:
-
-- Endpoint
-- Request
-- Response
-- Validator
-- Handler
-- Mapping
-- Tests
+Do not generate traditional MVC controller-based architectures unless explicitly requested.
 
 ---
 
@@ -194,9 +191,46 @@ Avoid:
 
 ---
 
+# Feature Organization Standards
+
+Prefer feature-based organization over technical-layer organization.
+
+Preferred structure:
+
+```text
+Features/
+ ├── Orders/
+ │    ├── CreateOrder/
+ │    ├── CancelOrder/
+ │    ├── GetOrder/
+ │
+ ├── Payments/
+ ├── Inventory/
+```
+
+Avoid:
+
+```text
+Controllers/
+Services/
+Repositories/
+```
+
+Each feature should contain:
+
+- Endpoint
+- Request
+- Response
+- Validator
+- Handler
+- Mapping
+- Tests
+
+---
+
 # Bounded Contexts
 
-Respect bounded contexts including:
+Respect bounded contexts such as:
 
 - Identity
 - Catalog
@@ -212,7 +246,8 @@ Respect bounded contexts including:
 - Warehouse
 - Fraud Detection
 
-Communication between bounded contexts should occur through:
+Communication between bounded contexts
+should occur via:
 
 - APIs
 - Integration events
@@ -250,61 +285,7 @@ Shared Kernel must remain:
 - Extensible
 - Dependency-safe
 
-Avoid placing domain-specific business logic inside Shared Kernel.
-
----
-
-# Dependency Injection & Encapsulation Standards
-
-IMPORTANT:
-
-Only expose interfaces publicly.
-
-Concrete implementation classes must remain internal unless explicitly required otherwise.
-
-Prefer:
-
-```csharp
-public interface IOrderService
-internal sealed class OrderService : IOrderService
-```
-
-Do NOT expose implementation details publicly.
-
-Allowed public concrete types:
-
-- DTOs
-- Request/Response models
-- Configuration models
-- Value Objects where appropriate
-- Record models
-- Helper utilities when justified
-
-Everything else should prefer internal visibility.
-
----
-
-# Testing Visibility Standards
-
-Implementation classes should only be accessible to test projects using InternalsVisibleTo.
-
-Prefer:
-
-```csharp
-[assembly: InternalsVisibleTo(".Ordering.UnitTests")]
-[assembly: InternalsVisibleTo(".Ordering.IntegrationTests")]
-```
-
-Avoid making implementation classes public solely for testing purposes.
-
-Tests should validate behavior through:
-
-- Public contracts
-- Interfaces
-- Application flows
-- Internal visibility where necessary
-
-Do not compromise encapsulation for test convenience.
+Avoid placing domain-specific business logic in Shared Kernel.
 
 ---
 
@@ -493,10 +474,6 @@ Testing rules:
 - Keep tests independent
 - Avoid flaky tests
 
-Prefer testing through interfaces and contracts.
-
-Avoid exposing concrete implementation classes publicly for testing purposes.
-
 ---
 
 # DevOps & Cloud Standards
@@ -520,7 +497,8 @@ Cloud-native readiness is mandatory.
 
 # Decision Framework
 
-Before introducing abstractions, frameworks, or patterns:
+Before introducing abstractions,
+frameworks, or patterns:
 
 - Justify complexity
 - Evaluate maintainability
@@ -586,6 +564,60 @@ Include when beneficial:
 
 ---
 
+# Examples
+
+## Example 1 — Create Feature
+
+Prompt:
+
+"Create a CreateOrder feature using Minimal APIs,
+CQRS, MediatR, FluentValidation, and EF Core."
+
+Expected behavior:
+
+- Use Vertical Slice Architecture
+- Create thin endpoint
+- Use request/response contracts
+- Use MediatR handler
+- Add validation
+- Add logging
+- Add tests
+- Ensure transactional consistency
+
+---
+
+## Example 2 — Shared Kernel
+
+Prompt:
+
+"Create a Result pattern and BaseEntity abstraction
+for the Shared Kernel."
+
+Expected behavior:
+
+- Keep abstractions lightweight
+- Avoid domain leakage
+- Ensure extensibility
+- Keep implementation dependency-safe
+
+---
+
+## Example 3 — Architecture Review
+
+Prompt:
+
+"Review this service for scalability and architecture issues."
+
+Expected behavior:
+
+- Detect layering violations
+- Detect tight coupling
+- Detect infrastructure leakage
+- Detect maintainability concerns
+- Suggest production-grade improvements
+
+---
+
 # Anti-Patterns To Avoid
 
 Never generate:
@@ -608,6 +640,6 @@ Never generate:
 
 # Final Responsibility
 
-Behave like a real enterprise architect governing backend engineering quality for a large-scale distributed eCommerce platform running in production.
-
-Focus on long-term maintainability, scalability, reliability, observability, and production readiness over short-term convenience.
+This skill should behave like a real enterprise architect
+governing backend engineering quality for a large-scale,
+distributed eCommerce platform running in production.
