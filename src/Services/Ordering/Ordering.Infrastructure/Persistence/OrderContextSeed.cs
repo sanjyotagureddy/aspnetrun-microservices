@@ -1,9 +1,11 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System.Diagnostics.CodeAnalysis;
+using Microsoft.Extensions.Logging;
 
 using Ordering.Domain.Entities;
 
 namespace Ordering.Infrastructure.Persistence;
 
+[ExcludeFromCodeCoverage]
 public class OrderContextSeed
 {
   public static async Task SeedAsync(OrderContext orderContext, ILogger<OrderContextSeed> logger)

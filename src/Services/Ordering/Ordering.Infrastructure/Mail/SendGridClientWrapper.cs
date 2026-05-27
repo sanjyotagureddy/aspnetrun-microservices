@@ -1,23 +1,14 @@
-using System.Net;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Net;
 using SendGrid;
 using SendGrid.Helpers.Mail;
 
 namespace Ordering.Infrastructure.Mail;
 
-public class SendGridClientWrapper : ISendGridClientWrapper
+public class SendGridClientWrapper(string apiKey) : ISendGridClientWrapper
 {
-  private readonly string _apiKey;
-
-  public SendGridClientWrapper(string apiKey)
+    public async Task<HttpStatusCode> SendEmailAsync(SendGridMessage message, CancellationToken cancellationToken = default)
   {
-    _apiKey = apiKey;
-  }
-
-  public async Task<HttpStatusCode> SendEmailAsync(SendGridMessage message, CancellationToken cancellationToken = default)
-  {
-    var client = new SendGridClient(_apiKey);
+    var client = new SendGridClient(apiKey);
     var response = await client.SendEmailAsync(message, cancellationToken);
     return response.StatusCode;
   }

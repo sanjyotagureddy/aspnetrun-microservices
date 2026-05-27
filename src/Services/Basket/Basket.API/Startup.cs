@@ -10,6 +10,7 @@ using MassTransit;
 using Microsoft.OpenApi;
 using SharedKernel;
 using SharedKernel.Middleware;
+using SharedKernel.Errors;
 using SharedKernel.Web;
 
 namespace Basket.API;
@@ -36,12 +37,12 @@ public class Startup(IConfiguration configuration)
 
         // Grpc Configuration
                 services.AddGrpcClient<DiscountProtoService.DiscountProtoServiceClient>
-                    (o => o.Address = new Uri(Configuration["GrpcSettings:DiscountUrl"] ?? throw new InvalidOperationException("GrpcSettings:DiscountUrl is missing.")));
+                    (o => o.Address = new Uri(Configuration["GrpcSettings:DiscountUrl"] ?? throw Errors.ServerSide.ConfigurationMissing("Missing GrpcSettings:DiscountUrl")));
 
         // MassTransit-RabbitMQ Configuration
         services.AddMassTransit(config =>
         {
-                        config.UsingRabbitMq((_, cfg) => { cfg.Host(Configuration["EventBusSettings:HostAddress"] ?? throw new InvalidOperationException("EventBusSettings:HostAddress is missing.")); });
+                        config.UsingRabbitMq((_, cfg) => { cfg.Host(Configuration["EventBusSettings:HostAddress"] ?? throw Errors.ServerSide.ConfigurationMissing("Missing EventBusSettings:HostAddress")); });
         });
 
         services.AddEndpointsApiExplorer();

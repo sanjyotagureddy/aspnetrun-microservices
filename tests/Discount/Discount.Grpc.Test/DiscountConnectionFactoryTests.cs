@@ -1,5 +1,9 @@
-using Discount.Grpc.Repositories;
+﻿using Discount.Grpc.Repositories;
+
 using Microsoft.Extensions.Configuration;
+
+using SharedKernel.Exceptions;
+
 using Xunit;
 
 namespace Discount.Grpc.Test;
@@ -23,7 +27,7 @@ public class DiscountConnectionFactoryTests
     var configuration = BuildConfiguration(null);
     var factory = new DiscountConnectionFactory(configuration);
 
-    var exception = Assert.Throws<InvalidOperationException>(() => factory.CreateConnection());
+    var exception = Assert.Throws<ConfigurationMissingException>(() => factory.CreateConnection());
 
     Assert.Contains("DatabaseSettings:ConnectionString", exception!.Message);
   }

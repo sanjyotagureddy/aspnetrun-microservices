@@ -1,10 +1,8 @@
-using System.Net;
-using System.Net.Http;
+﻿using System.Net;
 using System.Text;
-
+using SharedKernel.Exceptions;
 using Shopping.Aggregator.Extensions;
 using Shopping.Aggregator.Models;
-using Shopping.Aggregator.Test.TestHelpers;
 using Xunit;
 
 namespace Shopping.Aggregator.Test.Extensions;
@@ -33,7 +31,7 @@ public class HttpClientExtensionTests
       ReasonPhrase = "Bad Gateway"
     };
 
-    var ex = await Assert.ThrowsAsync<ApplicationException>(async () => await response.ReadContentAs<BasketModel>());
+    var ex = await Assert.ThrowsAsync<DependencyFailureException>(async () => await response.ReadContentAs<BasketModel>());
 
     Assert.Contains("Something went wrong calling the API", ex.Message);
     Assert.Contains("Bad Gateway", ex.Message);

@@ -1,9 +1,9 @@
-using MediatR;
+﻿using MediatR;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.Mvc;
+using SharedKernel.Exceptions;
 using Microsoft.AspNetCore.Routing;
 
 using Moq;
@@ -50,19 +50,12 @@ public sealed class OrderingEndpointsTests
     }
 
     [Fact]
-    public async Task CheckoutOrder_WhenIdempotencyKeyMissing_ReturnsBadRequest()
+    public async Task CheckoutOrder_WhenIdempotencyKeyMissing_ThrowsValidationException()
     {
         var mediator = new Mock<IMediator>(MockBehavior.Strict);
         var context = new DefaultHttpContext();
         var command = new CheckoutOrderCommand { UserName = "swn", CardNumber = "1234" };
-
-        Results<Ok<int>, BadRequest<ProblemDetails>> result =
-            await OrderingEndpoints.CheckoutOrder(mediator.Object, context, command, CancellationToken.None);
-
-        BadRequest<ProblemDetails> badRequest = Assert.IsType<BadRequest<ProblemDetails>>(result.Result);
-        Assert.NotNull(badRequest.Value);
-        Assert.Equal(StatusCodes.Status400BadRequest, badRequest.Value.Status);
-        Assert.Equal("ordering.idempotency_key_required", badRequest.Value.Extensions["error_code"]);
+        await Assert.ThrowsAsync<ValidationException>(async () => await OrderingEndpoints.CheckoutOrder(mediator.Object, context, command, CancellationToken.None));
         mediator.Verify(m => m.Send(It.IsAny<CheckoutOrderCommand>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -78,10 +71,7 @@ public sealed class OrderingEndpointsTests
         mediator.Setup(m => m.Send(It.Is<CheckoutOrderCommand>(value => value == command), It.IsAny<CancellationToken>()))
             .ReturnsAsync(42);
 
-        Results<Ok<int>, BadRequest<ProblemDetails>> result =
-            await OrderingEndpoints.CheckoutOrder(mediator.Object, context, command, CancellationToken.None);
-
-        Ok<int> ok = Assert.IsType<Ok<int>>(result.Result);
+        Ok<int> ok = await OrderingEndpoints.CheckoutOrder(mediator.Object, context, command, CancellationToken.None);
         Assert.Equal(42, ok.Value);
         mediator.VerifyAll();
     }
