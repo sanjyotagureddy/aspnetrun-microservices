@@ -114,10 +114,11 @@ Or add this block manually to your hosts file:
 ```txt
 # BEGIN aspnetrun-microservices
 127.0.0.1 aspnetrun.local
-127.0.0.1 catalog.aspnetrun.local
+127.0.0.1 aspire.aspnetrun.local
+127.0.0.1 product.aspnetrun.local
 127.0.0.1 basket.aspnetrun.local
 127.0.0.1 discount.aspnetrun.local
-127.0.0.1 discountgrpc.aspnetrun.local
+127.0.0.1 discount.grpc.aspnetrun.local
 127.0.0.1 ordering.aspnetrun.local
 127.0.0.1 gateway.aspnetrun.local
 127.0.0.1 aggregator.aspnetrun.local
@@ -129,7 +130,7 @@ Or add this block manually to your hosts file:
 
 4. You can **launch microservices** as below urls:
 
-* **Catalog API -> http://host.docker.internal:8000/swagger/index.html**
+* **Product API -> http://host.docker.internal:8000/swagger/index.html**
 * **Basket API -> http://host.docker.internal:8001/swagger/index.html**
 * **Discount API -> http://host.docker.internal:8002/swagger/index.html**
 * **Ordering API -> http://host.docker.internal:8004/swagger/index.html**
