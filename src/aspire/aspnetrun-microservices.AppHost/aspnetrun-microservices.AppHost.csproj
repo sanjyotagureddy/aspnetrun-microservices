@@ -1,0 +1,26 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.3.5">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UserSecretsId>f79c66f0-9aee-4e14-b980-05b228fa4099</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" />
+    <PackageReference Include="Aspire.Hosting.Kafka" />
+    <PackageReference Include="Aspire.Hosting.RabbitMQ" />
+    <PackageReference Include="Aspire.Hosting.Redis" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Gateway\Gateway.Yarp\Gateway.Yarp.csproj" />
+    <ProjectReference Include="..\..\Services\Cart\Cart.Api\Cart.Api.csproj" />
+    <ProjectReference Include="..\..\Services\Discount\Discount.Grpc\Discount.Grpc.csproj" />
+    <ProjectReference Include="..\..\Services\Order\Order.Api\Order.Api.csproj" />
+    <ProjectReference Include="..\..\Services\Product\Products.Api\Products.Api.csproj" />
+  </ItemGroup>
+
+</Project>
