@@ -1,6 +1,4 @@
-using System.Net;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Net;
 using SendGrid.Helpers.Mail;
 
 namespace Ordering.Infrastructure.Mail;

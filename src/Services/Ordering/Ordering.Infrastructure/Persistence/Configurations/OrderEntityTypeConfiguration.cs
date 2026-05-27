@@ -1,9 +1,11 @@
+﻿using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Ordering.Domain.Entities;
 
 namespace Ordering.Infrastructure.Persistence.Configurations;
 
+[ExcludeFromCodeCoverage]
 public sealed class OrderEntityTypeConfiguration : IEntityTypeConfiguration<Order>
 {
   public void Configure(EntityTypeBuilder<Order> builder)

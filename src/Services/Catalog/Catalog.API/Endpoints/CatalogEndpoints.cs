@@ -8,6 +8,7 @@ using Catalog.API.Domain.Entities;
 using MediatR;
 
 using SharedKernel.Web;
+using SharedKernel.Errors;
 
 namespace Catalog.API.Endpoints;
 
@@ -37,7 +38,7 @@ internal sealed class CatalogEndpoints(ILogger<CatalogEndpoints> logger) : IEndp
                     return Results.Ok(product);
 
                 _logger.LogError("product with id: {id}, not found.", id);
-                return Results.NotFound();
+                throw Errors.Common.NotFound($"product with id: {id}, not found.", new[] { new Info("catalog.product_not_found", id.ToString()) });
             })
             .WithName("GetProductById");
 
@@ -50,11 +51,13 @@ internal sealed class CatalogEndpoints(ILogger<CatalogEndpoints> logger) : IEndp
             .WithName("CreateProduct");
 
         products.MapPut("/{id:guid}",
-                async (IMediator mediator, Guid id, Product product, CancellationToken cancellationToken)
-                    => id != product.Id
-                        ? Results.BadRequest("Route id must match payload id.")
-                        : Results.Ok((object?)await mediator.Send(new UpdateProductCommand(product),
-                            cancellationToken)))
+                async (IMediator mediator, Guid id, Product product, CancellationToken cancellationToken) =>
+                {
+                    if (id != product.Id)
+                        throw Errors.Common.Validation("Route id must match payload id.", new[] { new Info("catalog.invalid_route_id", "Route id must match payload id.") });
+
+                    return Results.Ok((object?)await mediator.Send(new UpdateProductCommand(product), cancellationToken));
+                })
             .WithName("UpdateProductById");
 
         products.MapDelete("/{id:guid}", async (IMediator mediator, Guid id, CancellationToken cancellationToken) =>

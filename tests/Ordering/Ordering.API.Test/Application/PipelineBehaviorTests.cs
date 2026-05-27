@@ -1,10 +1,8 @@
-using FluentValidation;
+﻿using FluentValidation;
 
 using MediatR;
 
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Logging;
-
 using Ordering.Application.Behaviors;
 using Ordering.Application.Exceptions;
 using AppValidationException = Ordering.Application.Exceptions.ValidationException;
@@ -19,11 +17,11 @@ public sealed class PipelineBehaviorTests
     public async Task ValidationBehavior_WithNoValidators_CallsNext()
     {
         var behavior = new ValidationBehavior<TestRequest, string>(Array.Empty<IValidator<TestRequest>>());
-        RequestHandlerDelegate<string> next = _ => Task.FromResult("done");
+        Task<string> Next(CancellationToken _) => Task.FromResult("done");
 
-        string result = await behavior.Handle(
+        var result = await behavior.Handle(
             new TestRequest("ok"),
-            next,
+            Next,
             CancellationToken.None);
 
         Assert.Equal("done", result);

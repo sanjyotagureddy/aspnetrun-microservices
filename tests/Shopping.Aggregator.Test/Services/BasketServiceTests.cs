@@ -1,6 +1,4 @@
-using System.Net;
-
-using Shopping.Aggregator.Models;
+﻿using Shopping.Aggregator.Models;
 using Shopping.Aggregator.Services;
 using Shopping.Aggregator.Test.TestHelpers;
 using Xunit;

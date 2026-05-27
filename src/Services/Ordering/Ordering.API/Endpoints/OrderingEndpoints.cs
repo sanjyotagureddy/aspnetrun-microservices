@@ -9,6 +9,7 @@ using Ordering.Application.Features.Orders.Commands.UpdateOrder;
 using Ordering.Application.Features.Orders.Queries.GetOrdersList;
 
 using SharedKernel.Web;
+using SharedKernel.Errors;
 
 namespace Ordering.API.Endpoints;
 
@@ -44,7 +45,7 @@ internal sealed class OrderingEndpoints : IEndpoint
         return TypedResults.Ok(orders.AsEnumerable());
     }
 
-    internal static async Task<Results<Ok<int>, BadRequest<ProblemDetails>>> CheckoutOrder(
+    internal static async Task<Ok<int>> CheckoutOrder(
         [FromServices] IMediator mediator,
         HttpContext httpContext,
         [FromBody] CheckoutOrderCommand command,
@@ -52,14 +53,9 @@ internal sealed class OrderingEndpoints : IEndpoint
     {
         if (!httpContext.Request.Headers.TryGetValue(IdempotencyHeaderName, out var key) || string.IsNullOrWhiteSpace(key))
         {
-            var problemDetails = new ProblemDetails
-            {
-                Status = StatusCodes.Status400BadRequest,
-                Title = "Missing idempotency key",
-                Detail = $"Header '{IdempotencyHeaderName}' is required for checkout requests."
-            };
-            problemDetails.Extensions["error_code"] = IdempotencyErrorCode;
-            return TypedResults.BadRequest(problemDetails);
+            throw Errors.Common.Validation(
+                "Missing idempotency key",
+                new[] { new Info(IdempotencyErrorCode, $"Header '{IdempotencyHeaderName}' is required for checkout requests.") });
         }
 
         int orderId = await mediator.Send(command, cancellationToken);

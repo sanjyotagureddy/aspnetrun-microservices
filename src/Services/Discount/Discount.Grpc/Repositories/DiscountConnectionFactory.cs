@@ -1,6 +1,7 @@
 using System.Data.Common;
 using Discount.Grpc.Repositories.Interfaces;
 using Npgsql;
+using SharedKernel.Errors;
 
 namespace Discount.Grpc.Repositories;
 
@@ -13,7 +14,7 @@ internal sealed class DiscountConnectionFactory(IConfiguration configuration) : 
     var connectionString = _configuration.GetValue<string>("DatabaseSettings:ConnectionString");
     if (string.IsNullOrWhiteSpace(connectionString))
     {
-      throw new InvalidOperationException("DatabaseSettings:ConnectionString is required.");
+      throw Errors.ServerSide.ConfigurationMissing("Missing DatabaseSettings:ConnectionString");
     }
 
     return new NpgsqlConnection(connectionString);

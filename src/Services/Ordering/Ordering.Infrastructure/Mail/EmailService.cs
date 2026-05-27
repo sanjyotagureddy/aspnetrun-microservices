@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Ordering.Application.Contracts.Infrastructure;
 using Ordering.Application.Models;
-using System.Net;
 using SendGrid.Helpers.Mail;
 
 namespace Ordering.Infrastructure.Mail;
