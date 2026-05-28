@@ -1,54 +1,39 @@
 <Solution>
   <Folder Name="/Solution Items/">
-    <File Path="Directory.Build.props" />
+    <File Path=".editorconfig" />
     <File Path="Directory.Packages.props" />
   </Folder>
-  <Folder Name="/src/">
-    <Project Path="src/docker-compose.dcproj">
-      <Build />
-    </Project>
+  <Folder Name="/src/" />
+  <Folder Name="/src/0. aspire/">
+    <Project Path="src/aspire/aspnetrun-microservices.AppHost/aspnetrun-microservices.AppHost.csproj" Id="3bba23b7-dab4-41da-b6d0-a6eabd04826e" />
+    <Project Path="src/aspire/aspnetrun-microservices.ServiceDefaults/aspnetrun-microservices.ServiceDefaults.csproj" />
   </Folder>
-  <Folder Name="/src/.sharedkernel/">
-    <Project Path="src/BuildingBlocks/EventBus.Messages/Shared.Messaging.csproj" />
-    <Project Path="src/SharedKernel/SharedKernel.csproj" Id="eb53c7c1-7732-4313-9aac-ff45b5d9116a" />
+  <Folder Name="/src/1. gateway/">
+    <Project Path="src/Gateway/Gateway.Yarp/Gateway.Yarp.csproj" />
   </Folder>
-  <Folder Name="/src/api-gateway/">
-    <Project Path="src/ApiGateways/OcelotApiGateway/OcelotApiGateway.csproj" />
-    <Project Path="src/ApiGateways/Shopping.Aggregator/Shopping.Aggregator.csproj" />
+  <Folder Name="/src/2. sharedkernel/">
+    <Project Path="src/Shared/Common.SharedKernel/Common.SharedKernel.csproj" Id="0eaa7bff-1096-400b-8685-a75d8b1f35a7" />
+    <Project Path="src/Shared/Common.SharedKernel.Messaging.RabbitMq/Common.SharedKernel.Messaging.RabbitMq.csproj" />
   </Folder>
-  <Folder Name="/src/Services/" />
-  <Folder Name="/src/Services/Basket/">
-    <Project Path="src/Services/Basket/Basket.API/Basket.API.csproj" />
+  <Folder Name="/src/3. services/" />
+  <Folder Name="/src/3. services/cart/">
+    <Project Path="src/Services/Cart/Cart.Api/Cart.Api.csproj" />
   </Folder>
-  <Folder Name="/src/Services/Catalog/">
-    <Project Path="src/Services/Catalog/Catalog.API/Catalog.API.csproj" />
-  </Folder>
-  <Folder Name="/src/Services/Discount/">
-    <Project Path="src/Services/Discount/Discount.API/Discount.API.csproj" />
+  <Folder Name="/src/3. services/discount/">
     <Project Path="src/Services/Discount/Discount.Grpc/Discount.Grpc.csproj" />
   </Folder>
-  <Folder Name="/src/Services/Ordering/">
-    <Project Path="src/Services/Ordering/Ordering.API/Ordering.API.csproj" />
-    <Project Path="src/Services/Ordering/Ordering.Application/Ordering.Application.csproj" />
-    <Project Path="src/Services/Ordering/Ordering.Domain/Ordering.Domain.csproj" />
-    <Project Path="src/Services/Ordering/Ordering.Infrastructure/Ordering.Infrastructure.csproj" />
+  <Folder Name="/src/3. services/order/">
+    <Project Path="src/Services/Order/Order.Api/Order.Api.csproj" />
   </Folder>
-  <Folder Name="/test/" />
-  <Folder Name="/test/ApiGateways/">
-    <Project Path="Tests/Shopping.Aggregator.Test/Shopping.Aggregator.Test.csproj" />
+  <Folder Name="/src/3. services/product/">
+    <Project Path="src/Services/Product/Products.Api/Products.Api.csproj" />
   </Folder>
-  <Folder Name="/test/Services/" />
-  <Folder Name="/test/Services/Basket/">
-    <Project Path="Tests/Basket/Basket.API.Test/Basket.API.Test.csproj" />
-  </Folder>
-  <Folder Name="/test/Services/Catalog/">
-    <Project Path="Tests/Catalog/Catalog.API.Test/Catalog.API.Test.csproj" />
-  </Folder>
-  <Folder Name="/test/Services/Discount/">
-    <Project Path="Tests/Discount/Discount.API.Test/Discount.API.Test.csproj" />
-    <Project Path="Tests/Discount/Discount.Grpc.Test/Discount.Grpc.Test.csproj" />
-  </Folder>
-  <Folder Name="/test/Services/Ordering/">
-    <Project Path="Tests/Ordering/Ordering.API.Test/Ordering.API.Test.csproj" />
+  <Folder Name="/tests/" />
+  <Folder Name="/tests/Unit Tests/">
+    <Project Path="tests/UnitTests/Cart.Api.Tests/Cart.Api.Tests.csproj" Id="5a09a466-05c7-47d0-9a11-8d814122f047" />
+    <Project Path="tests/UnitTests/Common.SharedKernel.Tests/Common.SharedKernel.Tests.csproj" Id="1a840e40-e1c5-49ea-abd8-a164cbd7b03b" />
+    <Project Path="tests/UnitTests/Discount.Grpc.Tests/Discount.Grpc.Tests.csproj" Id="1c656092-b26b-46fd-a39d-732934ac960c" />
+    <Project Path="tests/UnitTests/Order.Api.Tests/Order.Api.Tests.csproj" Id="f9c409d1-c38a-4acd-bda2-c8af72ba2894" />
+    <Project Path="tests/UnitTests/Products.Api.Tests/Products.Api.Tests.csproj" Id="9f731c7a-e8bd-458a-afcf-c7392b0faac7" />
   </Folder>
 </Solution>
