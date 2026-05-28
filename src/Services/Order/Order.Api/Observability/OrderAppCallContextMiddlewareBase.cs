@@ -1,9 +1,10 @@
 using Common.SharedKernel.Observability.Context;
+using Common.SharedKernel.Helpers;
 
 namespace Order.Api.Observability;
 
-internal sealed class OrderAppCallContextMiddleware(RequestDelegate next)
-    : AppCallContextMiddleware<OrderAppCallContext>(next, BuildContext)
+internal sealed class OrderAppCallContextMiddlewareBase(RequestDelegate next)
+    : AppCallContextMiddlewareBase<OrderAppCallContext>(next, BuildContext)
 {
     protected override void ConfigureContext(HttpContext httpContext, OrderAppCallContext context)
     {
@@ -19,7 +20,7 @@ internal sealed class OrderAppCallContextMiddleware(RequestDelegate next)
 
     private static OrderAppCallContext BuildContext(HttpContext httpContext)
     {
-        ArgumentNullException.ThrowIfNull(httpContext);
+        Guard.Against.Null(httpContext);
 
         string correlationId = GetHeader(httpContext, "X-Correlation-Id") ?? Guid.NewGuid().ToString("N");
         string? parentCorrelationId = GetHeader(httpContext, "X-Parent-Correlation-Id");

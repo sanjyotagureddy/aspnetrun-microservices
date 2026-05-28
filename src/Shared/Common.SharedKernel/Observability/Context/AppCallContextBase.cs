@@ -40,7 +40,7 @@ public abstract class AppCallContextBase(
 
     public static IDisposable BeginScope(AppCallContextBase context)
     {
-        ArgumentNullException.ThrowIfNull(context);
+        Guard.Against.Null(context);
 
         var previous = SCurrent.Value;
         SCurrent.Value = context;

@@ -7,7 +7,7 @@ public sealed class LogEntryTests
     [Fact]
     public void Create_ShouldNormalizeOptionalCorrelationId()
     {
-        var entry = LogEntry.Create("orders", "created", DateTimeOffset.UtcNow, "   ");
+        var entry = LogEntry.Create("test-service", "orders", "created", DateTimeOffset.UtcNow, "   ");
 
         Assert.Null(entry.CorrelationId);
     }
@@ -15,7 +15,7 @@ public sealed class LogEntryTests
     [Fact]
     public void Create_ShouldKeepCategoryAndMessage()
     {
-        var entry = LogEntry.Create("orders", "created", DateTimeOffset.UtcNow);
+        var entry = LogEntry.Create("test-service", "orders", "created", DateTimeOffset.UtcNow);
 
         Assert.Equal("orders", entry.Category);
         Assert.Equal("created", entry.Message);

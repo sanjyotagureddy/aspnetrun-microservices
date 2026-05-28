@@ -1,4 +1,5 @@
-using Products.Api.Features.Products;
+using Products.Api.Features.Products.Create;
+using Products.Api.Features.Products.Update;
 
 namespace Products.Api.Infrastructure;
 

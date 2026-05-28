@@ -1,27 +1,42 @@
-namespace Common.SharedKernel.Helpers;
+﻿namespace Common.SharedKernel.Helpers;
+
+using System.Runtime.CompilerServices;
 
 public static class Guard
 {
     public static class Against
     {
-        public static T Null<T>(T? input, string parameterName)
+        public static T Null<T>(T? input, [CallerArgumentExpression("input")] string? parameterExpression = null)
             where T : class
         {
-            return input ?? throw new ArgumentNullException(parameterName);
+            if (input is not null)
+                return input;
+
+            var paramName = parameterExpression ?? typeof(T).Name;
+            var message = $"Required value '{paramName}' was null. Expected a non-null {typeof(T).FullName}.";
+            throw new Common.SharedKernel.Exceptions.ValidationException(paramName, message);
         }
 
-        public static string NullOrWhiteSpace(string? input, string parameterName)
+        public static string NullOrWhiteSpace(string? input, [CallerArgumentExpression("input")] string? parameterExpression = null)
         {
-            return !string.IsNullOrWhiteSpace(input)
-                ? input
-                : throw new ArgumentException("Value cannot be null or whitespace.", parameterName);
+            if (!string.IsNullOrWhiteSpace(input))
+                return input!;
+
+            var paramName = parameterExpression ?? "input";
+            var message = $"Value '{paramName}' cannot be null or whitespace.";
+            throw new Common.SharedKernel.Exceptions.ValidationException(paramName, message);
         }
 
-        public static int Negative(int input, string parameterName)
+        public static int Negative(int input, [CallerArgumentExpression("input")] string? parameterExpression = null)
         {
-            return input >= 0
-                ? input
-                : throw new ArgumentOutOfRangeException(parameterName, input, "Value cannot be negative.");
+            if (input >= 0)
+            {
+                return input;
+            }
+
+            var paramName = parameterExpression ?? "input";
+            var message = $"Value '{paramName}' must be greater than or equal to 0. Actual: {input}.";
+            throw new Common.SharedKernel.Exceptions.ValidationException(paramName, message);
         }
     }
 }

@@ -1,34 +1,9 @@
-﻿using Dapper;
+using Dapper;
 using Npgsql;
 
-namespace Products.Api.Infrastructure;
+namespace Products.Api.Infrastructure.Persistence;
 
-internal sealed record ProductSearchFilter(
-    string? Search,
-    string? Category,
-    string? Brand,
-    bool? IsActive,
-    int Page,
-    int PageSize);
-
-internal sealed record ProductSearchResult(IReadOnlyCollection<Product> Items, int TotalCount);
-
-internal interface IProductCatalogStore
-{
-    Task<Product?> GetByIdAsync(Guid id, CancellationToken cancellationToken);
-
-    Task<ProductSearchResult> SearchAsync(ProductSearchFilter filter, CancellationToken cancellationToken);
-
-    Task AddAsync(Product product, CancellationToken cancellationToken);
-
-    Task UpdateAsync(Product product, CancellationToken cancellationToken);
-
-    Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken);
-
-    Task EnsureSkuIsUniqueAsync(string sku, Guid? productId, CancellationToken cancellationToken);
-}
-
-internal sealed class ProductCatalogStore(NpgsqlDataSource dataSource) : IProductCatalogStore
+internal sealed class ProductCatalogStore(NpgsqlDataSource dataSource) : Products.Api.Infrastructure.IProductCatalogStore
 {
     public async Task<Product?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
     {
@@ -184,61 +159,5 @@ internal sealed class ProductCatalogStore(NpgsqlDataSource dataSource) : IProduc
         }
 
         return conditions.Count == 0 ? string.Empty : $" where {string.Join(" and ", conditions)}";
-    }
-
-    private sealed class ProductRecord
-    {
-        public Guid Id { get; set; }
-
-        public string Name { get; set; } = string.Empty;
-
-        public string Description { get; set; } = string.Empty;
-
-        public string Sku { get; set; } = string.Empty;
-
-        public decimal Price { get; set; }
-
-        public string Currency { get; set; } = string.Empty;
-
-        public string Category { get; set; } = string.Empty;
-
-        public string Brand { get; set; } = string.Empty;
-
-        public int StockQuantity { get; set; }
-
-        public bool IsActive { get; set; }
-
-        public DateTime CreatedAt { get; set; }
-
-        public DateTime UpdatedAt { get; set; }
-
-        public Product ToDomain()
-        {
-            var product = new Product(Id, Name, Description, Sku, Price, Currency, Category, Brand, StockQuantity, IsActive, CreatedAt);
-            product.Update(Name, Description, Sku, Price, Currency, Category, Brand, StockQuantity, IsActive, UpdatedAt);
-            return product;
-        }
-    }
-}
-
-internal static class ProductRecordMappings
-{
-    public static object ToRecord(this Product product)
-    {
-        return new
-        {
-            product.Id,
-            product.Name,
-            product.Description,
-            product.Sku,
-            product.Price,
-            product.Currency,
-            product.Category,
-            product.Brand,
-            product.StockQuantity,
-            product.IsActive,
-            product.CreatedAt,
-            product.UpdatedAt,
-        };
     }
 }

@@ -7,11 +7,11 @@ public sealed class EndpointScopeAttribute : Attribute
 
     public EndpointScopeAttribute(params EndpointScope[] scopes)
     {
-        ArgumentNullException.ThrowIfNull(scopes);
+        Common.SharedKernel.Helpers.Guard.Against.Null(scopes);
 
         if (scopes.Length == 0)
         {
-            throw new ArgumentException("At least one endpoint scope must be specified.", nameof(scopes));
+            throw new Common.SharedKernel.Exceptions.ValidationException(nameof(scopes), "At least one endpoint scope must be specified.");
         }
 
         this._allowedScopes = scopes.ToHashSet();

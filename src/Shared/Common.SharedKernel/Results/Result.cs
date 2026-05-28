@@ -8,12 +8,12 @@ public class Result
     {
         if (isSuccess && error.Length != 0)
         {
-            throw new ArgumentException("A successful result cannot contain an error.", nameof(error));
+            throw new Common.SharedKernel.Exceptions.ValidationException(nameof(error), "A successful result cannot contain an error.");
         }
 
         if (!isSuccess && error.Length == 0)
         {
-            throw new ArgumentException("A failed result must contain an error.", nameof(error));
+            throw new Common.SharedKernel.Exceptions.ValidationException(nameof(error), "A failed result must contain an error.");
         }
 
         IsSuccess = isSuccess;

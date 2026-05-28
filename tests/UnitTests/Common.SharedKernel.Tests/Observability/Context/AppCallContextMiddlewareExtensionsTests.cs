@@ -14,7 +14,7 @@ public sealed class AppCallContextMiddlewareExtensionsTests
         var appBuilder = new ApplicationBuilder(services.BuildServiceProvider());
         bool terminalInvoked = false;
 
-        appBuilder.UseAppCallContextMiddleware<TestAppCallContextMiddleware>();
+        appBuilder.UseAppCallContextMiddleware<TestAppCallContextMiddlewareBase>();
         appBuilder.Run(context =>
         {
             terminalInvoked = true;
@@ -43,8 +43,8 @@ public sealed class AppCallContextMiddlewareExtensionsTests
         Assert.Null(AppCallContextBase.Current);
     }
 
-    private sealed class TestAppCallContextMiddleware(RequestDelegate next)
-        : AppCallContextMiddleware<TestAppCallContext>(next, BuildContext)
+    private sealed class TestAppCallContextMiddlewareBase(RequestDelegate next)
+        : AppCallContextMiddlewareBase<TestAppCallContext>(next, BuildContext)
     {
         protected override void ConfigureContext(HttpContext httpContext, TestAppCallContext context)
         {

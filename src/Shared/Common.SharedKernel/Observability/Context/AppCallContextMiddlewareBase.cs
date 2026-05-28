@@ -2,7 +2,7 @@
 
 namespace Common.SharedKernel.Observability.Context;
 
-public class AppCallContextMiddleware<TContext>(RequestDelegate next, Func<HttpContext, TContext> contextFactory) where TContext : AppCallContextBase
+public class AppCallContextMiddlewareBase<TContext>(RequestDelegate next, Func<HttpContext, TContext> contextFactory) where TContext : AppCallContextBase
 {
     protected virtual TContext CreateContext(HttpContext httpContext)
     {

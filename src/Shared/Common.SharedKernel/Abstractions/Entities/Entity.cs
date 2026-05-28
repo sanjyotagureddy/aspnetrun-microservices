@@ -13,7 +13,7 @@ public abstract class Entity<TId>(TId id) : IEquatable<Entity<TId>>
 
     public void AddDomainEvent(IDomainEvent domainEvent)
     {
-        ArgumentNullException.ThrowIfNull(domainEvent);
+        Common.SharedKernel.Helpers.Guard.Against.Null(domainEvent);
 
         domainEvents.Add(domainEvent);
     }

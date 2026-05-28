@@ -63,7 +63,7 @@ public sealed class AppCallContextAmbientTests
     [Fact]
     public async Task Middleware_ShouldInitializeScopeFromHeaders()
     {
-        var middleware = new AppCallContextMiddleware<OrderAppCallContext>(
+        var middleware = new AppCallContextMiddlewareBase<OrderAppCallContext>(
             async context =>
             {
                 var current = AppCallContextBase.CurrentAs<OrderAppCallContext>();
@@ -102,7 +102,7 @@ public sealed class AppCallContextAmbientTests
     [Fact]
     public async Task Middleware_ShouldAllowCustomDerivedContextFactory()
     {
-        var middleware = new AppCallContextMiddleware<OrderAppCallContext>(
+        var middleware = new AppCallContextMiddlewareBase<OrderAppCallContext>(
             async _ =>
             {
                 var current = AppCallContextBase.CurrentAs<OrderAppCallContext>();

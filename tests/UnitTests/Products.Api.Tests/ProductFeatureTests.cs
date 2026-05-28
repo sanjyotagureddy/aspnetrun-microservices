@@ -1,5 +1,7 @@
 using Products.Api.Domain;
 using Products.Api.Features.Products;
+using Products.Api.Features.Products.Create;
+using Products.Api.Features.Products.Get;
 using Products.Api.Infrastructure;
 
 namespace Products.Api.Tests;
