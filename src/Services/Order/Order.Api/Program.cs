@@ -1,3 +1,6 @@
+﻿using Common.SharedKernel.Observability.Context;
+using Common.SharedKernel.Web;
+using Order.Api.Observability;
 
 namespace Order.Api;
 
@@ -14,7 +17,7 @@ public class Program
         // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
         builder.Services.AddOpenApi();
 
-        var app = builder.Build();
+        WebApplication app = builder.Build();
 
         app.MapDefaultEndpoints();
 
@@ -26,6 +29,8 @@ public class Program
 
         app.UseHttpsRedirection();
 
+        app.UseAppCallContextMiddleware<OrderAppCallContextMiddleware>();
+
         app.UseAuthorization();
 
         var summaries = new[]
@@ -33,7 +38,7 @@ public class Program
             "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
         };
 
-        app.MapGet("/weatherforecast", (HttpContext httpContext) =>
+        app.MapGet("/weatherforecast", () =>
         {
             var forecast =  Enumerable.Range(1, 5).Select(index =>
                 new WeatherForecast
@@ -47,6 +52,7 @@ public class Program
         })
         .WithName("GetWeatherForecast");
 
+        app.MapDiscoveredEndpoints();
         app.Run();
     }
 }

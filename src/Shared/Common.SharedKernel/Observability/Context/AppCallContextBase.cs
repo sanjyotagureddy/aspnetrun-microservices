@@ -1,6 +1,6 @@
-using Common.SharedKernel.Helpers;
+﻿using Common.SharedKernel.Helpers;
 
-namespace Common.SharedKernel.Observability.Correlation;
+namespace Common.SharedKernel.Observability.Context;
 
 public abstract class AppCallContextBase(
     string correlationId,
@@ -15,9 +15,11 @@ public abstract class AppCallContextBase(
     public static AppCallContextBase? Current => SCurrent.Value;
 
     public string ApplicationName { get; } = Guard.Against.NullOrWhiteSpace(correlationId, nameof(correlationId));
-    public string CorrelationId { get; } = Guid.NewGuid().ToString(); // Default to a new GUID if not provided, ensuring it's never null or whitespace.
+    public string CorrelationId { get; } = Guard.Against.NullOrWhiteSpace(correlationId, nameof(correlationId));
 
-    public string? ParentCorrelationId { get; } = Guid.NewGuid().ToString();
+    public string? ParentCorrelationId { get; } = string.IsNullOrWhiteSpace(parentCorrelationId)
+        ? null
+        : parentCorrelationId;
 
     public string? TraceId { get; } = string.IsNullOrWhiteSpace(traceId) ? null : traceId;
 

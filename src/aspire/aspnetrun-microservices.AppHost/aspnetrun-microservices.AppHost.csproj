@@ -1,4 +1,4 @@
-<Project Sdk="Aspire.AppHost.Sdk/13.2.1">
+<Project Sdk="Aspire.AppHost.Sdk/13.3.5">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -7,6 +7,12 @@
     <Nullable>enable</Nullable>
     <UserSecretsId>f79c66f0-9aee-4e14-b980-05b228fa4099</UserSecretsId>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" />
+    <PackageReference Include="Aspire.Hosting.RabbitMQ" />
+    <PackageReference Include="Aspire.Hosting.Redis" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Gateway\Gateway.Yarp\Gateway.Yarp.csproj" />

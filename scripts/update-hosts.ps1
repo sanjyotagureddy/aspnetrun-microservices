@@ -21,10 +21,11 @@ $content = [regex]::Replace($content, $pattern, '', [System.Text.RegularExpressi
 
 $aliases = @(
     'aspnetrun.local',
-    'catalog.aspnetrun.local',
+    'aspire.aspnetrun.local',
+    'product.aspnetrun.local',
     'basket.aspnetrun.local',
     'discount.aspnetrun.local',
-    'discountgrpc.aspnetrun.local',
+    'discount.grpc.aspnetrun.local',
     'ordering.aspnetrun.local',
     'gateway.aspnetrun.local',
     'aggregator.aspnetrun.local',

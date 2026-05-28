@@ -1,5 +1,4 @@
-using Common.SharedKernel.Abstractions;
-using Common.SharedKernel.Abstractions.ValueObjects;
+﻿using Common.SharedKernel.Abstractions.ValueObjects;
 
 namespace Common.SharedKernel.Tests.Abstractions.ValueObjects;
 

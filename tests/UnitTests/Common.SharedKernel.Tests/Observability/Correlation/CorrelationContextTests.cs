@@ -1,4 +1,4 @@
-using Common.SharedKernel.Observability.Correlation;
+﻿using Common.SharedKernel.Observability.Context;
 
 namespace Common.SharedKernel.Tests.Observability.Correlation;
 

@@ -1,5 +1,4 @@
-using Common.SharedKernel.Abstractions;
-using Common.SharedKernel.Abstractions.Events;
+﻿using Common.SharedKernel.Abstractions.Events;
 
 namespace Common.SharedKernel.Tests.Abstractions.Events;
 

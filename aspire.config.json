@@ -1,5 +1,5 @@
 {
   "appHost": {
-    "path": "aspnetrun-microservices.AppHost/aspnetrun-microservices.AppHost.csproj"
+    "path": "src/aspire/aspnetrun-microservices.AppHost/aspnetrun-microservices.AppHost.csproj"
   }
 }

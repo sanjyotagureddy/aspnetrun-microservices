@@ -1,5 +1,4 @@
-using Common.SharedKernel.Abstractions;
-using Common.SharedKernel.Abstractions.Auditing;
+﻿using Common.SharedKernel.Abstractions.Auditing;
 
 namespace Common.SharedKernel.Tests.Abstractions.Auditing;
 

@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
+    <File Path="Directory.Packages.props" />
   </Folder>
   <Folder Name="/src/" />
   <Folder Name="/src/0. aspire/">
@@ -12,6 +13,7 @@
   </Folder>
   <Folder Name="/src/2. sharedkernel/">
     <Project Path="src/Shared/Common.SharedKernel/Common.SharedKernel.csproj" Id="0eaa7bff-1096-400b-8685-a75d8b1f35a7" />
+    <Project Path="src/Shared/Common.SharedKernel.Messaging.RabbitMq/Common.SharedKernel.Messaging.RabbitMq.csproj" />
   </Folder>
   <Folder Name="/src/3. services/" />
   <Folder Name="/src/3. services/cart/">
