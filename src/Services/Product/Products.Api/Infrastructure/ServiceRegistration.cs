@@ -3,6 +3,7 @@ using System.Reflection;
 
 using Common.SharedKernel.Exceptions;
 using Common.SharedKernel.Logging;
+using Common.SharedKernel.Messaging;
 
 using Npgsql;
 
@@ -30,6 +31,18 @@ internal static class ServiceRegistration
                 builder.SetServiceName("Products.Api");
                 builder.SetMinimumLevel(Common.SharedKernel.Logging.LogLevel.Trace);
                 builder.UseConsole(opts => opts.FormatterKind = LogFormatterKind.Json);
+            });
+
+            services.AddMessaging(builder =>
+            {
+                builder.Options.TopicPrefix = configuration["Messaging:TopicPrefix"] ?? string.Empty;
+                builder.UseKafka(options =>
+                {
+                    options.BootstrapServers = configuration.GetConnectionString("message-broker")
+                                               ?? configuration["Messaging:Kafka:BootstrapServers"]
+                                               ?? "localhost:9092";
+                    options.ConsumerGroup = configuration["Messaging:Kafka:ConsumerGroup"] ?? "products-api";
+                });
             });
 
             services.AddMediatR(cfg =>

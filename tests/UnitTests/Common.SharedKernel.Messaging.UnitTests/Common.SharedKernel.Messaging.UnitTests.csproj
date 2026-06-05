@@ -1,26 +1,21 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <OutputType>Exe</OutputType>
-    <RootNamespace>Common.SharedKernel.Tests</RootNamespace>
+    <RootNamespace>Common.SharedKernel.Messaging.UnitTests</RootNamespace>
     <TargetFramework>net10.0</TargetFramework>
   </PropertyGroup>
-    <PropertyGroup>
-        <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
-        <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
-    </PropertyGroup>
-  <ItemGroup>
-    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
+
+  <PropertyGroup>
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+  </PropertyGroup>
 
   <ItemGroup>
+    <Using Include="FluentAssertions" />
     <Using Include="Xunit" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
   <ItemGroup>
@@ -32,9 +27,11 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="FluentAssertions" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" />
     <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" />
+    <PackageReference Include="NSubstitute" />
     <PackageReference Include="xunit.runner.visualstudio">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -43,11 +40,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\src\Shared\Common.SharedKernel\Common.SharedKernel.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Messaging\" />
+    <ProjectReference Include="..\..\..\src\Shared\Common.SharedKernel.Messaging\Common.SharedKernel.Messaging.csproj" />
   </ItemGroup>
 
 </Project>

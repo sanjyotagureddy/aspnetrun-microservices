@@ -8,13 +8,14 @@ The repository is currently centered on the Product service. Cart, Order, Discou
 
 - **Aspire AppHost** orchestrates local resources and service projects.
 - **ServiceDefaults** configures OpenTelemetry, service discovery, HTTP resilience, and health endpoints.
-- **Products API** implements product CRUD/search features using Minimal API endpoint discovery, MediatR, FluentValidation, Dapper, PostgreSQL, Serilog, rate limiting, response compression, output caching, and centralized exception handling.
+- **Products API** implements product CRUD/search features using Minimal API endpoint discovery, MediatR, FluentValidation, Dapper, PostgreSQL, Serilog, rate limiting, response compression, output caching, centralized exception handling, and publishes a `products.created` message through the shared messaging abstraction after a product is created.
 - **Cart API** is registered with Aspire and currently contains template API scaffolding.
 - **Order API** is registered with Aspire, uses shared observability context middleware, and currently contains template API scaffolding.
 - **Discount gRPC** is registered with Aspire and currently exposes the template greeter service.
 - **Gateway.Yarp** is registered with Aspire and currently contains template API scaffolding. YARP reverse proxy routes are not implemented yet.
 - **Shared Kernel** contains common abstractions for entities, value objects, domain events, integration events, messaging, validation, results, exceptions, endpoint registration, and observability context.
 - **Shared Logging** contains a custom logging pipeline, formatters, enrichers, filters, and console/file/Elasticsearch sink support.
+- **Shared Messaging** contains broker-agnostic messaging contracts, metadata/envelope models, DI registration, observability primitives, and the first Kafka provider implementation.
 
 ## Repository Layout
 
@@ -33,6 +34,7 @@ src/
   Shared/
     Common.SharedKernel/
     Common.SharedKernel.Logging/
+    Common.SharedKernel.Messaging/
     Common.SharedKernel.Messaging.RabbitMq/
 tests/
   IntegrationTests/
@@ -65,6 +67,8 @@ The Aspire dashboard will show the service URLs and provisioned resources. The A
 - Discount gRPC
 - Order API
 - Gateway.Yarp
+
+The Products API receives the Aspire Kafka connection string from the AppHost resource named `message-broker` and configures `Common.SharedKernel.Messaging` with the Kafka provider.
 
 ## Optional Local Host Aliases
 

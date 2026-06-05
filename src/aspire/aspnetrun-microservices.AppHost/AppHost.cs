@@ -12,8 +12,12 @@ IResourceBuilder<PostgresServerResource> postgresDb = builder.AddPostgres("produ
 
 IResourceBuilder<PostgresDatabaseResource> productDb = postgresDb.AddDatabase("products", "products");
 IResourceBuilder<KafkaServerResource> messaging = builder.AddKafka("message-broker")
-    .WithDataVolume("kafka-data")
-    .WithKafkaUI();
+    .WithDataVolume("kafka-data");
+
+messaging.WithKafkaUI(kafkaUi =>
+{
+    kafkaUi.WithImage("kafbat/kafka-ui", "v1.5.0");
+});
 
 #endregion
 #region Services
@@ -23,7 +27,8 @@ IResourceBuilder<KafkaServerResource> messaging = builder.AddKafka("message-brok
 builder.AddProject<Products_Api>("products-api")
     .WithReference(productDb)
     .WithReference(messaging)
-    .WaitFor(productDb);
+    .WaitFor(productDb)
+    .WaitFor(messaging);
 
 builder.AddProject<Cart_Api>("cart-api");
 

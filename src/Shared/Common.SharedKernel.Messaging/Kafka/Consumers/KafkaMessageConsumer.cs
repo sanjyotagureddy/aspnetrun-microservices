@@ -1,0 +1,199 @@
+﻿using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Text;
+using Common.SharedKernel.Logging;
+using Confluent.Kafka;
+using Microsoft.Extensions.Options;
+
+namespace Common.SharedKernel.Messaging;
+
+internal sealed class KafkaMessageConsumer(
+    IOptions<MessagingOptions> options,
+    IMessageSerializer serializer,
+    ILogger<KafkaMessageConsumer> logger,
+    MessagingInstrumentation instrumentation) : IMessageConsumer, IDisposable
+{
+    private readonly MessagingOptions _options = options.Value;
+    private readonly ConcurrentDictionary<string, CancellationTokenSource> _subscriptions = new(StringComparer.OrdinalIgnoreCase);
+
+    public Task SubscribeAsync<T>(string topic, IMessageHandler<T> handler, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(topic);
+        ArgumentNullException.ThrowIfNull(handler);
+
+        var resolvedTopic = ResolveTopic(topic);
+        var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+        if (!_subscriptions.TryAdd(resolvedTopic, linkedCts))
+        {
+            throw new MessagingException($"A consumer is already subscribed to topic '{resolvedTopic}'.");
+        }
+
+        _ = Task.Run(() => ConsumeLoopAsync(resolvedTopic, handler, linkedCts.Token), CancellationToken.None);
+        return Task.CompletedTask;
+    }
+
+    public Task UnsubscribeAsync(string topic, CancellationToken cancellationToken = default)
+    {
+        var resolvedTopic = ResolveTopic(topic);
+        if (!_subscriptions.TryRemove(resolvedTopic, out CancellationTokenSource? cts)) return Task.CompletedTask;
+        cts.Cancel();
+        cts.Dispose();
+
+        return Task.CompletedTask;
+    }
+
+    private async Task ConsumeLoopAsync<T>(string topic, IMessageHandler<T> handler, CancellationToken cancellationToken)
+    {
+        ConsumerConfig config = new()
+        {
+            BootstrapServers = _options.Kafka.BootstrapServers,
+            GroupId = _options.Kafka.ConsumerGroup,
+            EnableAutoCommit = _options.Kafka.EnableAutoCommit,
+            AutoOffsetReset = Enum.TryParse(_options.Kafka.AutoOffsetReset, true, out AutoOffsetReset reset) ? reset : AutoOffsetReset.Earliest
+        };
+
+        using IConsumer<string, byte[]> consumer = new ConsumerBuilder<string, byte[]>(config).Build();
+        consumer.Subscribe(topic);
+
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                ConsumeResult<string, byte[]>? result = consumer.Consume(_options.Kafka.ConsumeTimeout);
+                if (result is null)
+                {
+                    continue;
+                }
+
+                await HandleResultAsync(topic, handler, consumer, result, cancellationToken);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            consumer.Close();
+        }
+    }
+
+    private async Task HandleResultAsync<T>(
+        string topic,
+        IMessageHandler<T> handler,
+        IConsumer<string, byte[]> consumer,
+        ConsumeResult<string, byte[]> result,
+        CancellationToken cancellationToken)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        Dictionary<string, string> headers = ReadHeaders(result.Message.Headers);
+        IMessageEnvelope<T> envelope;
+
+        try
+        {
+            envelope = serializer.Deserialize<T>(result.Message.Value);
+        }
+        catch (Exception ex)
+        {
+            instrumentation.ConsumeFailures.Add(1);
+            await LogDeadLetterAsync(headers.GetValueOrDefault(KafkaMessageHeaderNames.MessageId) ?? string.Empty, topic, "DeserializationFailure", ex, cancellationToken);
+            return;
+        }
+
+        MessageContext context = new(
+            envelope.MessageId,
+            envelope.CorrelationId,
+            headers.GetValueOrDefault(KafkaMessageHeaderNames.TraceId),
+            headers.GetValueOrDefault(KafkaMessageHeaderNames.SpanId),
+            envelope.TenantId,
+            topic,
+            result.Partition.Value,
+            result.Offset.Value,
+            headers);
+
+        int attempts = Math.Max(1, _options.RetryPolicy.MaxAttempts);
+        for (int attempt = 1; attempt <= attempts; attempt++)
+        {
+            try
+            {
+                using Activity? activity = instrumentation.ActivitySource.StartActivity("messaging.consume", ActivityKind.Consumer);
+                activity?.SetTag("messaging.system", "kafka");
+                activity?.SetTag("messaging.destination.name", topic);
+                activity?.SetTag("messaging.message.id", envelope.MessageId);
+
+                await handler.HandleAsync(envelope.Payload, context, cancellationToken);
+                if (!_options.Kafka.EnableAutoCommit)
+                {
+                    consumer.Commit(result);
+                }
+
+                stopwatch.Stop();
+                instrumentation.ConsumeDurationMs.Record(stopwatch.Elapsed.TotalMilliseconds);
+                await logger.LogInformationAsync("Message consumed", "messaging.consume", new Dictionary<string, object?>
+                {
+                    ["messageId"] = envelope.MessageId,
+                    ["consumerGroup"] = _options.Kafka.ConsumerGroup,
+                    ["handler"] = handler.GetType().Name,
+                    ["topic"] = topic,
+                    ["durationMs"] = stopwatch.Elapsed.TotalMilliseconds
+                }, cancellationToken);
+                return;
+            }
+            catch (Exception) when (attempt < attempts)
+            {
+                instrumentation.RetryCount.Add(1);
+                await logger.LogWarningAsync("Message consume retry", "messaging.retry", new Dictionary<string, object?>
+                {
+                    ["messageId"] = envelope.MessageId,
+                    ["consumerGroup"] = _options.Kafka.ConsumerGroup,
+                    ["attempt"] = attempt
+                }, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                instrumentation.ConsumeFailures.Add(1);
+                await LogDeadLetterAsync(envelope.MessageId, topic, "HandlerFailure", ex, cancellationToken);
+            }
+        }
+    }
+
+    private async Task LogDeadLetterAsync(string messageId, string topic, string reason, Exception exception, CancellationToken cancellationToken)
+    {
+        instrumentation.DeadLetterCount.Add(1);
+        await logger.LogErrorAsync("Message moved to dead letter", "messaging.deadletter", exception, new Dictionary<string, object?>
+        {
+            ["messageId"] = messageId,
+            ["topic"] = topic,
+            ["reason"] = reason,
+            ["provider"] = "Kafka"
+        }, cancellationToken);
+    }
+
+    private static Dictionary<string, string> ReadHeaders(Headers? headers)
+    {
+        Dictionary<string, string> values = new(StringComparer.OrdinalIgnoreCase);
+        if (headers is null)
+        {
+            return values;
+        }
+
+        foreach (IHeader header in headers)
+        {
+            values[header.Key] = Encoding.UTF8.GetString(header.GetValueBytes());
+        }
+
+        return values;
+    }
+
+    private string ResolveTopic(string topic)
+        => string.IsNullOrWhiteSpace(_options.TopicPrefix) ? topic : $"{_options.TopicPrefix}.{topic}";
+
+    public void Dispose()
+    {
+        foreach (CancellationTokenSource cts in _subscriptions.Values)
+        {
+            cts.Cancel();
+            cts.Dispose();
+        }
+    }
+}

@@ -14,7 +14,7 @@
   <Folder Name="/src/2. sharedkernel/">
     <Project Path="src/Shared/Common.SharedKernel/Common.SharedKernel.csproj" Id="0eaa7bff-1096-400b-8685-a75d8b1f35a7" />
     <Project Path="src/Shared/Common.SharedKernel.Logging/Common.SharedKernel.Logging.csproj" Id="f5cfc6b8-7a61-4b2b-a7f8-41d50a2b7f34" />
-    <Project Path="src/Shared/Common.SharedKernel.Messaging.RabbitMq/Common.SharedKernel.Messaging.RabbitMq.csproj" />
+    <Project Path="src/Shared/Common.SharedKernel.Messaging/Common.SharedKernel.Messaging.csproj" />
   </Folder>
   <Folder Name="/src/3. services/" />
   <Folder Name="/src/3. services/cart/">
@@ -36,6 +36,7 @@
   </Folder>
   <Folder Name="/tests/Unit Tests/">
     <Project Path="tests/UnitTests/Cart.Api.Tests/Cart.Api.Tests.csproj" Id="5a09a466-05c7-47d0-9a11-8d814122f047" />
+    <Project Path="tests/UnitTests/Common.SharedKernel.Messaging.UnitTests/Common.SharedKernel.Messaging.UnitTests.csproj" />
     <Project Path="tests/UnitTests/Common.SharedKernel.Tests/Common.SharedKernel.Tests.csproj" Id="1a840e40-e1c5-49ea-abd8-a164cbd7b03b" />
     <Project Path="tests/UnitTests/Common.SharedKernel.Logging.UnitTests/Common.SharedKernel.Logging.UnitTests.csproj" Id="d0f6e32f-5b36-4d9d-8fa2-4e9c2c99a3df" />
     <Project Path="tests/UnitTests/Discount.Grpc.Tests/Discount.Grpc.Tests.csproj" Id="1c656092-b26b-46fd-a39d-732934ac960c" />

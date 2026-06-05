@@ -11,11 +11,9 @@ internal sealed class ElasticsearchLogSink : ILogSink, IBulkLogSink
         this._options = Guard.Against.Null(options);
         _httpClient = new HttpClient();
 
-        if (!string.IsNullOrWhiteSpace(this._options.Username))
-        {
-            string credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{this._options.Username}:{this._options.Password}"));
-            _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", credentials);
-        }
+        if (string.IsNullOrWhiteSpace(this._options.Username)) return;
+        var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{this._options.Username}:{this._options.Password}"));
+        _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", credentials);
     }
 
     public ValueTask WriteAsync(LogEntry entry, CancellationToken cancellationToken = default)

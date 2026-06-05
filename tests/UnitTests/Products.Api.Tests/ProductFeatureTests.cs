@@ -1,8 +1,10 @@
 ﻿using Common.SharedKernel.Logging;
+using Common.SharedKernel.Messaging;
 using Moq;
 
 using Products.Api.Domain;
 using Products.Api.Features.Products.Create;
+using Products.Api.Features.Products.Events;
 using Products.Api.Features.Products.Get;
 using Products.Api.Infrastructure;
 
@@ -14,7 +16,12 @@ public sealed class ProductFeatureTests
     public async Task CreateProductHandler_ShouldCreateProductWithNormalizedFields()
     {
         var store = new FakeProductCatalogStore();
-        var handler = new CreateProductCommandHandler(store, new FixedTimeProvider(new DateTimeOffset(2026, 5, 28, 12, 0, 0, TimeSpan.Zero)), new Mock<ILogger<CreateProductCommandHandler>>().Object);
+        var messageBus = new FakeMessageBus();
+        var handler = new CreateProductCommandHandler(
+            store,
+            new FixedTimeProvider(new DateTimeOffset(2026, 5, 28, 12, 0, 0, TimeSpan.Zero)),
+            new Mock<ILogger<CreateProductCommandHandler>>().Object,
+            messageBus);
 
         var command = new CreateProductCommand(
             "Laptop",
@@ -35,6 +42,26 @@ public sealed class ProductFeatureTests
         Assert.Equal("USD", result.Value.Currency);
         Assert.Equal(new DateTime(2026, 5, 28, 12, 0, 0, DateTimeKind.Utc), result.Value.CreatedAt);
         Assert.Single(store.Products);
+        Assert.Equal(ProductCreatedIntegrationEvent.Topic, messageBus.Topic);
+        var integrationEvent = Assert.IsType<ProductCreatedIntegrationEvent>(messageBus.Message);
+        Assert.NotEqual(Guid.Empty, integrationEvent.EventId);
+        Assert.Equal(result.Value.Id, integrationEvent.ProductId);
+        Assert.Equal("SKU-001", integrationEvent.Sku);
+        Assert.Equal("USD", integrationEvent.Currency);
+        Assert.Equal(new DateTime(2026, 5, 28, 12, 0, 0, DateTimeKind.Utc), integrationEvent.OccurredOnUtc);
+        Assert.Equal(integrationEvent.EventId.ToString("N"), messageBus.Metadata?.MessageId);
+        Assert.Equal(result.Value.Id.ToString("N"), messageBus.Metadata?.Key);
+        Assert.Equal("Products.Api", messageBus.Metadata?.Headers["Source"]);
+        Assert.Equal(nameof(ProductCreatedIntegrationEvent), messageBus.Metadata?.Headers["EventType"]);
+
+        SystemTextJsonMessageSerializer serializer = new();
+        MessageEnvelope<ProductCreatedIntegrationEvent> envelope = MessageEnvelope<ProductCreatedIntegrationEvent>.Create(
+            ProductCreatedIntegrationEvent.Topic,
+            integrationEvent,
+            messageBus.Metadata!);
+        IMessageEnvelope<ProductCreatedIntegrationEvent> restored = serializer.Deserialize<ProductCreatedIntegrationEvent>(serializer.Serialize(envelope));
+        Assert.Equal(integrationEvent.EventId, restored.Payload.EventId);
+        Assert.Equal(integrationEvent.ProductId, restored.Payload.ProductId);
     }
 
     [Fact]
@@ -166,5 +193,41 @@ public sealed class ProductFeatureTests
     private sealed class FixedTimeProvider(DateTimeOffset value) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => value;
+    }
+
+    private sealed class FakeMessageBus : IMessageBus
+    {
+        public string? Topic { get; private set; }
+
+        public object? Message { get; private set; }
+
+        public MessageMetadata? Metadata { get; private set; }
+
+        public Task PublishAsync<T>(string topic, T message, CancellationToken cancellationToken = default)
+            => PublishAsync(topic, message, null, cancellationToken);
+
+        public Task PublishAsync<T>(
+            string topic,
+            T message,
+            Action<MessageMetadata>? configureMetadata,
+            CancellationToken cancellationToken = default)
+        {
+            MessageMetadata metadata = new();
+            configureMetadata?.Invoke(metadata);
+            Topic = topic;
+            Message = message;
+            Metadata = metadata;
+            return Task.CompletedTask;
+        }
+
+        public Task PublishBatchAsync<T>(string topic, IReadOnlyCollection<T> messages, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task PublishBatchAsync<T>(
+            string topic,
+            IReadOnlyCollection<T> messages,
+            Action<MessageMetadata>? configureMetadata,
+            CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
     }
 }
