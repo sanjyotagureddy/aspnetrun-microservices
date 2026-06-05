@@ -1,0 +1,10 @@
+global using System.Buffers;
+global using System.Diagnostics;
+global using System.Globalization;
+global using System.Text;
+global using System.Text.Json;
+global using System.Threading.Channels;
+global using Common.SharedKernel.Helpers;
+global using Microsoft.Extensions.DependencyInjection;
+global using Microsoft.Extensions.Hosting;
+global using Microsoft.Extensions.Options;

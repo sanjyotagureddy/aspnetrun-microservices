@@ -1,28 +1,25 @@
-using System.Diagnostics.CodeAnalysis;
-
-using Discount.Grpc.Extensions;
+using Discount.Grpc.Services;
 
 namespace Discount.Grpc;
 
-[ExcludeFromCodeCoverage]
 public class Program
 {
-  internal static Func<string[], IHostBuilder> HostBuilderFactory { get; set; } = CreateHostBuilder;
+    public static void Main(string[] args)
+    {
+        var builder = WebApplication.CreateBuilder(args);
+        builder.AddServiceDefaults();
 
-  internal static Action<IHost> HostRunner { get; set; } = host => host.Run();
+        // Add services to the container.
+        builder.Services.AddGrpc();
 
-  public static void Main(string[] args)
-  {
-    var host = HostBuilderFactory(args).Build();
-    host.MigrateDatabase<Program>();
-    HostRunner(host);
-  }
+        var app = builder.Build();
 
-  // Additional configuration is required to successfully run gRPC on macOS.
-  // For instructions on how to configure Kestrel and gRPC clients on macOS, visit https://go.microsoft.com/fwlink/?linkid=2099682
-  public static IHostBuilder CreateHostBuilder(string[] args)
-  {
-    return Host.CreateDefaultBuilder(args)
-      .ConfigureWebHostDefaults(webBuilder => { webBuilder.UseStartup<Startup>(); });
-  }
+        app.MapDefaultEndpoints();
+
+        // Configure the HTTP request pipeline.
+        app.MapGrpcService<GreeterService>();
+        app.MapGet("/", () => "Communication with gRPC endpoints must be made through a gRPC client. To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909");
+
+        app.Run();
+    }
 }
