@@ -8,13 +8,16 @@ public abstract class AppCallContextBase(
     string? traceId = null,
     string? spanId = null,
     IDictionary<string, string>? headers = null,
-    IDictionary<string, object?>? items = null)
+    IDictionary<string, object?>? items = null,
+    string? applicationName = null)
 {
     private static readonly AsyncLocal<AppCallContextBase?> SCurrent = new();
 
     public static AppCallContextBase? Current => SCurrent.Value;
 
-    public string ApplicationName { get; } = Guard.Against.NullOrWhiteSpace(correlationId);
+    public string ApplicationName { get; } = string.IsNullOrWhiteSpace(applicationName)
+        ? Guard.Against.NullOrWhiteSpace(correlationId)
+        : applicationName;
     public string CorrelationId { get; } = Guard.Against.NullOrWhiteSpace(correlationId);
 
     public string? ParentCorrelationId { get; } = string.IsNullOrWhiteSpace(parentCorrelationId)

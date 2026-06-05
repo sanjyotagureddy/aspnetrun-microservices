@@ -1,161 +1,113 @@
-# Introduction  [![Build Status](https://dev.azure.com/sanjyotagureddy/aspnetrun-microservices/_apis/build/status%2Fsanjyotagureddy.aspnetrun-microservices?branchName=azure-1)](https://dev.azure.com/sanjyotagureddy/aspnetrun-microservices/_build/latest?definitionId=37&branchName=azure-1)
-Building Microservices on .Net Ecosystem 
+# aspnetrun-microservices
 
-Used Asp.Net Web API, Docker, RabbitMQ, MassTransit, Grpc, Ocelot API Gateway, MongoDB, Redis, PostgreSQL, SqlServer, Dapper, Entity Framework Core, CQRS and Clean Architecture implementation. Also includes Cross-Cutting concerns like Implementing Centralized Distributed Logging with Elasticsearch, Kibana and SeriLog, use the HealthChecks with Watchdog, Implement Retry and Circuit Breaker patterns with Polly and so on..
+Microservices sample built with ASP.NET Core, .NET Aspire, PostgreSQL, Kafka, gRPC, YARP-named gateway scaffolding, and shared cross-cutting libraries.
 
-**Catalog Microservice**
-- ASP.NET Web API application
-- REST API principles, CRUD operations
-- MongoDB database connection and containerization
-- Repository Pattern Implementation
-- Swagger Open API implementation
+The repository is currently centered on the Product service. Cart, Order, Discount, and Gateway projects are present in the Aspire host, but several still contain template endpoints while their domain behavior is being built out.
 
-**Basket Microservice**
-- ASP.NET Web API application
-- REST API principles, CRUD operations
-- Redis database connection and containerization
-- Consume Discount Grpc Service for inter-service sync communication to calculate product final price
-- Publish BasketCheckout Queue with using MassTransit and RabbitMQ
+## Current Architecture
 
-**Discount Microservice**
-- ASP.NET Grpc Server application
-- Build a Highly Performant inter-service gRPC Communication with Basket Microservice
-- Exposing Grpc Services with creating Protobuf messages
-- Using Dapper for micro-orm implementation to simplify data access and ensure high performance
-- PostgreSQL database connection and containerization
+- **Aspire AppHost** orchestrates local resources and service projects.
+- **ServiceDefaults** configures OpenTelemetry, service discovery, HTTP resilience, and health endpoints.
+- **Products API** implements product CRUD/search features using Minimal API endpoint discovery, MediatR, FluentValidation, Dapper, PostgreSQL, Serilog, rate limiting, response compression, output caching, and centralized exception handling.
+- **Cart API** is registered with Aspire and currently contains template API scaffolding.
+- **Order API** is registered with Aspire, uses shared observability context middleware, and currently contains template API scaffolding.
+- **Discount gRPC** is registered with Aspire and currently exposes the template greeter service.
+- **Gateway.Yarp** is registered with Aspire and currently contains template API scaffolding. YARP reverse proxy routes are not implemented yet.
+- **Shared Kernel** contains common abstractions for entities, value objects, domain events, integration events, messaging, validation, results, exceptions, endpoint registration, and observability context.
+- **Shared Logging** contains a custom logging pipeline, formatters, enrichers, filters, and console/file/Elasticsearch sink support.
 
-**Microservices Communication**
-- Sync inter-service gRPC Communication
-- Async Microservices Communication with RabbitMQ Message-Broker Service
-- Using RabbitMQ Publish/Subscribe Topic Exchange Model
-- Using MassTransit for abstraction over RabbitMQ Message-Broker system
-- Publishing BasketCheckout event queue from Basket microservices and Subscribing this event from Ordering microservices
-- Create RabbitMQ EventBus.Messages library and add references Microservices
+## Repository Layout
 
-**Ordering Microservice**
-- Implementing DDD, CQRS, and Clean Architecture with using Best Practices
-- Developing CQRS with using MediatR, FluentValidation and AutoMapper packages
-- Consuming RabbitMQ BasketCheckout event queue with using MassTransit-RabbitMQ Configuration
-- SqlServer database connection and containerization
-- Using Entity Framework Core ORM and auto migrate to SqlServer when application startup
-
-**API Gateway Ocelot Microservice**
-- Implement API Gateways with Ocelot
-- Sample microservices/containers to reroute through the API Gateways
-- Run multiple different API Gateway/BFF container types
-- The Gateway aggregation pattern in Shopping.Aggregator
-
-**WebUI ShoppingApp Microservice**
-- ASP.NET Core Web Application with Bootstrap 4 and Razor template
-- Call Ocelot APIs with HttpClientFactory and Polly
-
-**Microservices Cross-Cutting Implementations**
-- Implementing Centralized Distributed Logging with Elastic Stack (ELK); Elasticsearch, Logstash, Kibana and SeriLog for Microservices
-- Use the HealthChecks feature in back-end ASP.NET microservices
-- Using Watchdog in separate service that can watch health and load across services, and report health about the microservices by querying with the HealthChecks
-
-**Microservices Resilience Implementations**
-- Making Microservices more resilient Use IHttpClientFactory to implement resilient HTTP requests
-- Implement Retry and Circuit Breaker patterns with exponential backoff with IHttpClientFactory and Polly policies
-
-**Ancillary Containers**
-- Use Portainer for Container lightweight management UI which allows you to easily manage your different Docker environments
-- pgAdmin PostgreSQL Tools feature rich Open Source administration and development platform for PostgreSQL
-
-**Docker Compose establishment with all microservices on docker**
-- Containerization of microservices
-- Containerization of databases
-- Override Environment variables
-
-
-# Getting Started
-TODO: Guide users through getting your code up and running on their own system. In this section you can talk about:
-1.	Installation process
-    ### Installing
-Follow these steps to get your development environment set up: (Before Run Start the Docker Desktop)
-1. Clone the repository
-2. Once Docker for Windows is installed, go to the **Settings > Advanced option**, from the Docker icon in the system tray, to configure the minimum amount of memory and CPU like so:
-* **Memory: 4 GB**
-* CPU: 2
-3. At the root directory which include **docker-compose.yml** files, run below command:
-```csharp
-docker-compose -f docker-compose.yml -f docker-compose.override.yml up -d
+```text
+src/
+  aspire/
+    aspnetrun-microservices.AppHost/
+    aspnetrun-microservices.ServiceDefaults/
+  Gateway/
+    Gateway.Yarp/
+  Services/
+    Cart/
+    Discount/
+    Order/
+    Product/
+  Shared/
+    Common.SharedKernel/
+    Common.SharedKernel.Logging/
+    Common.SharedKernel.Messaging.RabbitMq/
+tests/
+  IntegrationTests/
+  UnitTests/
 ```
-3. Wait for docker compose all microservices. That’s it! (some microservices need extra time to work so please wait if not worked in first shut)
 
-If you already created the old Postgres volume with `/var/lib/postgresql/data`, remove that volume once before starting again so the new `/var/lib/postgresql` mount is used cleanly.
+## Prerequisites
 
-### Optional: Add local host aliases (Windows)
-If you want stable local host names for all services in this repo, run the hosts update script from an **elevated** PowerShell window (Run as Administrator):
+- .NET SDK 10
+- Docker Desktop or another supported container runtime for Aspire-hosted resources
+- An IDE or editor that supports `.slnx`, or the `dotnet` CLI
+
+The expected SDK is pinned in `global.json`.
+
+## Run Locally
+
+From the repository root:
 
 ```powershell
-cd E:\Projects\aspnetrun-microservices
+dotnet run --project src\aspire\aspnetrun-microservices.AppHost\aspnetrun-microservices.AppHost.csproj
+```
+
+The Aspire dashboard will show the service URLs and provisioned resources. The AppHost currently starts:
+
+- PostgreSQL resource `productsdb`
+- PostgreSQL database `products`
+- Kafka resource `message-broker`
+- Products API
+- Cart API
+- Discount gRPC
+- Order API
+- Gateway.Yarp
+
+## Optional Local Host Aliases
+
+To add stable local host names on Windows, run PowerShell as Administrator:
+
+```powershell
+cd E:\Scratch\aspnetrun-microservices
 .\scripts\update-hosts.ps1
 ```
 
-This adds aliases like:
-- `catalog.aspnetrun.local`
-- `basket.aspnetrun.local`
-- `discount.aspnetrun.local`
-- `ordering.aspnetrun.local`
-- `gateway.aspnetrun.local`
-- `aggregator.aspnetrun.local`
-
-To map aliases to your Docker host IP instead of localhost, run:
+To map aliases to a specific Docker host IP:
 
 ```powershell
 .\scripts\update-hosts.ps1 -IpAddress 192.168.31.47
 ```
 
-The script is idempotent and keeps a timestamped backup of your hosts file.
+The script is idempotent and creates a timestamped backup of the hosts file before editing.
 
-Or add this block manually to your hosts file:
+## Build And Test
 
-```txt
-# BEGIN aspnetrun-microservices
-127.0.0.1 aspnetrun.local
-127.0.0.1 aspire.aspnetrun.local
-127.0.0.1 product.aspnetrun.local
-127.0.0.1 basket.aspnetrun.local
-127.0.0.1 discount.aspnetrun.local
-127.0.0.1 discount.grpc.aspnetrun.local
-127.0.0.1 ordering.aspnetrun.local
-127.0.0.1 gateway.aspnetrun.local
-127.0.0.1 aggregator.aspnetrun.local
-127.0.0.1 rabbitmq.aspnetrun.local
-127.0.0.1 pgadmin.aspnetrun.local
-127.0.0.1 portainer.aspnetrun.local
-# END aspnetrun-microservices
+Run the full solution:
+
+```powershell
+dotnet test aspnetrun-microservices.slnx
 ```
 
-4. You can **launch microservices** as below urls:
+Run focused test projects:
 
-* **Product API -> http://host.docker.internal:8000/swagger/index.html**
-* **Basket API -> http://host.docker.internal:8001/swagger/index.html**
-* **Discount API -> http://host.docker.internal:8002/swagger/index.html**
-* **Ordering API -> http://host.docker.internal:8004/swagger/index.html**
-* **Shopping.Aggregator -> http://host.docker.internal:8005/swagger/index.html**
-* **API Gateway -> http://host.docker.internal:8010/Catalog**
-* **Rabbit Management Dashboard -> http://host.docker.internal:15672**   -- guest/guest
-* **Portainer -> http://host.docker.internal:9000**   -- admin/admin1234
-* **pgAdmin PostgreSQL -> http://host.docker.internal:5050**   -- admin@aspnetrun.com/admin1234
-* **Elasticsearch -> http://host.docker.internal:9200** -- To Be Develop
-* **Kibana -> http://host.docker.internal:5601** -- To Be Develop
+```powershell
+dotnet test tests\UnitTests\Common.SharedKernel.Tests\Common.SharedKernel.Tests.csproj
+dotnet test tests\UnitTests\Products.Api.Tests\Products.Api.Tests.csproj
+```
 
-* **Web Status -> http://host.docker.internal:8007** -- To Be Develop
-* **Web UI -> http://host.docker.internal:8006**
+If the Aspire AppHost SDK cannot be resolved, verify that NuGet configuration is accessible and restore packages:
 
-5. Launch http://host.docker.internal:8007 in your browser to view the Web Status. Make sure that every microservices are healthy.
-6. Launch http://host.docker.internal:8006 in your browser to view the Web UI. You can use Web project in order to **call microservices over API Gateway**. When you **checkout the basket** you can follow **queue record on RabbitMQ dashboard**.
+```powershell
+dotnet restore aspnetrun-microservices.slnx
+```
 
->Note: If you are running this application in macOS then use `docker.for.mac.localhost` as DNS name in `.env` file and the above URLs instead of `host.docker.internal`.
-2.	Software dependencies
-    * [Visual Studio 2019](https://visualstudio.microsoft.com/downloads/)
-    * [.Net Core 5 or later](https://dotnet.microsoft.com/download/dotnet-core/5)
-    * [Docker Desktop](https://www.docker.com/products/docker-desktop)
-3.	Latest releases
-4.	API references
+## Current Gaps
 
-# Build and Test
-TODO: Describe and show how to build your code and run the tests. 
-
+- Gateway.Yarp does not yet configure `AddReverseProxy` or `MapReverseProxy`.
+- Cart and Order still contain template weather endpoints.
+- Discount gRPC still uses the template greeter service.
+- Messaging abstractions exist, but concrete publisher/consumer flows are not implemented.
+- README instructions now describe the current repository state; older Docker Compose, Ocelot, Basket, Web UI, and MassTransit flows are not present in this codebase.

@@ -10,7 +10,7 @@ internal sealed class OrderAppCallContext(
     string? tenantId = null,
     IDictionary<string, string>? headers = null,
     IDictionary<string, object?>? items = null)
-    : AppCallContextBase(correlationId, parentCorrelationId, traceId, spanId, headers, items)
+    : AppCallContextBase(correlationId, parentCorrelationId, traceId, spanId, headers, items, "Order.Api")
 {
     public string ServiceName { get; } = "Order.Api";
 

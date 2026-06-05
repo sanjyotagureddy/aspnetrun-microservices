@@ -1,6 +1,7 @@
 ﻿using Common.SharedKernel;
 using Common.SharedKernel.Observability.Context;
 using Common.SharedKernel.Helpers;
+using Microsoft.Extensions.Primitives;
 
 namespace Products.Api.Observability;
 
@@ -8,8 +9,7 @@ internal sealed class AppCallContextMiddleware(RequestDelegate next)
     : AppCallContextMiddlewareBase<AppCallContext>(next, BuildContext)
 {
     protected override void ConfigureContext(HttpContext httpContext, AppCallContext context)
-    {
-        context.Items["serviceName"] = context.ServiceName;
+    {       
 
         if (!string.IsNullOrWhiteSpace(context.TenantId))
         {
@@ -45,6 +45,6 @@ internal sealed class AppCallContextMiddleware(RequestDelegate next)
 
     private static string? GetHeader(HttpContext httpContext, string headerName)
     {
-        return httpContext.Request.Headers.TryGetValue(headerName, out var values) ? values.ToString() : null;
+        return httpContext.Request.Headers.TryGetValue(headerName, out StringValues values) ? values.ToString() : null;
     }
 }

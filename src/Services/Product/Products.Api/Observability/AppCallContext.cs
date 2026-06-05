@@ -10,9 +10,8 @@ internal sealed class AppCallContext(
     string? tenantId = null,
     IDictionary<string, string>? headers = null,
     IDictionary<string, object?>? items = null)
-    : AppCallContextBase(correlationId, parentCorrelationId, traceId, spanId, headers, items)
+    : AppCallContextBase(correlationId, parentCorrelationId, traceId, spanId, headers, items, "Products.Api")
 {
-    public string ServiceName { get; } = "Order.Api";
 
     public string? TenantId { get; } = string.IsNullOrWhiteSpace(tenantId) ? null : tenantId;
 }
