@@ -17,8 +17,10 @@ public sealed class ProductFeatureTests
     {
         var store = new FakeProductCatalogStore();
         var messageBus = new FakeMessageBus();
+        var inventory = new FakeInventoryStockAdapter();
         var handler = new CreateProductCommandHandler(
             store,
+            inventory,
             new FixedTimeProvider(new DateTimeOffset(2026, 5, 28, 12, 0, 0, TimeSpan.Zero)),
             new Mock<ILogger<CreateProductCommandHandler>>().Object,
             messageBus);
@@ -41,6 +43,7 @@ public sealed class ProductFeatureTests
         Assert.Equal("SKU-001", result.Value!.Sku);
         Assert.Equal("USD", result.Value.Currency);
         Assert.Equal(new DateTime(2026, 5, 28, 12, 0, 0, DateTimeKind.Utc), result.Value.CreatedAt);
+        Assert.Equal(10, result.Value.StockQuantity);
         Assert.Single(store.Products);
         Assert.Equal(ProductCreatedIntegrationEvent.Topic, messageBus.Topic);
         var integrationEvent = Assert.IsType<ProductCreatedIntegrationEvent>(messageBus.Message);
@@ -88,17 +91,47 @@ public sealed class ProductFeatureTests
     public async Task GetProductsHandler_ShouldReturnPagedResults()
     {
         var store = new FakeProductCatalogStore();
+        var inventory = new FakeInventoryStockAdapter();
         var createdAt = new DateTime(2026, 5, 28, 12, 0, 0, DateTimeKind.Utc);
-        var product = new Product(Guid.NewGuid(), "Keyboard", "Mechanical keyboard", "SKU-KEY", 79.99m, "USD", "Accessories", "Contoso", 25, true, createdAt);
+        var product = new Product(Guid.NewGuid(), "Keyboard", "Mechanical keyboard", "SKU-KEY", 79.99m, "USD", "Accessories", "Contoso", true, createdAt);
         store.Products.Add(product);
+        await inventory.InitializeAsync(product.Id, 25, CancellationToken.None);
 
-        var handler = new GetProductsQueryHandler(store);
+        var handler = new GetProductsQueryHandler(store, inventory);
 
         var result = await handler.Handle(new GetProductsQuery(null, null, null, true, 1, 20), TestContext.Current.CancellationToken);
 
         Assert.True(result.IsSuccess);
         Assert.Single(result.Value!.Items);
         Assert.Equal(1, result.Value.TotalCount);
+        Assert.Equal(25, result.Value.Items.First().StockQuantity);
+    }
+
+    private sealed class FakeInventoryStockAdapter : IInventoryStockAdapter
+    {
+        private readonly Dictionary<Guid, int> _stockByProductId = new();
+
+        public Task InitializeAsync(Guid productId, int stockQuantity, CancellationToken cancellationToken)
+        {
+            _stockByProductId.TryAdd(productId, stockQuantity);
+            return Task.CompletedTask;
+        }
+
+        public Task<int?> GetStockQuantityAsync(Guid productId, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(_stockByProductId.TryGetValue(productId, out int stockQuantity)
+                ? (int?)stockQuantity
+                : null);
+        }
+
+        public Task<IReadOnlyDictionary<Guid, int>> GetStockQuantitiesAsync(IReadOnlyCollection<Guid> productIds, CancellationToken cancellationToken)
+        {
+            Dictionary<Guid, int> values = productIds.Distinct().ToDictionary(
+                productId => productId,
+                productId => _stockByProductId.GetValueOrDefault(productId, 0));
+
+            return Task.FromResult((IReadOnlyDictionary<Guid, int>)values);
+        }
     }
 
     private sealed class FakeProductCatalogStore : IProductCatalogStore

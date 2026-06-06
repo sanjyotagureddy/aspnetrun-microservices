@@ -80,7 +80,6 @@ internal sealed class ProductCatalogStore(NpgsqlDataSource dataSource) : Product
                     currency = @Currency,
                     category = @Category,
                     brand = @Brand,
-                    stock_quantity = @StockQuantity,
                     is_active = @IsActive,
                     updated_at = @UpdatedAt
                 where id = @Id

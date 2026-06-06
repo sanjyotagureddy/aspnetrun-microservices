@@ -2,7 +2,11 @@
 
 using Common.SharedKernel.Logging;
 
-internal sealed class UpdateProductCommandHandler(IProductCatalogStore store, TimeProvider timeProvider, ILogger<UpdateProductCommandHandler> logger)
+internal sealed class UpdateProductCommandHandler(
+    IProductCatalogStore store,
+    IInventoryStockAdapter inventoryStockAdapter,
+    TimeProvider timeProvider,
+    ILogger<UpdateProductCommandHandler> logger)
     : IRequestHandler<UpdateProductCommand, Result<ProductResponse>>
 {
     public async Task<Result<ProductResponse>> Handle(UpdateProductCommand request, CancellationToken cancellationToken)
@@ -22,6 +26,7 @@ internal sealed class UpdateProductCommandHandler(IProductCatalogStore store, Ti
             new Dictionary<string, object?> { ["productId"] = normalizedProduct.Id, ["sku"] = normalizedProduct.Sku },
             cancellationToken);
 
-        return Result<ProductResponse>.Success(normalizedProduct.ToResponse());
+        var stockQuantity = await inventoryStockAdapter.GetStockQuantityAsync(normalizedProduct.Id, cancellationToken) ?? 0;
+        return Result<ProductResponse>.Success(normalizedProduct.ToResponse(stockQuantity));
     }
 }

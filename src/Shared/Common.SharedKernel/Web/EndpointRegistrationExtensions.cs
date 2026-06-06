@@ -59,7 +59,7 @@ public static class EndpointRegistrationExtensions
 
     private static bool ImplementsEndpointContract(Type endpointType)
     {
-        if (endpointType is null || endpointType is { IsInterface: true, IsAbstract: true })
+        if (endpointType.IsInterface || endpointType.IsAbstract)
         {
             return false;
         }

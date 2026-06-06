@@ -23,13 +23,15 @@
   <Folder Name="/src/3. services/discount/">
     <Project Path="src/Services/Discount/Discount.Grpc/Discount.Grpc.csproj" />
   </Folder>
+  <Folder Name="/src/3. services/inventory/">
+    <Project Path="src/Services/Inventory/Inventory.Api/Inventory.Api.csproj" />
+  </Folder>
   <Folder Name="/src/3. services/order/">
     <Project Path="src/Services/Order/Order.Api/Order.Api.csproj" />
   </Folder>
   <Folder Name="/src/3. services/product/">
     <Project Path="src/Services/Product/Products.Api/Products.Api.csproj" />
   </Folder>
-  <Folder Name="/src/Shared/" />
   <Folder Name="/tests/" />
   <Folder Name="/tests/IntegrationTests/">
     <Project Path="tests/IntegrationTests/Common.SharedKernel.Logging.IntegrationTests/Common.SharedKernel.Logging.IntegrationTests.csproj" />
@@ -43,5 +45,4 @@
     <Project Path="tests/UnitTests/Order.Api.Tests/Order.Api.Tests.csproj" Id="f9c409d1-c38a-4acd-bda2-c8af72ba2894" />
     <Project Path="tests/UnitTests/Products.Api.Tests/Products.Api.Tests.csproj" Id="9f731c7a-e8bd-458a-afcf-c7392b0faac7" />
   </Folder>
-  <Folder Name="/tests/UnitTests/" />
 </Solution>

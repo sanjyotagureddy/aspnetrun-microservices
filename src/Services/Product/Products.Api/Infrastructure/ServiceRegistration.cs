@@ -52,6 +52,19 @@ internal static class ServiceRegistration
 
 
             services.AddSingleton<IProductCatalogStore, ProductCatalogStore>();
+            services.AddHttpClient<IInventoryStockAdapter, InventoryStockAdapter>((provider, client) =>
+                {
+                    IConfiguration config = provider.GetRequiredService<IConfiguration>();
+                    var configuredBaseUrl = config["Services:Inventory:BaseUrl"];
+                    var resolvedBaseUrl = string.IsNullOrWhiteSpace(configuredBaseUrl)
+                        ? "https+http://inventory-api"
+                        : configuredBaseUrl;
+
+                    client.BaseAddress = new Uri(resolvedBaseUrl, UriKind.Absolute);
+                    client.Timeout = new TimeSpan(0, 0, 60);
+                })
+                .AddServiceDiscovery()
+                .AddStandardResilienceHandler();
 
             services.AddExceptionHandler<GlobalExceptionHandler>();
             services.AddProblemDetails();
@@ -59,7 +72,7 @@ internal static class ServiceRegistration
             return services;
         }
 
-        public IServiceCollection AddValidationBehaviour()
+        private IServiceCollection AddValidationBehaviour()
         {
             services.AddValidatorsFromAssemblyContaining<Program>();
             services.AddTransient(typeof(IPipelineBehavior<,>), typeof(Common.SharedKernel.Validation.ValidationBehavior<,>));
