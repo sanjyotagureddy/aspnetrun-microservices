@@ -9,5 +9,4 @@ internal sealed record UpdateProductCommand(
     string Currency,
     string Category,
     string Brand,
-    int StockQuantity,
     bool IsActive) : IRequest<Result<ProductResponse>>;

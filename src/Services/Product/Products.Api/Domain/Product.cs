@@ -14,12 +14,11 @@ internal sealed class Product : AuditableEntity<Guid>
         string currency,
         string category,
         string brand,
-        int stockQuantity,
         bool isActive,
         DateTime createdAtUtc)
         : base(id)
     {
-        UpdateCore(name, description, sku, price, currency, category, brand, stockQuantity, isActive);
+        UpdateCore(name, description, sku, price, currency, category, brand, isActive);
         SetCreatedAudit(createdAtUtc);
     }
 
@@ -37,7 +36,6 @@ internal sealed class Product : AuditableEntity<Guid>
 
     public string Brand { get; private set; } = string.Empty;
 
-    public int StockQuantity { get; private set; }
 
     public bool IsActive { get; private set; }
 
@@ -53,11 +51,10 @@ internal sealed class Product : AuditableEntity<Guid>
         string currency,
         string category,
         string brand,
-        int stockQuantity,
         bool isActive,
         DateTime updatedAtUtc)
     {
-        UpdateCore(name, description, sku, price, currency, category, brand, stockQuantity, isActive);
+        UpdateCore(name, description, sku, price, currency, category, brand, isActive);
         SetUpdatedAudit(updatedAtUtc);
     }
 
@@ -69,7 +66,6 @@ internal sealed class Product : AuditableEntity<Guid>
         string currency,
         string category,
         string brand,
-        int stockQuantity,
         bool isActive)
     {
         Name = Guard.Against.NullOrWhiteSpace(name).Trim();
@@ -79,7 +75,6 @@ internal sealed class Product : AuditableEntity<Guid>
         Category = Guard.Against.NullOrWhiteSpace(category).Trim();
         Brand = Guard.Against.NullOrWhiteSpace(brand).Trim();
         Price = price;
-        StockQuantity = stockQuantity;
         IsActive = isActive;
     }
 }

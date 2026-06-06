@@ -12,6 +12,5 @@ internal sealed class UpdateProductCommandValidator : AbstractValidator<UpdatePr
         RuleFor(x => x.Currency).NotEmpty().Length(3);
         RuleFor(x => x.Category).NotEmpty().MaximumLength(200);
         RuleFor(x => x.Brand).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.StockQuantity).GreaterThanOrEqualTo(0);
     }
 }

@@ -1,6 +1,6 @@
 namespace Products.Api.Features.Products.GetById;
 
-internal sealed class GetProductByIdQueryHandler(IProductCatalogStore store)
+internal sealed class GetProductByIdQueryHandler(IProductCatalogStore store, IInventoryStockAdapter inventoryStockAdapter)
     : IRequestHandler<GetProductByIdQuery, Result<ProductResponse>>
 {
     public async Task<Result<ProductResponse>> Handle(GetProductByIdQuery request, CancellationToken cancellationToken)
@@ -11,6 +11,7 @@ internal sealed class GetProductByIdQueryHandler(IProductCatalogStore store)
             throw new Common.SharedKernel.Exceptions.NotFoundException(nameof(Product), request.Id.ToString());
         }
 
-        return Result<ProductResponse>.Success(product.ToResponse());
+        int stockQuantity = await inventoryStockAdapter.GetStockQuantityAsync(product.Id, cancellationToken) ?? 0;
+        return Result<ProductResponse>.Success(product.ToResponse(stockQuantity));
     }
 }

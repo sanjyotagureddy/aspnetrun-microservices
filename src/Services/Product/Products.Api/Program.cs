@@ -16,14 +16,13 @@ public class Program
         builder.AddServiceDefaults();
         builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
-        // Configure Serilog early so host logs are captured
-        Log.Logger = new LoggerConfiguration()
-            .ReadFrom.Configuration(builder.Configuration)
-            .Enrich.FromLogContext()
-            .WriteTo.Console()
-            .CreateLogger();
-
-        builder.Host.UseSerilog();
+        builder.Host.UseSerilog(
+            (context, services, loggerConfiguration) => loggerConfiguration
+                .ReadFrom.Configuration(context.Configuration)
+                .ReadFrom.Services(services)
+                .Enrich.FromLogContext()
+                .WriteTo.Console(),
+            writeToProviders: true);
 
         builder.Services.AddAuthorization();
         builder.Services.AddSwaggerSupport(builder.Configuration, "Products API");

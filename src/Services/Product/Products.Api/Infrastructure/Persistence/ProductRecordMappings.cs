@@ -28,15 +28,15 @@ internal sealed class ProductRecord
 
     public Product ToDomain()
     {
-        var product = new Product(Id, Name, Description, Sku, Price, Currency, Category, Brand, StockQuantity, IsActive, CreatedAt);
-        product.Update(Name, Description, Sku, Price, Currency, Category, Brand, StockQuantity, IsActive, UpdatedAt);
+        var product = new Product(Id, Name, Description, Sku, Price, Currency, Category, Brand, IsActive, CreatedAt);
+        product.Update(Name, Description, Sku, Price, Currency, Category, Brand, IsActive, UpdatedAt);
         return product;
     }
 }
 
 internal static class ProductRecordMappings
 {
-    public static object ToRecord(this Product product)
+    public static object ToRecord(this Product product, int stockQuantity = 0)
     {
         return new
         {
@@ -48,7 +48,7 @@ internal static class ProductRecordMappings
             product.Currency,
             product.Category,
             product.Brand,
-            product.StockQuantity,
+            StockQuantity = stockQuantity,
             product.IsActive,
             product.CreatedAt,
             product.UpdatedAt,

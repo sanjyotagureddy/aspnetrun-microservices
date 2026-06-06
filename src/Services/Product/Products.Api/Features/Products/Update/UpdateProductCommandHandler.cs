@@ -1,8 +1,15 @@
-﻿namespace Products.Api.Features.Products.Update;
+using Common.SharedKernel.Messaging;
+using Common.SharedKernel.Observability.Context;
+using Products.Api.Features.Products.Events;
 
-using Common.SharedKernel.Logging;
+namespace Products.Api.Features.Products.Update;
 
-internal sealed class UpdateProductCommandHandler(IProductCatalogStore store, TimeProvider timeProvider, ILogger<UpdateProductCommandHandler> logger)
+internal sealed class UpdateProductCommandHandler(
+    IProductCatalogStore store,
+    IInventoryStockAdapter inventoryStockAdapter,
+    TimeProvider timeProvider,
+    Common.SharedKernel.Logging.ILogger<UpdateProductCommandHandler> logger,
+    IMessageBus messageBus)
     : IRequestHandler<UpdateProductCommand, Result<ProductResponse>>
 {
     public async Task<Result<ProductResponse>> Handle(UpdateProductCommand request, CancellationToken cancellationToken)
@@ -13,15 +20,43 @@ internal sealed class UpdateProductCommandHandler(IProductCatalogStore store, Ti
             throw new Common.SharedKernel.Exceptions.NotFoundException(nameof(Product), request.Id.ToString());
         }
 
-        Product normalizedProduct = request.ToDomain(product, timeProvider.GetUtcNow().UtcDateTime);
+        DateTime occurredOnUtc = timeProvider.GetUtcNow().UtcDateTime;
+        Product normalizedProduct = request.ToDomain(product, occurredOnUtc);
         await store.EnsureSkuIsUniqueAsync(normalizedProduct.Sku, normalizedProduct.Id, cancellationToken);
         await store.UpdateAsync(normalizedProduct, cancellationToken);
 
-        await logger.LogInformationAsync(
-            "Product updated",
-            new Dictionary<string, object?> { ["productId"] = normalizedProduct.Id, ["sku"] = normalizedProduct.Sku },
+        int stockQuantity = await inventoryStockAdapter.GetStockQuantityAsync(normalizedProduct.Id, cancellationToken) ?? 0;
+        ProductUpdatedIntegrationEvent productUpdated = normalizedProduct.ToUpdatedIntegrationEvent(occurredOnUtc, stockQuantity);
+        AppCallContextBase? appContext = AppCallContextBase.Current;
+
+        await messageBus.PublishAsync(
+            ProductUpdatedIntegrationEvent.Topic,
+            productUpdated,
+            metadata =>
+            {
+                metadata.MessageId = productUpdated.EventId.ToString("N");
+                metadata.Key = normalizedProduct.Id.ToString("N");
+                metadata.CorrelationId = appContext?.CorrelationId;
+                metadata.TraceId = appContext?.TraceId;
+                metadata.SpanId = appContext?.SpanId;
+                metadata.TenantId = appContext?.Headers.TryGetValue("X-Tenant-Id", out string? tenantId) == true ? tenantId : null;
+                metadata.Headers["Source"] = "Products.Api";
+                metadata.Headers["Entity"] = nameof(Product);
+                metadata.Headers["EventType"] = nameof(ProductUpdatedIntegrationEvent);
+            },
             cancellationToken);
 
-        return Result<ProductResponse>.Success(normalizedProduct.ToResponse());
+        await logger.LogInformationAsync(
+            "Product updated",
+            new Dictionary<string, object?>
+            {
+                ["productId"] = normalizedProduct.Id,
+                ["sku"] = normalizedProduct.Sku,
+                ["eventId"] = productUpdated.EventId,
+                ["topic"] = ProductUpdatedIntegrationEvent.Topic
+            },
+            cancellationToken);
+
+        return Result<ProductResponse>.Success(normalizedProduct.ToResponse(stockQuantity));
     }
 }

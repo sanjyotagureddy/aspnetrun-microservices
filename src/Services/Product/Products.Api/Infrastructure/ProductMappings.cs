@@ -1,4 +1,4 @@
-﻿using Products.Api.Features.Products.Create;
+using Products.Api.Features.Products.Create;
 using Products.Api.Features.Products.Events;
 using Products.Api.Features.Products.Update;
 
@@ -19,7 +19,6 @@ internal static class ProductMappings
                 request.Currency,
                 request.Category,
                 request.Brand,
-                request.StockQuantity,
                 request.IsActive,
                 createdAtUtc);
         }
@@ -37,7 +36,6 @@ internal static class ProductMappings
                 request.Currency,
                 request.Category,
                 request.Brand,
-                request.StockQuantity,
                 request.IsActive,
                 updatedAtUtc);
 
@@ -47,7 +45,7 @@ internal static class ProductMappings
 
     extension(Product product)
     {
-        public ProductResponse ToResponse()
+        public ProductResponse ToResponse(int stockQuantity)
         {
             return new ProductResponse(
                 product.Id,
@@ -58,13 +56,13 @@ internal static class ProductMappings
                 product.Currency,
                 product.Category,
                 product.Brand,
-                product.StockQuantity,
+                stockQuantity,
                 product.IsActive,
                 product.CreatedAt,
                 product.UpdatedAt);
         }
 
-        public ProductCreatedIntegrationEvent ToCreatedIntegrationEvent(DateTime occurredOnUtc)
+        public ProductCreatedIntegrationEvent ToCreatedIntegrationEvent(DateTime occurredOnUtc, int stockQuantity)
         {
             return new ProductCreatedIntegrationEvent(
                 product.Id,
@@ -74,9 +72,26 @@ internal static class ProductMappings
                 product.Currency,
                 product.Category,
                 product.Brand,
-                product.StockQuantity,
+                stockQuantity,
                 product.IsActive,
                 product.CreatedAt,
+                occurredOnUtc);
+        }
+
+        public ProductUpdatedIntegrationEvent ToUpdatedIntegrationEvent(DateTime occurredOnUtc, int stockQuantity)
+        {
+            return new ProductUpdatedIntegrationEvent(
+                product.Id,
+                product.Name,
+                product.Sku,
+                product.Price,
+                product.Currency,
+                product.Category,
+                product.Brand,
+                stockQuantity,
+                product.IsActive,
+                product.CreatedAt,
+                product.UpdatedAt,
                 occurredOnUtc);
         }
     }
@@ -111,7 +126,6 @@ internal static class ProductMappings
                 request.Currency,
                 request.Category,
                 request.Brand,
-                request.StockQuantity,
                 request.IsActive);
         }
     }
