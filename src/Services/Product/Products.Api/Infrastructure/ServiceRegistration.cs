@@ -19,7 +19,8 @@ internal static class ServiceRegistration
         public IServiceCollection AddProductsApi(IConfiguration configuration)
         {
             var connectionString = configuration.GetConnectionString("productsdb")
-                                   ?? throw new ConfigurationException("Connection string");
+                                   ?? configuration.GetConnectionString("products")
+                                   ?? throw new ConfigurationException("Connection string 'productsdb' or 'products'");
 
             services.AddValidationBehaviour();
             services.AddSingleton(TimeProvider.System);

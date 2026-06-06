@@ -5,7 +5,9 @@ IDistributedApplicationBuilder builder = DistributedApplication.CreateBuilder(ar
 // ReSharper disable once EmptyRegion
 #region Persistence
 
-IResourceBuilder<PostgresServerResource> postgresDb = builder.AddPostgres("productsdb")
+IResourceBuilder<ParameterResource> postgresPassword = builder.AddParameter("postgres-password", secret: true);
+
+IResourceBuilder<PostgresServerResource> postgresDb = builder.AddPostgres("productsdb", password: postgresPassword)
         .WithDataVolume("postgres-data")
         .WithPgAdmin(containerName: "pgAdmin")
         .WithHostPort(5432);
@@ -24,6 +26,8 @@ IResourceBuilder<KafkaServerResource> messaging = builder.AddKafka("message-brok
 
 IResourceBuilder<ProjectResource> inventoryApi = builder.AddProject<Inventory_Api>("inventory-api")
     .WithReference(inventory)
+    .WithEnvironment("ConnectionStrings__inventory", inventory.Resource.ConnectionStringExpression)
+    .WithEnvironment("ConnectionStrings__inventorydb", inventory.Resource.ConnectionStringExpression)
     .WaitFor(inventory)
     .WithUrl("/swagger", "Swagger");
 
@@ -31,6 +35,7 @@ builder.AddProject<Products_Api>("products-api")
     .WithReference(productDb)
     .WithReference(messaging)
     .WithReference(inventoryApi)
+    .WithEnvironment("ConnectionStrings__productsdb", productDb.Resource.ConnectionStringExpression)
     .WaitFor(productDb)
     .WaitFor(messaging)
     .WaitFor(inventoryApi)

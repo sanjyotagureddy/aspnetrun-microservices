@@ -68,6 +68,38 @@ public sealed class ProductFeatureTests
     }
 
     [Fact]
+    public async Task CreateProductHandler_ShouldRollbackAndFail_WhenInventoryInitializationFails()
+    {
+        var store = new FakeProductCatalogStore();
+        var messageBus = new FakeMessageBus();
+        var inventory = new FakeInventoryStockAdapter { ThrowOnInitialize = true };
+        var handler = new CreateProductCommandHandler(
+            store,
+            inventory,
+            new FixedTimeProvider(new DateTimeOffset(2026, 5, 28, 12, 0, 0, TimeSpan.Zero)),
+            new Mock<ILogger<CreateProductCommandHandler>>().Object,
+            messageBus);
+
+        var command = new CreateProductCommand(
+            "Laptop",
+            "Business laptop",
+            "sku-001",
+            1299.99m,
+            "usd",
+            "Electronics",
+            "Contoso",
+            10,
+            true);
+
+        await Assert.ThrowsAsync<Common.SharedKernel.Exceptions.ConflictException>(() =>
+            handler.Handle(command, CancellationToken.None));
+
+        Assert.Empty(store.Products);
+        Assert.Null(messageBus.Topic);
+        Assert.Null(messageBus.Message);
+    }
+
+    [Fact]
     public async Task CreateProductValidator_ShouldRejectInvalidCommand()
     {
         var validator = new CreateProductCommandValidator();
@@ -111,8 +143,15 @@ public sealed class ProductFeatureTests
     {
         private readonly Dictionary<Guid, int> _stockByProductId = new();
 
+        public bool ThrowOnInitialize { get; init; }
+
         public Task InitializeAsync(Guid productId, int stockQuantity, CancellationToken cancellationToken)
         {
+            if (ThrowOnInitialize)
+            {
+                throw new InvalidOperationException("Inventory initialization failed.");
+            }
+
             _stockByProductId.TryAdd(productId, stockQuantity);
             return Task.CompletedTask;
         }
