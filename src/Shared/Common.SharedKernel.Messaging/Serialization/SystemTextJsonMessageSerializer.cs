@@ -14,6 +14,16 @@ public sealed class SystemTextJsonMessageSerializer : IMessageSerializer
     public IMessageEnvelope<T> Deserialize<T>(ReadOnlySpan<byte> payload)
     {
         MessageEnvelope<T>? envelope = JsonSerializer.Deserialize<MessageEnvelope<T>>(payload, JsonOptions);
-        return envelope ?? throw new MessagingException("Message envelope could not be deserialized.");
+        if (envelope is null)
+        {
+            throw new MessagingException("Message envelope could not be deserialized.");
+        }
+
+        if (envelope.Contract is null)
+        {
+            return envelope with { Contract = MessageContractDescriptor.Unspecified };
+        }
+
+        return envelope;
     }
 }

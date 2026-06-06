@@ -40,11 +40,16 @@ internal sealed class KafkaMessageProducer(
     private async Task PublishCoreAsync<T>(string topic, T message, MessageMetadata metadata, CancellationToken cancellationToken)
     {
         string resolvedTopic = ResolveTopic(topic);
+        DestinationRegistration? registration = ResolveRegistration(topic, resolvedTopic);
+        int? explicitPartition = ResolveExplicitPartition(metadata);
+        ValidatePartitionPolicy(metadata, registration, resolvedTopic, explicitPartition);
+
         MessageEnvelope<T> envelope = MessageEnvelope<T>.Create(resolvedTopic, message, metadata);
+        string messageKey = ResolveMessageKey(envelope, metadata);
         byte[] payload = serializer.Serialize(envelope);
         Message<string, byte[]> kafkaMessage = new()
         {
-            Key = metadata.Key ?? envelope.MessageId,
+            Key = messageKey,
             Value = payload,
             Headers = BuildHeaders(envelope, metadata)
         };
@@ -61,8 +66,8 @@ internal sealed class KafkaMessageProducer(
         {
             try
             {
-                DeliveryResult<string, byte[]> report = metadata.Partition.HasValue
-                    ? await _producer.ProduceAsync(new TopicPartition(resolvedTopic, new Partition(metadata.Partition.Value)), kafkaMessage, cancellationToken)
+                DeliveryResult<string, byte[]> report = explicitPartition.HasValue
+                    ? await _producer.ProduceAsync(new TopicPartition(resolvedTopic, new Partition(explicitPartition.Value)), kafkaMessage, cancellationToken)
                     : await _producer.ProduceAsync(resolvedTopic, kafkaMessage, cancellationToken);
 
                 stopwatch.Stop();
@@ -117,6 +122,9 @@ internal sealed class KafkaMessageProducer(
         Add(headers, KafkaMessageHeaderNames.SpanId, metadata.SpanId);
         Add(headers, KafkaMessageHeaderNames.TenantId, envelope.TenantId);
         Add(headers, KafkaMessageHeaderNames.ContentType, serializer.ContentType);
+        Add(headers, KafkaMessageHeaderNames.ContractType, envelope.Contract.MessageType);
+        Add(headers, KafkaMessageHeaderNames.ContractVersion, envelope.Contract.Version);
+        Add(headers, KafkaMessageHeaderNames.ContractCompatibility, envelope.Contract.Compatibility.ToString());
 
         foreach (KeyValuePair<string, string> header in envelope.Headers)
         {
@@ -138,6 +146,60 @@ internal sealed class KafkaMessageProducer(
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(topic);
         return string.IsNullOrWhiteSpace(_options.TopicPrefix) ? topic : $"{_options.TopicPrefix}.{topic}";
+    }
+
+    private string ResolveMessageKey<T>(IMessageEnvelope<T> envelope, MessageMetadata metadata)
+    {
+        if (!string.IsNullOrWhiteSpace(metadata.OrderingKey))
+        {
+            return metadata.OrderingKey;
+        }
+
+        if (!string.IsNullOrWhiteSpace(metadata.RoutingKey))
+        {
+            return metadata.RoutingKey;
+        }
+
+        return envelope.MessageId;
+    }
+
+    private DestinationRegistration? ResolveRegistration(string topic, string resolvedTopic)
+        => _options.Destinations.FirstOrDefault(destination =>
+            string.Equals(destination.DestinationName, topic, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(destination.DestinationName, resolvedTopic, StringComparison.OrdinalIgnoreCase));
+
+    private static void ValidatePartitionPolicy(MessageMetadata metadata, DestinationRegistration? registration, string topic, int? explicitPartition)
+    {
+        if (registration is null)
+        {
+            return;
+        }
+
+        string? effectiveKey = !string.IsNullOrWhiteSpace(metadata.OrderingKey)
+            ? metadata.OrderingKey
+            : metadata.RoutingKey;
+
+        if (registration.OrderingRequired && string.IsNullOrWhiteSpace(effectiveKey) && registration.PartitioningStrategy != PartitioningStrategy.ExplicitPartition)
+        {
+            throw new MessagingConfigurationException($"Destination '{topic}' requires an OrderingKey or RoutingKey.");
+        }
+
+        if (registration.PartitioningStrategy != PartitioningStrategy.ExplicitPartition && explicitPartition.HasValue)
+        {
+            throw new MessagingConfigurationException($"Destination '{topic}' does not allow explicit partition assignment.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(effectiveKey) && string.Equals(effectiveKey, metadata.MessageId, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new MessagingConfigurationException($"Destination '{topic}' cannot use message/event id as partition key.");
+        }
+    }
+
+    private static int? ResolveExplicitPartition(MessageMetadata metadata)
+    {
+        return metadata.TryGetKafkaPartition(out int partitionFromHint)
+            ? partitionFromHint
+            : null;
     }
 
     private TimeSpan GetDelay(int attempt)

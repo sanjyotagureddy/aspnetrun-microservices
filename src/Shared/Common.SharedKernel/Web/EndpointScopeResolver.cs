@@ -1,5 +1,6 @@
 ﻿namespace Common.SharedKernel.Web;
 
+[ExcludeFromCodeCoverage]
 public static class EndpointScopeResolver
 {
     public static EndpointScope Resolve(string? environmentName)

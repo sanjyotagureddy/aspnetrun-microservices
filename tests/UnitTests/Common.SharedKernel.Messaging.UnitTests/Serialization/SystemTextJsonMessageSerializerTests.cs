@@ -25,5 +25,28 @@ public sealed class SystemTextJsonMessageSerializerTests
         restored.Payload.OrderId.Should().Be("ORD-1");
     }
 
+    [Fact]
+    public void Deserialize_ShouldAssignUnspecifiedContract_WhenMissingInPayload()
+    {
+        SystemTextJsonMessageSerializer serializer = new();
+        byte[] payload = """
+        {
+          "messageId": "msg-legacy",
+          "correlationId": "corr-legacy",
+          "causationId": null,
+          "tenantId": null,
+          "topic": "products.events.v1",
+          "timestampUtc": "2026-06-06T00:00:00Z",
+          "headers": {},
+          "payload": { "orderId": "ORD-legacy" }
+        }
+        """u8.ToArray();
+
+        IMessageEnvelope<TestPayload> restored = serializer.Deserialize<TestPayload>(payload);
+
+        restored.Contract.Should().Be(MessageContractDescriptor.Unspecified);
+        restored.Payload.OrderId.Should().Be("ORD-legacy");
+    }
+
     private sealed record TestPayload(string OrderId);
 }

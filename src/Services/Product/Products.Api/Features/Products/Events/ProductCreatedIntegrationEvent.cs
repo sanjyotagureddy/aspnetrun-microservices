@@ -5,7 +5,7 @@ namespace Products.Api.Features.Products.Events;
 
 internal sealed record ProductCreatedIntegrationEvent : IntegrationEventBase
 {
-    public const string Topic = "products.created";
+    public const string Topic = "products.events.v1";
 
     [JsonConstructor]
     public ProductCreatedIntegrationEvent(

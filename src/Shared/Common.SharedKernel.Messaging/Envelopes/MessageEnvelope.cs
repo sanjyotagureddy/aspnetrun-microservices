@@ -7,6 +7,7 @@ public sealed record MessageEnvelope<T>(
     string? TenantId,
     string Topic,
     DateTimeOffset TimestampUtc,
+    MessageContractDescriptor Contract,
     IReadOnlyDictionary<string, string> Headers,
     T Payload) : IMessageEnvelope<T>
 {
@@ -22,6 +23,7 @@ public sealed record MessageEnvelope<T>(
             metadata.TenantId,
             topic,
             DateTimeOffset.UtcNow,
+            metadata.Contract,
             new Dictionary<string, string>(metadata.Headers, StringComparer.OrdinalIgnoreCase),
             payload);
     }

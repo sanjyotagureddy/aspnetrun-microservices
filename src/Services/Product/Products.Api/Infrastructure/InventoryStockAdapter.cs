@@ -1,6 +1,4 @@
-using System.Net.Http.Json;
-
-namespace Products.Api.Infrastructure;
+﻿namespace Products.Api.Infrastructure;
 
 internal sealed class InventoryStockAdapter(HttpClient httpClient, ILogger<InventoryStockAdapter> logger) : IInventoryStockAdapter
 {

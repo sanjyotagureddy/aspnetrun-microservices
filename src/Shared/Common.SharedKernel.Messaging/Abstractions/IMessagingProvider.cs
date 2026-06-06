@@ -6,11 +6,13 @@ public interface IMessagingProvider
 {
     string Name { get; }
 
+    MessagingProviderCapabilities Capabilities { get; }
+
     IMessageProducer CreateProducer();
 
     IMessageConsumer CreateConsumer();
 
-    Task EnsureTopicAsync(string topic, CancellationToken cancellationToken = default);
+    IDestinationProvisioner CreateProvisioner();
 
     Task<HealthCheckResult> CheckHealthAsync(CancellationToken cancellationToken = default);
 }

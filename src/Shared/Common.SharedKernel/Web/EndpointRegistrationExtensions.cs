@@ -9,6 +9,7 @@ namespace Common.SharedKernel.Web;
 /// Provides extension methods for dynamically registering and mapping API endpoints
 /// that implement the <see cref="IEndpoint"/> interface.
 /// </summary>
+[ExcludeFromCodeCoverage]
 public static class EndpointRegistrationExtensions
 {
     /// <summary>

@@ -9,4 +9,7 @@ internal static class KafkaMessageHeaderNames
     public const string SpanId = "span-id";
     public const string TenantId = "tenant-id";
     public const string ContentType = "content-type";
+    public const string ContractType = "contract-type";
+    public const string ContractVersion = "contract-version";
+    public const string ContractCompatibility = "contract-compatibility";
 }

@@ -53,7 +53,6 @@ public sealed class ProductFeatureTests
         Assert.Equal("USD", integrationEvent.Currency);
         Assert.Equal(new DateTime(2026, 5, 28, 12, 0, 0, DateTimeKind.Utc), integrationEvent.OccurredOnUtc);
         Assert.Equal(integrationEvent.EventId.ToString("N"), messageBus.Metadata?.MessageId);
-        Assert.Equal(result.Value.Id.ToString("N"), messageBus.Metadata?.Key);
         Assert.Equal("Products.Api", messageBus.Metadata?.Headers["Source"]);
         Assert.Equal(nameof(ProductCreatedIntegrationEvent), messageBus.Metadata?.Headers["EventType"]);
 

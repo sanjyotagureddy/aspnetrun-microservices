@@ -14,6 +14,8 @@ public interface IMessageEnvelope<out T>
 
     DateTimeOffset TimestampUtc { get; }
 
+    MessageContractDescriptor Contract { get; }
+
     IReadOnlyDictionary<string, string> Headers { get; }
 
     T Payload { get; }

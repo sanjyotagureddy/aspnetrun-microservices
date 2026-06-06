@@ -14,9 +14,13 @@ public sealed class MessageMetadata
 
     public string? TenantId { get; set; }
 
-    public string? Key { get; set; }
+    public string? RoutingKey { get; set; }
 
-    public int? Partition { get; set; }
+    public string? OrderingKey { get; set; }
+
+    public MessageContractDescriptor Contract { get; set; } = MessageContractDescriptor.Unspecified;
+
+    public IDictionary<string, string> TransportHints { get; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
     public IDictionary<string, string> Headers { get; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
@@ -30,9 +34,15 @@ public sealed class MessageMetadata
             TraceId = TraceId,
             SpanId = SpanId,
             TenantId = TenantId,
-            Key = Key,
-            Partition = Partition
+            RoutingKey = RoutingKey,
+            OrderingKey = OrderingKey,
+            Contract = Contract
         };
+
+        foreach (KeyValuePair<string, string> transportHint in TransportHints)
+        {
+            clone.TransportHints[transportHint.Key] = transportHint.Value;
+        }
 
         foreach (KeyValuePair<string, string> header in Headers)
         {

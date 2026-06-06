@@ -1,6 +1,4 @@
-﻿using Common.SharedKernel.Helpers;
-
-namespace Common.SharedKernel.Logging;
+﻿namespace Common.SharedKernel.Logging;
 
 public sealed record LogEntry
 {
