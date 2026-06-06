@@ -25,6 +25,31 @@ internal sealed class InventoryStore(NpgsqlDataSource dataSource) : IInventorySt
         return record?.ToDomain();
     }
 
+    public async Task<IReadOnlyDictionary<Guid, int>> GetStockByProductIdsAsync(IReadOnlyCollection<Guid> productIds, CancellationToken cancellationToken)
+    {
+        if (productIds.Count == 0)
+        {
+            return new Dictionary<Guid, int>();
+        }
+
+        Guid[] distinctProductIds = productIds.Distinct().ToArray();
+
+        await using NpgsqlConnection connection = await dataSource.OpenConnectionAsync(cancellationToken);
+        InventoryStockRecord[] rows = (await connection.QueryAsync<InventoryStockRecord>(
+            new CommandDefinition(
+                """
+                select
+                    product_id as ProductId,
+                    stock_quantity as StockQuantity
+                from inventory_items
+                where product_id = any(@ProductIds)
+                """,
+                new { ProductIds = distinctProductIds },
+                cancellationToken: cancellationToken))).ToArray();
+
+        return rows.ToDictionary(row => row.ProductId, row => row.StockQuantity);
+    }
+
     public async Task InitializeAsync(InventoryItem item, CancellationToken cancellationToken)
     {
         await using NpgsqlConnection connection = await dataSource.OpenConnectionAsync(cancellationToken);
@@ -39,5 +64,12 @@ internal sealed class InventoryStore(NpgsqlDataSource dataSource) : IInventorySt
             """,
             item.ToRecord(),
             cancellationToken: cancellationToken));
+    }
+
+    private sealed class InventoryStockRecord
+    {
+        public Guid ProductId { get; set; }
+
+        public int StockQuantity { get; set; }
     }
 }

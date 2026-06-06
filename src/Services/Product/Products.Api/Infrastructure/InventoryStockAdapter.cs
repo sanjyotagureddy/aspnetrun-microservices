@@ -17,6 +17,10 @@ internal sealed class InventoryStockAdapter(HttpClient httpClient, ILogger<Inven
             InventoryStockResponse? response = await httpClient.GetFromJsonAsync<InventoryStockResponse>($"/api/v1/inventory/{productId}", cancellationToken);
             return response?.StockQuantity;
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Failed to fetch inventory quantity for product {ProductId}", productId);
@@ -31,16 +35,40 @@ internal sealed class InventoryStockAdapter(HttpClient httpClient, ILogger<Inven
             return new Dictionary<Guid, int>();
         }
 
-        Task<KeyValuePair<Guid, int?>>[] tasks = productIds
-            .Distinct()
-            .Select(async productId => new KeyValuePair<Guid, int?>(productId, await GetStockQuantityAsync(productId, cancellationToken)))
-            .ToArray();
+        Guid[] distinctProductIds = productIds.Distinct().ToArray();
 
-        KeyValuePair<Guid, int?>[] results = await Task.WhenAll(tasks);
-        return results.ToDictionary(item => item.Key, item => item.Value ?? 0);
+        try
+        {
+            using HttpResponseMessage response = await httpClient.PostAsJsonAsync(
+                "/api/v1/inventory/batch",
+                new InventoryBatchRequest(distinctProductIds),
+                cancellationToken);
+
+            response.EnsureSuccessStatusCode();
+
+            InventoryBatchResponse? payload = await response.Content.ReadFromJsonAsync<InventoryBatchResponse>(cancellationToken);
+            IReadOnlyDictionary<Guid, int> stockByProductId = payload?.StockByProductId ?? new Dictionary<Guid, int>();
+
+            return distinctProductIds.ToDictionary(
+                productId => productId,
+                productId => stockByProductId.TryGetValue(productId, out int quantity) ? quantity : 0);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to fetch inventory quantities in batch for {ProductCount} products", distinctProductIds.Length);
+            return distinctProductIds.ToDictionary(productId => productId, _ => 0);
+        }
     }
 
     private sealed record InitializeInventoryRequest(int StockQuantity);
 
     private sealed record InventoryStockResponse(Guid ProductId, int StockQuantity);
+
+    private sealed record InventoryBatchRequest(IReadOnlyCollection<Guid> ProductIds);
+
+    private sealed record InventoryBatchResponse(IReadOnlyDictionary<Guid, int> StockByProductId);
 }
