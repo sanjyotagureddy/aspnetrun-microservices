@@ -21,9 +21,11 @@ public static class MessagingServiceCollectionExtensions
         {
             configured.Provider = options.Provider;
             configured.TopicPrefix = options.TopicPrefix;
+            configured.ProvisioningMode = options.ProvisioningMode;
             configured.Serialization = options.Serialization;
             configured.RetryPolicy = options.RetryPolicy;
             configured.DeadLetter = options.DeadLetter;
+            configured.Destinations = options.Destinations.Select(destination => destination.Clone()).ToList();
             configured.Kafka = options.Kafka;
         });
 
@@ -32,8 +34,14 @@ public static class MessagingServiceCollectionExtensions
             services.AddSingleton<IMessageSerializer, SystemTextJsonMessageSerializer>();
         }
 
+        if (services.All(descriptor => descriptor.ServiceType != typeof(IMessageUpcaster)))
+        {
+            services.AddSingleton<IMessageUpcaster, NoOpMessageUpcaster>();
+        }
+
         services.AddSingleton<MessagingInstrumentation>();
         services.AddSingleton<IMessageBus, DefaultMessageBus>();
+        services.AddHostedService<MessagingConfigurationValidationHostedService>();
         services.AddSingleton<IMessageProducer>(provider => provider.GetRequiredService<IMessagingProvider>().CreateProducer());
         services.AddSingleton<IMessageConsumer>(provider => provider.GetRequiredService<IMessagingProvider>().CreateConsumer());
         services.AddSingleton<IMessagingProvider>(provider =>
@@ -57,6 +65,19 @@ public static class MessagingServiceCollectionExtensions
 
         builder.Options.Provider = MessagingProviderKind.Kafka;
         configure?.Invoke(builder.Options.Kafka);
+        return builder;
+    }
+
+    public static IMessagingBuilder RegisterDestination(
+        this IMessagingBuilder builder,
+        Action<DestinationRegistration> configure)
+    {
+        Guard.Against.Null(builder);
+        Guard.Against.Null(configure);
+
+        DestinationRegistration registration = new();
+        configure(registration);
+        builder.Options.Destinations.Add(registration);
         return builder;
     }
 }

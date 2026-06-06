@@ -69,7 +69,8 @@ internal sealed class CreateProductCommandHandler(
             metadata =>
             {
                 metadata.MessageId = productCreated.EventId.ToString("N");
-                metadata.Key = normalizedProduct.Id.ToString("N");
+                metadata.OrderingKey = normalizedProduct.Id.ToString("N");
+                metadata.Contract = new MessageContractDescriptor(nameof(ProductCreatedIntegrationEvent), "1.0", "application/json");
                 metadata.CorrelationId = appContext?.CorrelationId;
                 metadata.TraceId = appContext?.TraceId;
                 metadata.SpanId = appContext?.SpanId;

@@ -2,6 +2,11 @@
 
 Broker-agnostic messaging abstractions and provider implementations for Shared Kernel applications.
 
+## Architecture Decisions
+
+- [ADR-0001: Broker-Agnostic Messaging Architecture](docs/ADR-0001-broker-agnostic-messaging-architecture.md)
+- [Messaging Implementation Checklist](docs/Messaging-Implementation-Checklist.md)
+
 Applications depend on:
 
 - `IMessageBus`

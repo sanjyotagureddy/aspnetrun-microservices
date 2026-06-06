@@ -10,6 +10,7 @@ namespace Common.SharedKernel.Messaging;
 internal sealed class KafkaMessageConsumer(
     IOptions<MessagingOptions> options,
     IMessageSerializer serializer,
+    IEnumerable<IMessageUpcaster> upcasters,
     ILogger<KafkaMessageConsumer> logger,
     MessagingInstrumentation instrumentation) : IMessageConsumer, IDisposable
 {
@@ -92,11 +93,28 @@ internal sealed class KafkaMessageConsumer(
         try
         {
             envelope = serializer.Deserialize<T>(result.Message.Value);
+
+            if (TryResolveExpectedContract(handler, topic, out MessageContractDescriptor expectedContract)
+                && !MessageContractCompatibility.IsCompatible(
+                    envelope.Contract,
+                    expectedContract,
+                    (handler as IContractAwareMessageHandler)?.SupportedContractVersions,
+                    (handler as IContractAwareMessageHandler)?.SupportedMessageType))
+            {
+                IMessageEnvelope<T>? upcastedEnvelope = TryUpcast(envelope, expectedContract, upcasters);
+                if (upcastedEnvelope is null)
+                {
+                    throw new MessagingConfigurationException(
+                        $"Message contract '{envelope.Contract.MessageType}:{envelope.Contract.Version}' is not compatible with expected '{expectedContract.MessageType}:{expectedContract.Version}' for topic '{topic}'.");
+                }
+
+                envelope = upcastedEnvelope;
+            }
         }
         catch (Exception ex)
         {
             instrumentation.ConsumeFailures.Add(1);
-            await LogDeadLetterAsync(headers.GetValueOrDefault(KafkaMessageHeaderNames.MessageId) ?? string.Empty, topic, "DeserializationFailure", ex, cancellationToken);
+            await LogDeadLetterAsync(headers.GetValueOrDefault(KafkaMessageHeaderNames.MessageId) ?? string.Empty, topic, "DeserializationOrCompatibilityFailure", ex, cancellationToken);
             return;
         }
 
@@ -187,6 +205,52 @@ internal sealed class KafkaMessageConsumer(
 
     private string ResolveTopic(string topic)
         => string.IsNullOrWhiteSpace(_options.TopicPrefix) ? topic : $"{_options.TopicPrefix}.{topic}";
+
+    private bool TryResolveExpectedContract<T>(IMessageHandler<T> handler, string topic, out MessageContractDescriptor expectedContract)
+    {
+        if (handler is IContractAwareMessageHandler contractAware
+            && !string.IsNullOrWhiteSpace(contractAware.SupportedMessageType)
+            && contractAware.SupportedContractVersions.Count > 0)
+        {
+            string version = contractAware.SupportedContractVersions.OrderByDescending(value => value, StringComparer.OrdinalIgnoreCase).First();
+            expectedContract = new MessageContractDescriptor(contractAware.SupportedMessageType, version, "application/json", Compatibility: CompatibilityMode.Full);
+            return true;
+        }
+
+        DestinationRegistration? registration = _options.Destinations.FirstOrDefault(destination =>
+            string.Equals(destination.DestinationName, topic, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(ResolveTopic(destination.DestinationName), topic, StringComparison.OrdinalIgnoreCase));
+
+        if (registration is null)
+        {
+            expectedContract = MessageContractDescriptor.Unspecified;
+            return false;
+        }
+
+        expectedContract = registration.Contract;
+        return true;
+    }
+
+    private static IMessageEnvelope<T>? TryUpcast<T>(
+        IMessageEnvelope<T> envelope,
+        MessageContractDescriptor expectedContract,
+        IEnumerable<IMessageUpcaster> upcasters)
+    {
+        foreach (IMessageUpcaster upcaster in upcasters)
+        {
+            if (!upcaster.CanUpcast(envelope.Contract, expectedContract, typeof(T)))
+            {
+                continue;
+            }
+
+            IMessageEnvelope<T> upcasted = upcaster.Upcast(envelope, expectedContract);
+            return MessageContractCompatibility.IsCompatible(upcasted.Contract, expectedContract)
+                ? upcasted
+                : null;
+        }
+
+        return null;
+    }
 
     public void Dispose()
     {

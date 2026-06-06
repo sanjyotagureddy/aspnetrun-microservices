@@ -8,6 +8,7 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Common.SharedKernel.Web;
 
+[ExcludeFromCodeCoverage]
 public static partial class SwaggerExtensions
 {
     private const string SwaggerDocumentName = "v1";

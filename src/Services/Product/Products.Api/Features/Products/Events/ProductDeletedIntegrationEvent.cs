@@ -11,7 +11,7 @@ internal sealed record ProductDeletedIntegrationEvent(
     DateTime DeletedAtUtc)
     : IntegrationEventBase(EventId, OccurredOnUtc)
 {
-    public const string Topic = "products.deleted";
+    public const string Topic = "products.events.v1";
 
     public ProductDeletedIntegrationEvent(
         Guid productId,

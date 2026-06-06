@@ -29,7 +29,8 @@ internal sealed class DeleteProductCommandHandler(
             metadata =>
             {
                 metadata.MessageId = productDeleted.EventId.ToString("N");
-                metadata.Key = request.Id.ToString("N");
+                metadata.OrderingKey = request.Id.ToString("N");
+                metadata.Contract = new MessageContractDescriptor(nameof(ProductDeletedIntegrationEvent), "1.0", "application/json");
                 metadata.CorrelationId = appContext?.CorrelationId;
                 metadata.TraceId = appContext?.TraceId;
                 metadata.SpanId = appContext?.SpanId;

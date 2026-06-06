@@ -1,7 +1,6 @@
-using Inventory.Api.Features.Inventory;
+﻿using Inventory.Api.Features.Inventory;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Inventory.Api.Tests.Features.Inventory;
 

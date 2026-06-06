@@ -1,5 +1,6 @@
 ﻿namespace Common.SharedKernel.Web;
 
+[ExcludeFromCodeCoverage]
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
 public sealed class EndpointScopeAttribute : Attribute
 {

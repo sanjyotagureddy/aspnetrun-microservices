@@ -7,6 +7,7 @@ using Common.SharedKernel.Messaging;
 
 using Npgsql;
 
+using Products.Api.Features.Products.Events;
 using Products.Api.Infrastructure.Persistence;
 
 namespace Products.Api.Infrastructure;
@@ -37,6 +38,17 @@ internal static class ServiceRegistration
             services.AddMessaging(builder =>
             {
                 builder.Options.TopicPrefix = configuration["Messaging:TopicPrefix"] ?? string.Empty;
+                builder.Options.ProvisioningMode = ProvisioningMode.ValidateOnly;
+
+                builder.RegisterDestination(destination =>
+                {
+                    destination.DestinationName = ProductCreatedIntegrationEvent.Topic;
+                    destination.OwnerService = "Products.Api";
+                    destination.Contract = new MessageContractDescriptor("ProductLifecycleEvent", "1.0", "application/json");
+                    destination.PartitioningStrategy = PartitioningStrategy.ByAggregateId;
+                    destination.PartitionKeySelector = "payload.productId";
+                });
+
                 builder.UseKafka(options =>
                 {
                     options.BootstrapServers = configuration.GetConnectionString("message-broker")
