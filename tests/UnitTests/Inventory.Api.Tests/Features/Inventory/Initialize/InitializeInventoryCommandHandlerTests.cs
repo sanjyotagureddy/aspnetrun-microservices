@@ -1,0 +1,48 @@
+using Moq;
+using Common.SharedKernel.Results;
+using Inventory.Api.Domain;
+using Inventory.Api.Features.Inventory.Initialize;
+using Inventory.Api.Infrastructure;
+
+namespace Inventory.Api.Tests.Features.Inventory.Initialize;
+
+public sealed class InitializeInventoryCommandHandlerTests
+{
+    [Fact]
+    public async Task Handle_ShouldInitializeStoreAndReturnSuccess()
+    {
+        FakeInventoryStore store = new();
+        Mock<Common.SharedKernel.Logging.ILogger<InitializeInventoryCommandHandler>> logger = new();
+        InitializeInventoryCommandHandler handler = new(store, new FixedTimeProvider(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero)), logger.Object);
+        Guid productId = Guid.NewGuid();
+
+        Result result = await handler.Handle(new InitializeInventoryCommand(productId, 6), CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(store.LastInitialized);
+        Assert.Equal(productId, store.LastInitialized!.ProductId);
+        Assert.Equal(6, store.LastInitialized.StockQuantity);
+    }
+
+    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
+    }
+
+    private sealed class FakeInventoryStore : IInventoryStore
+    {
+        public InventoryItem? LastInitialized { get; private set; }
+
+        public Task<InventoryItem?> GetByProductIdAsync(Guid productId, CancellationToken cancellationToken)
+            => Task.FromResult<InventoryItem?>(null);
+
+        public Task<IReadOnlyDictionary<Guid, int>> GetStockByProductIdsAsync(IReadOnlyCollection<Guid> productIds, CancellationToken cancellationToken)
+            => Task.FromResult((IReadOnlyDictionary<Guid, int>)new Dictionary<Guid, int>());
+
+        public Task InitializeAsync(InventoryItem item, CancellationToken cancellationToken)
+        {
+            LastInitialized = item;
+            return Task.CompletedTask;
+        }
+    }
+}

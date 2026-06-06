@@ -1,4 +1,4 @@
-﻿using Products.Api.Features.Products.Create;
+using Products.Api.Features.Products.Create;
 using Products.Api.Features.Products.Events;
 using Products.Api.Features.Products.Update;
 
@@ -56,7 +56,7 @@ internal static class ProductMappings
                 product.Currency,
                 product.Category,
                 product.Brand,
-            stockQuantity,
+                stockQuantity,
                 product.IsActive,
                 product.CreatedAt,
                 product.UpdatedAt);
@@ -72,9 +72,26 @@ internal static class ProductMappings
                 product.Currency,
                 product.Category,
                 product.Brand,
-            stockQuantity,
+                stockQuantity,
                 product.IsActive,
                 product.CreatedAt,
+                occurredOnUtc);
+        }
+
+        public ProductUpdatedIntegrationEvent ToUpdatedIntegrationEvent(DateTime occurredOnUtc, int stockQuantity)
+        {
+            return new ProductUpdatedIntegrationEvent(
+                product.Id,
+                product.Name,
+                product.Sku,
+                product.Price,
+                product.Currency,
+                product.Category,
+                product.Brand,
+                stockQuantity,
+                product.IsActive,
+                product.CreatedAt,
+                product.UpdatedAt,
                 occurredOnUtc);
         }
     }

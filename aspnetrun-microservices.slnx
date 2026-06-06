@@ -32,16 +32,20 @@
   <Folder Name="/src/3. services/product/">
     <Project Path="src/Services/Product/Products.Api/Products.Api.csproj" />
   </Folder>
+  <Folder Name="/src/Services/" />
+  <Folder Name="/src/Services/Inventory/" />
   <Folder Name="/tests/" />
   <Folder Name="/tests/IntegrationTests/">
     <Project Path="tests/IntegrationTests/Common.SharedKernel.Logging.IntegrationTests/Common.SharedKernel.Logging.IntegrationTests.csproj" />
+    <Project Path="tests/IntegrationTests/Inventory.Api.IntegrationTests/Inventory.Api.IntegrationTests.csproj" />
   </Folder>
-  <Folder Name="/tests/Unit Tests/">
+  <Folder Name="/tests/UnitTests/">
     <Project Path="tests/UnitTests/Cart.Api.Tests/Cart.Api.Tests.csproj" Id="5a09a466-05c7-47d0-9a11-8d814122f047" />
+    <Project Path="tests/UnitTests/Common.SharedKernel.Logging.UnitTests/Common.SharedKernel.Logging.UnitTests.csproj" Id="d0f6e32f-5b36-4d9d-8fa2-4e9c2c99a3df" />
     <Project Path="tests/UnitTests/Common.SharedKernel.Messaging.UnitTests/Common.SharedKernel.Messaging.UnitTests.csproj" />
     <Project Path="tests/UnitTests/Common.SharedKernel.Tests/Common.SharedKernel.Tests.csproj" Id="1a840e40-e1c5-49ea-abd8-a164cbd7b03b" />
-    <Project Path="tests/UnitTests/Common.SharedKernel.Logging.UnitTests/Common.SharedKernel.Logging.UnitTests.csproj" Id="d0f6e32f-5b36-4d9d-8fa2-4e9c2c99a3df" />
     <Project Path="tests/UnitTests/Discount.Grpc.Tests/Discount.Grpc.Tests.csproj" Id="1c656092-b26b-46fd-a39d-732934ac960c" />
+    <Project Path="tests/UnitTests/Inventory.Api.Tests/Inventory.Api.Tests.csproj" />
     <Project Path="tests/UnitTests/Order.Api.Tests/Order.Api.Tests.csproj" Id="f9c409d1-c38a-4acd-bda2-c8af72ba2894" />
     <Project Path="tests/UnitTests/Products.Api.Tests/Products.Api.Tests.csproj" Id="9f731c7a-e8bd-458a-afcf-c7392b0faac7" />
   </Folder>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="Code Coverage" uri="datacollector://microsoft/CodeCoverage/3.0" assemblyQualifiedName="Microsoft.VisualStudio.Coverage.DynamicCoverageDataCollector, Microsoft.VisualStudio.TraceCollector, Version=18.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
+        <Configuration>
+          <CodeCoverage>
+            <ModulePaths>
+              <Include>
+                <ModulePath>.*Inventory\.Api\.dll$</ModulePath>
+              </Include>
+            </ModulePaths>
+            <Sources>
+              <Include>
+                <Source>.*src\\Services\\Inventory\\Inventory\.Api\\.*</Source>
+              </Include>
+              <Exclude>
+                <Source>.*\\obj\\.*</Source>
+                <Source>.*\\bin\\.*</Source>
+                <Source>.*\\Program\.cs$</Source>
+              </Exclude>
+            </Sources>
+            <Attributes>
+              <Exclude>
+                <Attribute>GeneratedCodeAttribute</Attribute>
+                <Attribute>CompilerGeneratedAttribute</Attribute>
+                <Attribute>ExcludeFromCodeCoverageAttribute</Attribute>
+              </Exclude>
+            </Attributes>
+          </CodeCoverage>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>
