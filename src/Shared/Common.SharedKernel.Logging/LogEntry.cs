@@ -36,7 +36,7 @@ public sealed record LogEntry
         CorrelationId = string.IsNullOrWhiteSpace(correlationId) ? null : correlationId;
         Exception = exception;
         Properties = properties;
-        Category = category;
+        Category = Guard.Against.NullOrWhiteSpace(category);
     }
 
     public static LogEntry Create(
@@ -50,7 +50,8 @@ public sealed record LogEntry
         Exception? exception = null,
         IReadOnlyDictionary<string, object?>? properties = null)
     {
-        return new LogEntry(level, serviceName, @namespace, category, message, timestampUtc, correlationId, exception, properties);
+        var normalizedCategory = string.IsNullOrWhiteSpace(category) ? "General" : category;
+        return new LogEntry(level, serviceName, @namespace, normalizedCategory, message, timestampUtc, correlationId, exception, properties);
     }
 
     public static LogEntry Create(

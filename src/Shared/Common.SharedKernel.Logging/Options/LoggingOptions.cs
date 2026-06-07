@@ -17,4 +17,6 @@ public sealed record LoggingOptions
     public BoundedChannelFullMode QueueFullMode { get; set; } = BoundedChannelFullMode.Wait;
 
     public bool CaptureActivityContext { get; set; } = true;
+
+    public Action<Exception, string>? SinkFailureCallback { get; set; }
 }

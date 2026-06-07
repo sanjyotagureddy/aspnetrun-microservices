@@ -35,7 +35,6 @@ public class Program
         if (!app.Environment.IsDevelopment()) app.UseHsts();
 
         app.UseHttpsRedirection();
-        app.UseSerilogRequestLogging();
         app.UseAuthorization();
         app.MapDiscoveredEndpoints();
 

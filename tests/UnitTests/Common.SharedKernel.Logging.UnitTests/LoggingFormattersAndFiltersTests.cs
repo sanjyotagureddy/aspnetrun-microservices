@@ -26,7 +26,7 @@ public sealed class LoggingFormattersAndFiltersTests
         document.RootElement.GetProperty("category").GetString().Should().Be("Products");
         document.RootElement.GetProperty("message").GetString().Should().Be("Created product");
         document.RootElement.GetProperty("correlationId").GetString().Should().Be("corr-123");
-        document.RootElement.GetProperty("properties").GetProperty("sku").GetString().Should().Be("ABC-123");
+        document.RootElement.GetProperty("sku").GetString().Should().Be("ABC-123");
     }
 
     [Fact]

@@ -5,6 +5,7 @@ internal sealed class LoggingPipeline(
     IOptions<LoggingOptions> options,
     IReadOnlyList<ILogEnricher> enrichers,
     IReadOnlyList<ILogFilter> filters,
+    ILogRedactor redactor,
     LogDispatcher dispatcher,
     TimeProvider timeProvider)
 {
@@ -44,10 +45,12 @@ internal sealed class LoggingPipeline(
             }
         }
 
+        EnrichFromActivity(initialProperties, logContext, options.Value.CaptureActivityContext);
+
         LogEnrichmentContext enrichmentContext = new(
             level,
             @namespace,
-            category,
+            category ?? string.Empty,
             message,
             timestampUtc,
             options.Value.ServiceName,
@@ -79,6 +82,43 @@ internal sealed class LoggingPipeline(
             exception,
             enrichedProperties);
 
-        return filters.Any(filter => !filter.IsEnabled(entry)) ? ValueTask.CompletedTask : dispatcher.EnqueueAsync(entry, cancellationToken);
+        if (filters.Any(filter => !filter.IsEnabled(entry)))
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        return dispatcher.EnqueueAsync(redactor.Redact(entry), cancellationToken);
+    }
+
+    private static void EnrichFromActivity(
+        IDictionary<string, object?> properties,
+        LogContext? logContext,
+        bool captureActivityContext)
+    {
+        if (!captureActivityContext)
+        {
+            return;
+        }
+
+        Activity? activity = Activity.Current;
+        if (activity is null)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(logContext?.TraceId) && !properties.ContainsKey("traceId"))
+        {
+            properties["traceId"] = activity.TraceId.ToString();
+        }
+
+        if (string.IsNullOrWhiteSpace(logContext?.SpanId) && !properties.ContainsKey("spanId"))
+        {
+            properties["spanId"] = activity.SpanId.ToString();
+        }
+
+        if (activity.ParentSpanId != default && !properties.ContainsKey("parentSpanId"))
+        {
+            properties["parentSpanId"] = activity.ParentSpanId.ToString();
+        }
     }
 }

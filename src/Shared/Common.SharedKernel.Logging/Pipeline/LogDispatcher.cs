@@ -5,6 +5,7 @@ internal sealed class LogDispatcher
     private readonly IReadOnlyList<ILogSink> _sinks;
     private readonly LoggingOptions _options;
     private readonly Channel<LogEntry> _channel;
+    private long _sinkFailureCount;
 
     public LogDispatcher(IReadOnlyList<ILogSink> sinks, IOptions<LoggingOptions> options)
     {
@@ -20,6 +21,8 @@ internal sealed class LogDispatcher
 
     public ValueTask EnqueueAsync(LogEntry entry, CancellationToken cancellationToken = default)
         => _channel.Writer.WriteAsync(entry, cancellationToken);
+
+    public long SinkFailureCount => Interlocked.Read(ref _sinkFailureCount);
 
     public async Task RunAsync(CancellationToken cancellationToken)
     {
@@ -70,7 +73,7 @@ internal sealed class LogDispatcher
         await Task.WhenAll(writeTasks).ConfigureAwait(false);
     }
 
-    private static async ValueTask WriteSinkAsync(ILogSink sink, IReadOnlyList<LogEntry> batch, CancellationToken cancellationToken)
+    private async ValueTask WriteSinkAsync(ILogSink sink, IReadOnlyList<LogEntry> batch, CancellationToken cancellationToken)
     {
         try
         {
@@ -85,8 +88,10 @@ internal sealed class LogDispatcher
                 await sink.WriteAsync(entry, cancellationToken).ConfigureAwait(false);
             }
         }
-        catch
+        catch (Exception exception)
         {
+            Interlocked.Increment(ref _sinkFailureCount);
+            _options.SinkFailureCallback?.Invoke(exception, sink.GetType().Name);
         }
     }
 }
