@@ -6,6 +6,7 @@ IDistributedApplicationBuilder builder = DistributedApplication.CreateBuilder(ar
 #region Persistence
 
 IResourceBuilder<ParameterResource> postgresPassword = builder.AddParameter("postgres-password", secret: true);
+IResourceBuilder<ParameterResource> openSearchInitialAdminPassword = builder.AddParameter("opensearch-initial-admin-password", secret: true);
 
 IResourceBuilder<PostgresServerResource> postgresDb = builder.AddPostgres("productsdb", password: postgresPassword)
         .WithDataVolume("postgres-data")
@@ -18,6 +19,20 @@ IResourceBuilder<KafkaServerResource> messaging = builder.AddKafka("message-brok
     .WithDataVolume("kafka-data")
     .WithKafkaUI();
 
+IResourceBuilder<ContainerResource> openSearch = builder.AddContainer("opensearch", "opensearchproject/opensearch")
+    .WithEnvironment("discovery.type", "single-node")
+    .WithEnvironment("plugins.security.disabled", "true")
+    .WithEnvironment("OPENSEARCH_INITIAL_ADMIN_PASSWORD", openSearchInitialAdminPassword)
+    .WithEnvironment("OPENSEARCH_JAVA_OPTS", "-Xms512m -Xmx512m")
+    .WithHttpEndpoint(port: 9200, targetPort: 9200, name: "http");
+
+IResourceBuilder<ContainerResource> openSearchDashboards = builder.AddContainer("opensearch-dashboards", "opensearchproject/opensearch-dashboards")
+    .WithEnvironment("OPENSEARCH_HOSTS", "[\"http://opensearch:9200\"]")
+    .WithEnvironment("DISABLE_SECURITY_DASHBOARDS_PLUGIN", "true")
+    .WithHttpEndpoint(port: 5601, targetPort: 5601, name: "http")
+    .WaitFor(openSearch);
+
+
 
 #endregion
 #region Services
@@ -28,7 +43,13 @@ IResourceBuilder<ProjectResource> inventoryApi = builder.AddProject<Inventory_Ap
     .WithReference(inventory)
     .WithEnvironment("ConnectionStrings__inventory", inventory.Resource.ConnectionStringExpression)
     .WithEnvironment("ConnectionStrings__inventorydb", inventory.Resource.ConnectionStringExpression)
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__Enabled", "true")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__Endpoint", "http://localhost:9200")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__ApiIndexPrefix", "api-logs")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__InfraIndexPrefix", "infra-logs")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__UseDailyIndexes", "true")
     .WaitFor(inventory)
+    .WaitFor(openSearch)
     .WithUrl("/swagger", "Swagger");
 
 builder.AddProject<Products_Api>("products-api")
@@ -36,9 +57,15 @@ builder.AddProject<Products_Api>("products-api")
     .WithReference(messaging)
     .WithReference(inventoryApi)
     .WithEnvironment("ConnectionStrings__productsdb", productDb.Resource.ConnectionStringExpression)
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__Enabled", "true")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__Endpoint", "http://localhost:9200")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__ApiIndexPrefix", "api-logs")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__InfraIndexPrefix", "infra-logs")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__UseDailyIndexes", "true")
     .WaitFor(productDb)
     .WaitFor(messaging)
     .WaitFor(inventoryApi)
+    .WaitFor(openSearch)
     .WithUrl("/swagger", "Swagger");
 
 builder.AddProject<Cart_Api>("cart-api")
@@ -51,6 +78,8 @@ builder.AddProject<Order_Api>("order-api")
 
 builder.AddProject<Gateway_Yarp>("gateway-yarp")
     .WithUrl("/openapi/v1.json", "OpenAPI");
+
+openSearchDashboards.WithUrl("/", "OpenSearch Dashboards");
 
 #endregion
 

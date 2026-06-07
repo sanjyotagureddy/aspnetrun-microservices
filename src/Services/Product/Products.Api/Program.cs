@@ -60,7 +60,6 @@ public class Program
         if (!app.Environment.IsDevelopment()) app.UseHsts();
         app.UseHttpsRedirection();
         app.UseResponseCompression();
-        app.UseSerilogRequestLogging(); // or your logging middleware
         app.UseCors("Default");
         app.UseRateLimiter();
         app.UseAuthorization();

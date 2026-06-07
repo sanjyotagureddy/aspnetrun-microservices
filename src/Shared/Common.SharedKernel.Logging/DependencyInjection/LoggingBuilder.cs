@@ -77,7 +77,10 @@ internal sealed class LoggingBuilder(IServiceCollection services) : ILoggingBuil
 
     public void EnsureDefaults()
     {
-        if (_configuration.Options.EnabledSinks is LogSinkKind.None)
+        if (_configuration.CustomSinks.Count is 0
+            && _configuration.ConsoleSinks.Count is 0
+            && _configuration.FileSinks.Count is 0
+            && _configuration.ElasticsearchSinks.Count is 0)
         {
             UseConsole();
         }
@@ -95,10 +98,27 @@ internal sealed class LoggingBuilder(IServiceCollection services) : ILoggingBuil
 
     public void Register()
     {
+        _configuration.Validate();
+
         services.AddSingleton(_configuration);
         services.AddSingleton(Options.Create(_configuration.Options));
+        OptionsBuilder<LoggingPolicyOptions> policyOptionsBuilder = services.AddOptions<LoggingPolicyOptions>();
+        if (services.Any(descriptor => descriptor.ServiceType == typeof(Microsoft.Extensions.Configuration.IConfiguration)))
+        {
+            policyOptionsBuilder.BindConfiguration("Logging:Policy");
+        }
+
+        policyOptionsBuilder.PostConfigure(policy => policy.EnsureDefaults());
+        OptionsBuilder<LoggingMiddlewareOptions> middlewareOptionsBuilder = services.AddOptions<LoggingMiddlewareOptions>();
+        if (services.Any(descriptor => descriptor.ServiceType == typeof(Microsoft.Extensions.Configuration.IConfiguration)))
+        {
+            middlewareOptionsBuilder.BindConfiguration("Logging:Middleware");
+        }
+
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<ILogContextAccessor, LogContextAccessor>();
+        services.AddSingleton<ILogRedactor, DefaultLogRedactor>();
+        services.AddTransient<IStartupFilter, LoggingStartupFilter>();
         services.AddSingleton<IReadOnlyList<ILogSink>>(sp => sp.GetRequiredService<LoggingConfiguration>().CreateSinks());
         services.AddSingleton<IReadOnlyList<ILogEnricher>>(sp => sp.GetRequiredService<LoggingConfiguration>().Enrichers.AsReadOnly());
         services.AddSingleton<IReadOnlyList<ILogFilter>>(sp => sp.GetRequiredService<LoggingConfiguration>().Filters.AsReadOnly());
@@ -138,5 +158,52 @@ internal sealed class LoggingConfiguration
         sinks.AddRange(ElasticsearchSinks.Select(options => new ElasticsearchLogSink(options)).Cast<ILogSink>());
 
         return sinks;
+    }
+
+    public void Validate()
+    {
+        if (Options.BatchSize <= 0)
+        {
+            throw new InvalidOperationException("Logging options must define a BatchSize greater than zero.");
+        }
+
+        if (Options.QueueCapacity <= 0)
+        {
+            throw new InvalidOperationException("Logging options must define a QueueCapacity greater than zero.");
+        }
+
+        foreach (ConsoleSinkOptions options in ConsoleSinks)
+        {
+            if (!Enum.IsDefined(options.FormatterKind))
+            {
+                throw new InvalidOperationException("Console sink formatter kind is invalid.");
+            }
+        }
+
+        foreach (FileSinkOptions options in FileSinks)
+        {
+            if (string.IsNullOrWhiteSpace(options.FilePath))
+            {
+                throw new InvalidOperationException("File sink FilePath is required.");
+            }
+
+            if (!Enum.IsDefined(options.FormatterKind))
+            {
+                throw new InvalidOperationException("File sink formatter kind is invalid.");
+            }
+        }
+
+        foreach (ElasticsearchSinkOptions options in ElasticsearchSinks)
+        {
+            if (options.Endpoint is null || !options.Endpoint.IsAbsoluteUri)
+            {
+                throw new InvalidOperationException("Elasticsearch sink endpoint must be an absolute URI.");
+            }
+
+            if (string.IsNullOrWhiteSpace(options.IndexName))
+            {
+                throw new InvalidOperationException("Elasticsearch sink index name is required.");
+            }
+        }
     }
 }
