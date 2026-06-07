@@ -21,9 +21,9 @@ internal sealed class LogStorePayloadStore(LogStoreSinkOptions options) : IPaylo
         Guard.Against.Null(request);
 
         JsonNode protectedPayload = NormalizeDocument(request.ProtectedPayload);
-        var serializedDocument = protectedPayload.ToJsonString();
-        var bytes = Encoding.UTF8.GetBytes(serializedDocument);
-        var payloadHash = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+        string serializedDocument = protectedPayload.ToJsonString();
+        byte[] bytes = Encoding.UTF8.GetBytes(serializedDocument);
+        string payloadHash = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
 
         if (_options.EnablePayloadDeduplication
             && _dedupCache.TryGetValue(payloadHash, out PayloadStoreWriteResult? cachedResult))
@@ -43,9 +43,9 @@ internal sealed class LogStorePayloadStore(LogStoreSinkOptions options) : IPaylo
         using HttpResponseMessage response = await _httpClient.PostAsync(route, content, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
 
-        var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-        var responseNode = JsonNode.Parse(json);
-        var id = responseNode?["id"]?.GetValue<string>()
+        string json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        JsonNode? responseNode = JsonNode.Parse(json);
+        string id = responseNode?["id"]?.GetValue<string>()
             ?? throw new InvalidOperationException("LogStore create response does not contain id.");
 
         PayloadStoreWriteResult result = new(
@@ -78,7 +78,7 @@ internal sealed class LogStorePayloadStore(LogStoreSinkOptions options) : IPaylo
 
         if (protectedPayload is string text)
         {
-            var parsed = JsonNode.Parse(text);
+            JsonNode? parsed = JsonNode.Parse(text);
             if (parsed is not null)
             {
                 return parsed;
@@ -95,6 +95,7 @@ internal sealed class LogStorePayloadStore(LogStoreSinkOptions options) : IPaylo
     {
         return new JsonObject
         {
+            ["logType"] = "payload",
             ["contentType"] = request.ContentType,
             ["correlationId"] = request.CorrelationId,
             ["traceId"] = request.TraceId,
@@ -105,7 +106,7 @@ internal sealed class LogStorePayloadStore(LogStoreSinkOptions options) : IPaylo
 
     private string BuildPayloadRef(string id)
     {
-        var basePath = _options.CreateRoutePath.TrimEnd('/');
+        string basePath = _options.CreateRoutePath.TrimEnd('/');
         if (!basePath.StartsWith('/'))
         {
             basePath = "/" + basePath;

@@ -8,62 +8,9 @@ namespace LogStore.Api.Infrastructure;
 
 internal sealed class PayloadProtectionService(
     HttpClient httpClient,
-    IOptions<LogStorageOptions> options) : ILogStorageService
+    IOptions<LogStorageOptions> options,
+    ILogger<PayloadProtectionService> logger) : ILogStorageService
 {
-    private static readonly string[] InfraNamespacePrefixes =
-    [
-        "Microsoft.",
-        "System.",
-        "Aspire.",
-        "Npgsql.",
-        "Confluent.",
-        "RabbitMQ.",
-        "StackExchange.Redis",
-        "Yarp."
-    ];
-
-    private static readonly string[] InfraCategoryPrefixes =
-    [
-        "infra.",
-        "infrastructure.",
-        "system.",
-        "microsoft.",
-        "host."
-    ];
-
-    private static readonly string[] MessagingNamespacePrefixes =
-    [
-        "Common.SharedKernel.Messaging.",
-        "Confluent.Kafka"
-    ];
-
-    private static readonly string[] MessagingCategoryPrefixes =
-    [
-        "messaging.",
-        "kafka."
-    ];
-
-    private static readonly string[] EventCategoryPrefixes =
-    [
-        "event.",
-        "domain.event.",
-        "business.event."
-    ];
-
-    private static readonly string[] AuditCategoryPrefixes =
-    [
-        "audit.",
-        "compliance."
-    ];
-
-    private static readonly string[] SecurityCategoryPrefixes =
-    [
-        "security.",
-        "auth.",
-        "authorization.",
-        "authentication."
-    ];
-
     private readonly LogStorageOptions _options = options.Value;
 
     public async Task<CreateLogResponse> CreateAsync(CreateLogRequest request, CancellationToken cancellationToken)
@@ -87,6 +34,7 @@ internal sealed class PayloadProtectionService(
             throw new InvalidOperationException($"Failed to persist log document to index '{index}'. Status: {(int)response.StatusCode}. Details: {details}");
         }
 
+        logger.LogInformation("Log document persisted to index {Index} with id {Id}", index, id);
         return new CreateLogResponse(id, index, DateTimeOffset.UtcNow);
     }
 
@@ -184,159 +132,18 @@ internal sealed class PayloadProtectionService(
             return _options.ApiIndexPrefix;
         }
 
-        if (IsPayloadSnapshotDocument(obj))
-        {
-            return _options.PayloadIndexPrefix;
-        }
-
-        if (IsSecurityLog(obj))
-        {
-            return _options.SecurityIndexPrefix;
-        }
-
-        if (IsAuditLog(obj))
-        {
-            return _options.AuditIndexPrefix;
-        }
-
-        if (IsMessagingLog(obj) || IsEventLog(obj))
-        {
-            return _options.MessagingIndexPrefix;
-        }
-
-        if (IsInfrastructureLog(obj))
-        {
-            return _options.InfraIndexPrefix;
-        }
-
         var logType = obj["logType"]?.GetValue<string>();
         if (string.Equals(logType, "infra", StringComparison.OrdinalIgnoreCase))
         {
             return _options.InfraIndexPrefix;
         }
 
-        if (string.Equals(logType, "messaging", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(logType, "event", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(logType, "messaging", StringComparison.OrdinalIgnoreCase))
         {
             return _options.MessagingIndexPrefix;
         }
 
-        if (string.Equals(logType, "audit", StringComparison.OrdinalIgnoreCase))
-        {
-            return _options.AuditIndexPrefix;
-        }
-
-        if (string.Equals(logType, "security", StringComparison.OrdinalIgnoreCase))
-        {
-            return _options.SecurityIndexPrefix;
-        }
-
         return _options.ApiIndexPrefix;
-    }
-
-    private static bool IsInfrastructureLog(JsonObject document)
-    {
-        var logNamespace = document["namespace"]?.GetValue<string>();
-        if (StartsWithAny(logNamespace, InfraNamespacePrefixes))
-        {
-            return true;
-        }
-
-        var category = document["category"]?.GetValue<string>();
-        if (StartsWithAny(category, InfraCategoryPrefixes))
-        {
-            return true;
-        }
-
-        return IsLogType(document, "infra");
-    }
-
-    private static bool IsMessagingLog(JsonObject document)
-    {
-        var logNamespace = document["namespace"]?.GetValue<string>();
-        if (StartsWithAny(logNamespace, MessagingNamespacePrefixes))
-        {
-            return true;
-        }
-
-        var category = document["category"]?.GetValue<string>();
-        if (StartsWithAny(category, MessagingCategoryPrefixes))
-        {
-            return true;
-        }
-
-        if (IsLogType(document, "messaging"))
-        {
-            return true;
-        }
-
-        var provider = document["provider"]?.GetValue<string>();
-        return string.Equals(provider, "Kafka", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsEventLog(JsonObject document)
-    {
-        var category = document["category"]?.GetValue<string>();
-        if (StartsWithAny(category, EventCategoryPrefixes))
-        {
-            return true;
-        }
-
-        return IsLogType(document, "event");
-    }
-
-    private static bool IsAuditLog(JsonObject document)
-    {
-        var category = document["category"]?.GetValue<string>();
-        if (StartsWithAny(category, AuditCategoryPrefixes))
-        {
-            return true;
-        }
-
-        return IsLogType(document, "audit");
-    }
-
-    private static bool IsSecurityLog(JsonObject document)
-    {
-        var category = document["category"]?.GetValue<string>();
-        if (StartsWithAny(category, SecurityCategoryPrefixes))
-        {
-            return true;
-        }
-
-        return IsLogType(document, "security");
-    }
-
-    private static bool IsLogType(JsonObject document, string expected)
-    {
-        var logType = document["logType"]?.GetValue<string>();
-        return string.Equals(logType, expected, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsPayloadSnapshotDocument(JsonObject document)
-    {
-        return document["payload"] is not null
-               && document["contentType"] is not null
-               && document["level"] is null
-               && document["category"] is null;
-    }
-
-    private static bool StartsWithAny(string? value, IReadOnlyList<string> prefixes)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return false;
-        }
-
-        foreach (string prefix in prefixes)
-        {
-            if (value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private static DateTimeOffset ResolveTimestamp(JsonNode document)
@@ -380,14 +187,12 @@ internal sealed class PayloadProtectionService(
 
         return false;
     }
+
     private IEnumerable<string> BuildSearchPatterns()
     {
         yield return BuildPattern(_options.ApiIndexPrefix);
-        yield return BuildPattern(_options.PayloadIndexPrefix);
         yield return BuildPattern(_options.InfraIndexPrefix);
         yield return BuildPattern(_options.MessagingIndexPrefix);
-        yield return BuildPattern(_options.AuditIndexPrefix);
-        yield return BuildPattern(_options.SecurityIndexPrefix);
     }
 
     private string BuildPattern(string prefix)

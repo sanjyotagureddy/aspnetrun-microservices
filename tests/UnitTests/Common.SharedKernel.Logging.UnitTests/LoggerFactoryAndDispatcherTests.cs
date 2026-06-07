@@ -13,7 +13,8 @@ public sealed class LoggerFactoryAndDispatcherTests
             ServiceName = "Catalog",
             MinimumLevel = LogLevel.Trace,
             BatchSize = 1,
-            QueueCapacity = 32
+            QueueCapacity = 32,
+            EnabledLogTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "*" }
         }));
 
         LoggingPipeline pipeline = new(
@@ -23,7 +24,8 @@ public sealed class LoggerFactoryAndDispatcherTests
                 ServiceName = "Catalog",
                 MinimumLevel = LogLevel.Trace,
                 BatchSize = 1,
-                QueueCapacity = 32
+                QueueCapacity = 32,
+                EnabledLogTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "*" }
             }),
             [],
             [],
@@ -69,6 +71,7 @@ public sealed class LoggerFactoryAndDispatcherTests
             MinimumLevel = LogLevel.Trace,
             BatchSize = 1,
             QueueCapacity = 16,
+            EnabledLogTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "*" },
             SinkFailureCallback = (ex, sinkName) =>
             {
                 observedException = ex;
