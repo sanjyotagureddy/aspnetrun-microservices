@@ -1,4 +1,4 @@
-using Common.SharedKernel.Logging;
+﻿using Common.SharedKernel.Logging;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
@@ -50,7 +50,7 @@ internal sealed class MessagingConfigurationValidationHostedService(
                 return;
             }
 
-            await logger.LogInformationAsync(
+            await logger.LogEventAsync(
                 "Messaging destination provisioning completed.",
                 "messaging.configuration.provision",
                 new Dictionary<string, object?>

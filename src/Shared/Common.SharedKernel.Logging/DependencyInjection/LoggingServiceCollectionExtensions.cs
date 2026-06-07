@@ -15,4 +15,13 @@ public static class LoggingServiceCollectionExtensions
         builder.Register();
         return services;
     }
+
+    public static IServiceCollection UseRequestLoggingMiddleware<TMiddleware>(this IServiceCollection services)
+        where TMiddleware : RequestLoggingMiddlewareBase
+    {
+        Guard.Against.Null(services);
+
+        services.AddSingleton(new RequestLoggingMiddlewareRegistration(typeof(TMiddleware)));
+        return services;
+    }
 }

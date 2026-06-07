@@ -18,6 +18,32 @@ internal sealed class LoggingBuilder(IServiceCollection services) : ILoggingBuil
         return this;
     }
 
+    public ILoggingBuilder SetEnabledLogTypes(IEnumerable<string> enabledLogTypes)
+    {
+        if (enabledLogTypes is null)
+        {
+            throw new ArgumentNullException(nameof(enabledLogTypes));
+        }
+
+        HashSet<string> normalized = new(StringComparer.OrdinalIgnoreCase);
+        foreach (string candidate in enabledLogTypes)
+        {
+            if (string.IsNullOrWhiteSpace(candidate))
+            {
+                continue;
+            }
+
+            normalized.Add(candidate.Trim());
+        }
+
+        if (normalized.Count > 0)
+        {
+            _configuration.Options.EnabledLogTypes = normalized;
+        }
+
+        return this;
+    }
+
     public ILoggingBuilder AddSink(ILogSink sink)
     {
         _configuration.CustomSinks.Add(Guard.Against.Null(sink));
@@ -51,9 +77,24 @@ internal sealed class LoggingBuilder(IServiceCollection services) : ILoggingBuil
         return this;
     }
 
+    public ILoggingBuilder UseLogStore(Action<LogStoreSinkOptions>? configure = null)
+    {
+        LogStoreSinkOptions options = new();
+        configure?.Invoke(options);
+        _configuration.LogStoreSinks.Add(options);
+        _configuration.Options.EnabledSinks |= LogSinkKind.LogStore;
+        return this;
+    }
+
     public ILoggingBuilder AddEnricher(ILogEnricher enricher)
     {
         _configuration.Enrichers.Add(Guard.Against.Null(enricher));
+        return this;
+    }
+
+    public ILoggingBuilder AddMasker(IMask masker)
+    {
+        _configuration.Maskers.Add(Guard.Against.Null(masker));
         return this;
     }
 
@@ -80,7 +121,8 @@ internal sealed class LoggingBuilder(IServiceCollection services) : ILoggingBuil
         if (_configuration.CustomSinks.Count is 0
             && _configuration.ConsoleSinks.Count is 0
             && _configuration.FileSinks.Count is 0
-            && _configuration.ElasticsearchSinks.Count is 0)
+            && _configuration.ElasticsearchSinks.Count is 0
+            && _configuration.LogStoreSinks.Count is 0)
         {
             UseConsole();
         }
@@ -94,6 +136,15 @@ internal sealed class LoggingBuilder(IServiceCollection services) : ILoggingBuil
             _configuration.Enrichers.Add(new TenantEnricher());
             _configuration.Enrichers.Add(new UserEnricher());
         }
+
+        if (_configuration.Maskers.Count is 0)
+        {
+            _configuration.Maskers.Add(new CreditCardMask());
+            _configuration.Maskers.Add(new PhoneMask());
+            _configuration.Maskers.Add(new EmailMask());
+            _configuration.Maskers.Add(new TokenMask());
+            _configuration.Maskers.Add(new DefaultMask());
+        }
     }
 
     public void Register()
@@ -102,6 +153,13 @@ internal sealed class LoggingBuilder(IServiceCollection services) : ILoggingBuil
 
         services.AddSingleton(_configuration);
         services.AddSingleton(Options.Create(_configuration.Options));
+        services.AddSingleton<IReadOnlyList<IMask>>(sp => sp.GetRequiredService<LoggingConfiguration>().Maskers.AsReadOnly());
+        OptionsBuilder<MaskingOptions> maskingOptionsBuilder = services.AddOptions<MaskingOptions>();
+        if (services.Any(descriptor => descriptor.ServiceType == typeof(Microsoft.Extensions.Configuration.IConfiguration)))
+        {
+            maskingOptionsBuilder.BindConfiguration("Logging:Masking");
+        }
+
         OptionsBuilder<LoggingPolicyOptions> policyOptionsBuilder = services.AddOptions<LoggingPolicyOptions>();
         if (services.Any(descriptor => descriptor.ServiceType == typeof(Microsoft.Extensions.Configuration.IConfiguration)))
         {
@@ -109,6 +167,13 @@ internal sealed class LoggingBuilder(IServiceCollection services) : ILoggingBuil
         }
 
         policyOptionsBuilder.PostConfigure(policy => policy.EnsureDefaults());
+        OptionsBuilder<PayloadProtectionOptions> payloadProtectionOptionsBuilder = services.AddOptions<PayloadProtectionOptions>();
+        if (services.Any(descriptor => descriptor.ServiceType == typeof(Microsoft.Extensions.Configuration.IConfiguration)))
+        {
+            payloadProtectionOptionsBuilder.BindConfiguration("Logging:PayloadProtection");
+        }
+
+        payloadProtectionOptionsBuilder.PostConfigure(policy => policy.EnsureDefaults());
         OptionsBuilder<LoggingMiddlewareOptions> middlewareOptionsBuilder = services.AddOptions<LoggingMiddlewareOptions>();
         if (services.Any(descriptor => descriptor.ServiceType == typeof(Microsoft.Extensions.Configuration.IConfiguration)))
         {
@@ -118,6 +183,32 @@ internal sealed class LoggingBuilder(IServiceCollection services) : ILoggingBuil
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<ILogContextAccessor, LogContextAccessor>();
         services.AddSingleton<ILogRedactor, DefaultLogRedactor>();
+        services.AddSingleton<IPayloadMaskingEngine, DefaultPayloadMaskingEngine>();
+        services.AddSingleton<IPayloadProtectionPipeline, PayloadProtectionPipeline>();
+        services.AddSingleton<IPayloadStore>(sp =>
+        {
+            LoggingConfiguration configuration = sp.GetRequiredService<LoggingConfiguration>();
+
+            LogStoreSinkOptions? logStoreOptions = configuration.LogStoreSinks.FirstOrDefault();
+            if (logStoreOptions is not null)
+            {
+                return new LogStorePayloadStore(logStoreOptions);
+            }
+
+            ElasticsearchSinkOptions? elasticsearchOptions = configuration.ElasticsearchSinks.FirstOrDefault();
+            if (elasticsearchOptions is not null)
+            {
+                return new ElasticsearchPayloadStore(elasticsearchOptions);
+            }
+
+            return new NoopPayloadStore();
+        });
+
+        if (!services.Any(descriptor => descriptor.ServiceType == typeof(RequestLoggingMiddlewareRegistration)))
+        {
+            services.AddSingleton(new RequestLoggingMiddlewareRegistration(typeof(RequestLoggingMiddleware)));
+        }
+
         services.AddTransient<IStartupFilter, LoggingStartupFilter>();
         services.AddSingleton<IReadOnlyList<ILogSink>>(sp => sp.GetRequiredService<LoggingConfiguration>().CreateSinks());
         services.AddSingleton<IReadOnlyList<ILogEnricher>>(sp => sp.GetRequiredService<LoggingConfiguration>().Enrichers.AsReadOnly());
@@ -142,20 +233,26 @@ internal sealed class LoggingConfiguration
 
     public List<ElasticsearchSinkOptions> ElasticsearchSinks { get; } = [];
 
+    public List<LogStoreSinkOptions> LogStoreSinks { get; } = [];
+
     public List<ILogEnricher> Enrichers { get; } = [];
 
     public List<ILogFilter> Filters { get; } = [];
+
+    public List<IMask> Maskers { get; } = [];
 
     public IReadOnlyList<ILogSink> CreateSinks()
     {
         List<ILogSink> sinks = [];
         sinks.AddRange(CustomSinks);
 
-        sinks.AddRange(ConsoleSinks.Select(options => new ConsoleLogSink(options)).Cast<ILogSink>());
+        sinks.AddRange(ConsoleSinks.Select(options => (ILogSink)new ConsoleLogSink(options)));
 
-        sinks.AddRange(FileSinks.Select(options => new FileLogSink(options)).Cast<ILogSink>());
+        sinks.AddRange(FileSinks.Select(options => (ILogSink)new FileLogSink(options)));
 
-        sinks.AddRange(ElasticsearchSinks.Select(options => new ElasticsearchLogSink(options)).Cast<ILogSink>());
+        sinks.AddRange(ElasticsearchSinks.Select(options => (ILogSink)new ElasticsearchLogSink(options)));
+
+        sinks.AddRange(LogStoreSinks.Select(options => (ILogSink)new LogStoreLogSink(options)));
 
         return sinks;
     }
@@ -203,6 +300,24 @@ internal sealed class LoggingConfiguration
             if (string.IsNullOrWhiteSpace(options.IndexName))
             {
                 throw new InvalidOperationException("Elasticsearch sink index name is required.");
+            }
+        }
+
+        foreach (LogStoreSinkOptions options in LogStoreSinks)
+        {
+            if (options.Endpoint is null || !options.Endpoint.IsAbsoluteUri)
+            {
+                throw new InvalidOperationException("LogStore sink endpoint must be an absolute URI.");
+            }
+
+            if (string.IsNullOrWhiteSpace(options.CreateRoutePath))
+            {
+                throw new InvalidOperationException("LogStore sink create route path is required.");
+            }
+
+            if (options.MaxPayloadDedupEntries <= 0)
+            {
+                throw new InvalidOperationException("LogStore sink MaxPayloadDedupEntries must be greater than zero.");
             }
         }
     }

@@ -26,6 +26,9 @@
   <Folder Name="/src/3. services/inventory/">
     <Project Path="src/Services/Inventory/Inventory.Api/Inventory.Api.csproj" />
   </Folder>
+  <Folder Name="/src/3. services/logging/">
+    <Project Path="src/Services/Logging/LogStore.Api/LogStore.Api.csproj" />
+  </Folder>
   <Folder Name="/src/3. services/order/">
     <Project Path="src/Services/Order/Order.Api/Order.Api.csproj" />
   </Folder>

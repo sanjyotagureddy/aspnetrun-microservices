@@ -25,6 +25,11 @@ internal sealed class LoggingPipeline(
             return ValueTask.CompletedTask;
         }
 
+        if (!IsLogTypeEnabled(level, category, properties, options.Value.EnabledLogTypes))
+        {
+            return ValueTask.CompletedTask;
+        }
+
         DateTimeOffset timestampUtc = timeProvider.GetUtcNow();
         LogContext? logContext = contextAccessor.Current;
 
@@ -88,6 +93,69 @@ internal sealed class LoggingPipeline(
         }
 
         return dispatcher.EnqueueAsync(redactor.Redact(entry), cancellationToken);
+    }
+
+    private static bool IsLogTypeEnabled(
+        LogLevel level,
+        string? category,
+        IReadOnlyDictionary<string, object?>? properties,
+        ISet<string>? enabledLogTypes)
+    {
+        if (enabledLogTypes is null || enabledLogTypes.Count is 0)
+        {
+            return true;
+        }
+
+        if (ContainsType(enabledLogTypes, level.ToString()))
+        {
+            return true;
+        }
+
+        if (properties is not null
+            && properties.TryGetValue("logType", out object? logType)
+            && ContainsType(enabledLogTypes, logType?.ToString()))
+        {
+            return true;
+        }
+
+        if (string.IsNullOrWhiteSpace(category))
+        {
+            return false;
+        }
+
+        string primaryCategoryToken = category.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .FirstOrDefault() ?? string.Empty;
+
+        return ContainsType(enabledLogTypes, primaryCategoryToken);
+    }
+
+    private static bool ContainsType(ISet<string> enabledLogTypes, string? token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return false;
+        }
+
+        string normalized = token.Trim();
+        if (enabledLogTypes.Contains(normalized))
+        {
+            return true;
+        }
+
+        if (normalized.Equals("events", StringComparison.OrdinalIgnoreCase)
+            && enabledLogTypes.Contains("event"))
+        {
+            return true;
+        }
+
+        if (normalized.Equals("event", StringComparison.OrdinalIgnoreCase)
+            && enabledLogTypes.Contains("events"))
+        {
+            return true;
+        }
+
+        return enabledLogTypes.Contains("all")
+               || enabledLogTypes.Contains("*");
     }
 
     private static void EnrichFromActivity(

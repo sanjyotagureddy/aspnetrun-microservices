@@ -200,7 +200,8 @@ public sealed class AdditionalCoverageTests
             provider.GetRequiredService<ILogger<RequestLoggingMiddleware>>(),
             provider.GetRequiredService<ILogContextAccessor>(),
             Options.Create(new LoggingMiddlewareOptions { IncludeRequestStartLog = false }),
-            provider.GetRequiredService<TimeProvider>());
+            provider.GetRequiredService<IPayloadProtectionPipeline>(),
+            provider.GetRequiredService<IPayloadStore>());
 
         using CancellationTokenSource cts = new();
         Task loop = dispatcher.RunAsync(cts.Token);

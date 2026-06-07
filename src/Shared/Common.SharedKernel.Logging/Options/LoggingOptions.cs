@@ -18,5 +18,12 @@ public sealed record LoggingOptions
 
     public bool CaptureActivityContext { get; set; } = true;
 
+    public HashSet<string> EnabledLogTypes { get; set; } = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "api",
+        "trace",
+        "event"
+    };
+
     public Action<Exception, string>? SinkFailureCallback { get; set; }
 }

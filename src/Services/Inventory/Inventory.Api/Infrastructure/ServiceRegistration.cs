@@ -3,6 +3,7 @@ using System.Reflection;
 using Common.SharedKernel.Exceptions;
 using Common.SharedKernel.Logging;
 using Inventory.Api.Infrastructure.Persistence;
+using Inventory.Api.Observability;
 using Npgsql;
 
 namespace Inventory.Api.Infrastructure;
@@ -25,7 +26,7 @@ internal static class ServiceRegistration
             services.AddHostedService<InventorySchemaInitializer>();
 
             IConfigurationSection loggingSection = configuration.GetSection("Logging:CommonSharedKernel");
-            string loggingServiceName = loggingSection["ServiceName"] ?? "Inventory.Api";
+            string loggingServiceName = loggingSection["ServiceName"] ?? "inventory-api";
             bool hasMinimumLevel = Enum.TryParse(
                 loggingSection["MinimumLevel"],
                 true,
@@ -33,6 +34,8 @@ internal static class ServiceRegistration
             Common.SharedKernel.Logging.LogLevel minimumLevel = hasMinimumLevel
                 ? configuredMinimumLevel
                 : Common.SharedKernel.Logging.LogLevel.Trace;
+            string[] enabledLogTypes = loggingSection.GetSection("EnabledLogTypes").Get<string[]>()
+                ?? ["api", "trace", "event"];
 
             bool hasConsoleFormatter = Enum.TryParse(
                 loggingSection["Console:FormatterKind"],
@@ -51,13 +54,24 @@ internal static class ServiceRegistration
             string openSearchInfraIndexPrefix = string.IsNullOrWhiteSpace(openSearchSection["InfraIndexPrefix"])
                 ? "infra-logs"
                 : openSearchSection["InfraIndexPrefix"]!;
+            string openSearchMessagingIndexPrefix = string.IsNullOrWhiteSpace(openSearchSection["MessagingIndexPrefix"])
+                ? "messaging-log"
+                : openSearchSection["MessagingIndexPrefix"]!;
             bool useDailyIndexes = !bool.TryParse(openSearchSection["UseDailyIndexes"], out bool configuredUseDailyIndexes)
                 || configuredUseDailyIndexes;
+
+            IConfigurationSection logStoreSection = loggingSection.GetSection("LogStore");
+            bool logStoreEnabled = bool.TryParse(logStoreSection["Enabled"], out bool configuredLogStoreEnabled) && configuredLogStoreEnabled;
+            bool hasLogStoreEndpoint = Uri.TryCreate(logStoreSection["Endpoint"], UriKind.Absolute, out Uri? logStoreEndpoint);
+            string logStoreCreateRoutePath = string.IsNullOrWhiteSpace(logStoreSection["CreateRoutePath"])
+                ? "/api/v1/logs"
+                : logStoreSection["CreateRoutePath"]!;
 
             services.AddCommonSharedKernelLogging(builder =>
             {
                 builder.SetServiceName(loggingServiceName);
                 builder.SetMinimumLevel(minimumLevel);
+                builder.SetEnabledLogTypes(enabledLogTypes);
                 builder.UseConsole(opts => opts.FormatterKind = consoleFormatter);
 
                 if (openSearchEnabled && hasOpenSearchEndpoint && openSearchEndpoint is not null)
@@ -67,10 +81,22 @@ internal static class ServiceRegistration
                         opts.Endpoint = openSearchEndpoint;
                         opts.ApiIndexPrefix = openSearchApiIndexPrefix;
                         opts.InfraIndexPrefix = openSearchInfraIndexPrefix;
+                        opts.MessagingIndexPrefix = openSearchMessagingIndexPrefix;
                         opts.UseDailyIndexes = useDailyIndexes;
                     });
                 }
+
+                if (logStoreEnabled && hasLogStoreEndpoint && logStoreEndpoint is not null)
+                {
+                    builder.UseLogStore(opts =>
+                    {
+                        opts.Endpoint = logStoreEndpoint;
+                        opts.CreateRoutePath = logStoreCreateRoutePath;
+                    });
+                }
             });
+
+            services.UseRequestLoggingMiddleware<InventoryRequestLoggingMiddleware>();
 
             services.AddMediatR(cfg =>
             {

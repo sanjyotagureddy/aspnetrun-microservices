@@ -75,7 +75,7 @@ internal sealed class CreateProductCommandHandler(
                 metadata.TraceId = appContext?.TraceId;
                 metadata.SpanId = appContext?.SpanId;
                 metadata.TenantId = appContext?.TenantId;
-                metadata.Headers["Source"] = "Products.Api";
+                metadata.Headers["Source"] = "products-api";
                 metadata.Headers["Entity"] = nameof(Product);
                 metadata.Headers["EventType"] = nameof(ProductCreatedIntegrationEvent);
             },

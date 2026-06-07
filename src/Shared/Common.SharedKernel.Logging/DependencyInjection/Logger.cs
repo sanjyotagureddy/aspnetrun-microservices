@@ -27,17 +27,39 @@ internal sealed class Logger(LoggingPipeline pipeline, string @namespace) : ILog
     public ValueTask LogWarningAsync(string message, string? category = null, IReadOnlyDictionary<string, object?>? properties = null, CancellationToken cancellationToken = default)
         => LogAsync(LogLevel.Warning, message, category, null, properties, cancellationToken);
 
+    public ValueTask LogApiAsync(string message, string? category = "api", IReadOnlyDictionary<string, object?>? properties = null, CancellationToken cancellationToken = default)
+        => LogAsync(LogLevel.Information, message, category, null, EnsureLogType(properties, "api"), cancellationToken);
+
+    public ValueTask LogEventAsync(string message, string? category = "event", IReadOnlyDictionary<string, object?>? properties = null, CancellationToken cancellationToken = default)
+        => LogAsync(LogLevel.Information, message, category, null, EnsureLogType(properties, "event"), cancellationToken);
+
+    public ValueTask LogAuditAsync(string message, string? category = "audit", IReadOnlyDictionary<string, object?>? properties = null, CancellationToken cancellationToken = default)
+        => LogAsync(LogLevel.Information, message, category, null, EnsureLogType(properties, "audit"), cancellationToken);
+
+    public ValueTask LogSecurityAsync(string message, string? category = "security", IReadOnlyDictionary<string, object?>? properties = null, CancellationToken cancellationToken = default)
+        => LogAsync(LogLevel.Warning, message, category, null, EnsureLogType(properties, "security"), cancellationToken);
+
     public ValueTask LogErrorAsync(string message, string? category = null, Exception? exception = null, IReadOnlyDictionary<string, object?>? properties = null, CancellationToken cancellationToken = default)
-        => LogAsync(LogLevel.Error, message, category, exception, properties, cancellationToken);
+        => LogAsync(LogLevel.Error, message, category, exception, EnsureLogType(properties, "error"), cancellationToken);
 
     public ValueTask LogCriticalAsync(string message, string? category = null, Exception? exception = null, IReadOnlyDictionary<string, object?>? properties = null, CancellationToken cancellationToken = default)
-        => LogAsync(LogLevel.Critical, message, category, exception, properties, cancellationToken);
+        => LogAsync(LogLevel.Critical, message, category, exception, EnsureLogType(properties, "error"), cancellationToken);
 
     public ValueTask LogErrorAsync(Exception? exception = null, IReadOnlyDictionary<string, object?>? properties = null, CancellationToken cancellationToken = default)
-        => LogAsync(LogLevel.Error, exception?.Message ?? "An exception occurred", "exception", exception, properties, cancellationToken);
+        => LogAsync(LogLevel.Error, exception?.Message ?? "An exception occurred", "exception", exception, EnsureLogType(properties, "error"), cancellationToken);
 
     public ValueTask LogCriticalAsync(Exception? exception = null, IReadOnlyDictionary<string, object?>? properties = null, CancellationToken cancellationToken = default)
-        => LogAsync(LogLevel.Critical, exception?.Message ?? "A critical error occurred", "fatal", exception, properties, cancellationToken);
+        => LogAsync(LogLevel.Critical, exception?.Message ?? "A critical error occurred", "fatal", exception, EnsureLogType(properties, "error"), cancellationToken);
+
+    private static IReadOnlyDictionary<string, object?> EnsureLogType(IReadOnlyDictionary<string, object?>? properties, string logType)
+    {
+        Dictionary<string, object?> result = properties is null
+            ? new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, object?>(properties, StringComparer.OrdinalIgnoreCase);
+
+        result["logType"] = logType;
+        return result;
+    }
 }
 
 internal sealed class Logger<TCategoryName>(LoggingPipeline pipeline) : ILogger<TCategoryName>
@@ -64,6 +86,18 @@ internal sealed class Logger<TCategoryName>(LoggingPipeline pipeline) : ILogger<
 
     public ValueTask LogWarningAsync(string message, string? category = null, IReadOnlyDictionary<string, object?>? properties = null, CancellationToken cancellationToken = default)
         => _inner.LogWarningAsync(message, category, properties, cancellationToken);
+
+    public ValueTask LogApiAsync(string message, string? category = "api", IReadOnlyDictionary<string, object?>? properties = null, CancellationToken cancellationToken = default)
+        => _inner.LogApiAsync(message, category, properties, cancellationToken);
+
+    public ValueTask LogEventAsync(string message, string? category = "event", IReadOnlyDictionary<string, object?>? properties = null, CancellationToken cancellationToken = default)
+        => _inner.LogEventAsync(message, category, properties, cancellationToken);
+
+    public ValueTask LogAuditAsync(string message, string? category = "audit", IReadOnlyDictionary<string, object?>? properties = null, CancellationToken cancellationToken = default)
+        => _inner.LogAuditAsync(message, category, properties, cancellationToken);
+
+    public ValueTask LogSecurityAsync(string message, string? category = "security", IReadOnlyDictionary<string, object?>? properties = null, CancellationToken cancellationToken = default)
+        => _inner.LogSecurityAsync(message, category, properties, cancellationToken);
 
     public ValueTask LogErrorAsync(Exception? exception = null, IReadOnlyDictionary<string, object?>? properties = null,
         CancellationToken cancellationToken = default)

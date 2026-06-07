@@ -1,14 +1,15 @@
-using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using System.Text;
 
 namespace Common.SharedKernel.Logging.UnitTests;
 
 public sealed class LoggingMiddlewareTests
 {
     [Fact]
-    public async Task RequestLoggingMiddleware_ShouldEmitStartAndCompletionLogs()
+    public async Task RequestLoggingMiddleware_ShouldEmitCompletionLogOnly_OnSuccess()
     {
         ServiceCollection services = new();
         CaptureSink sink = new();
@@ -21,11 +22,10 @@ public sealed class LoggingMiddlewareTests
 
         using ServiceProvider provider = services.BuildServiceProvider();
         LogDispatcher dispatcher = provider.GetRequiredService<LogDispatcher>();
-        ILogger<RequestLoggingMiddleware> logger =
-            provider.GetRequiredService<ILogger<RequestLoggingMiddleware>>();
+        ILogger<RequestLoggingMiddlewareBase> logger =
+            provider.GetRequiredService<ILogger<RequestLoggingMiddlewareBase>>();
         ILogContextAccessor contextAccessor = provider.GetRequiredService<ILogContextAccessor>();
         IOptions<LoggingMiddlewareOptions> middlewareOptions = provider.GetRequiredService<IOptions<LoggingMiddlewareOptions>>();
-        TimeProvider timeProvider = provider.GetRequiredService<TimeProvider>();
 
         RequestLoggingMiddleware middleware = new(
             async context =>
@@ -36,7 +36,8 @@ public sealed class LoggingMiddlewareTests
             logger,
             contextAccessor,
             middlewareOptions,
-            timeProvider);
+            provider.GetRequiredService<IPayloadProtectionPipeline>(),
+            provider.GetRequiredService<IPayloadStore>());
 
         using CancellationTokenSource cts = new();
         Task loop = dispatcher.RunAsync(cts.Token);
@@ -48,13 +49,13 @@ public sealed class LoggingMiddlewareTests
         http.Request.Headers[Constants.Headers.TenantId] = "tenant-1";
 
         await middleware.InvokeAsync(http);
-        await sink.WaitForCountAsync(2, TimeSpan.FromSeconds(5));
+        await sink.WaitForCountAsync(1, TimeSpan.FromSeconds(5));
 
         cts.Cancel();
         await loop;
 
-        sink.Entries.Should().Contain(e => e.Category == "http.request.start");
-        sink.Entries.Should().Contain(e => e.Category == "http.request.complete");
+        sink.Entries.Should().Contain(e => e.Category == "app_request");
+        sink.Entries.Should().NotContain(e => e.Category == "http.request.start");
         sink.Entries.Any(e =>
                 e.Properties is not null
                 && e.Properties.TryGetValue("statusCode", out object? value)
@@ -84,10 +85,11 @@ public sealed class LoggingMiddlewareTests
 
         RequestLoggingMiddleware middleware = new(
             _ => Task.CompletedTask,
-            provider.GetRequiredService<ILogger<RequestLoggingMiddleware>>(),
+            provider.GetRequiredService<ILogger<RequestLoggingMiddlewareBase>>(),
             provider.GetRequiredService<ILogContextAccessor>(),
             Options.Create(options),
-            provider.GetRequiredService<TimeProvider>());
+            provider.GetRequiredService<IPayloadProtectionPipeline>(),
+            provider.GetRequiredService<IPayloadStore>());
 
         using CancellationTokenSource cts = new();
         Task loop = dispatcher.RunAsync(cts.Token);
@@ -120,7 +122,7 @@ public sealed class LoggingMiddlewareTests
         ApplicationBuilder app = new(provider);
 
         bool nextCalled = false;
-        LoggingStartupFilter startupFilter = new();
+        LoggingStartupFilter startupFilter = new(new RequestLoggingMiddlewareRegistration(typeof(RequestLoggingMiddleware)));
         Action<IApplicationBuilder> configure = startupFilter.Configure(_ => { nextCalled = true; });
         configure(app);
 
@@ -131,6 +133,112 @@ public sealed class LoggingMiddlewareTests
         await pipeline(http);
 
         nextCalled.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task RequestLoggingMiddleware_ShouldCaptureOnlyAllowedHeaders()
+    {
+        ServiceCollection services = new();
+        CaptureSink sink = new();
+        services.AddCommonSharedKernelLogging(builder =>
+        {
+            builder.SetServiceName("Catalog.Api");
+            builder.SetMinimumLevel(LogLevel.Trace);
+            builder.AddSink(sink);
+        });
+
+        using ServiceProvider provider = services.BuildServiceProvider();
+        LogDispatcher dispatcher = provider.GetRequiredService<LogDispatcher>();
+        ILogger<RequestLoggingMiddlewareBase> logger =
+            provider.GetRequiredService<ILogger<RequestLoggingMiddlewareBase>>();
+        ILogContextAccessor contextAccessor = provider.GetRequiredService<ILogContextAccessor>();
+        IOptions<LoggingMiddlewareOptions> middlewareOptions = provider.GetRequiredService<IOptions<LoggingMiddlewareOptions>>();
+
+        RequestLoggingMiddleware middleware = new(
+            context =>
+            {
+                context.Response.Headers[Constants.Headers.CorrelationId] = "corr-response-1";
+                context.Response.Headers["x-not-allowed-response"] = "secret-response";
+                context.Response.StatusCode = StatusCodes.Status200OK;
+                return Task.CompletedTask;
+            },
+            logger,
+            contextAccessor,
+            middlewareOptions,
+            provider.GetRequiredService<IPayloadProtectionPipeline>(),
+            provider.GetRequiredService<IPayloadStore>());
+
+        using CancellationTokenSource cts = new();
+        Task loop = dispatcher.RunAsync(cts.Token);
+
+        DefaultHttpContext http = new();
+        http.Request.Method = HttpMethods.Get;
+        http.Request.Path = "/products";
+        http.Request.Headers[Constants.Headers.CorrelationId] = "corr-request-1";
+        http.Request.Headers["x-not-allowed-request"] = "secret-request";
+
+        await middleware.InvokeAsync(http);
+        await sink.WaitForCountAsync(1, TimeSpan.FromSeconds(5));
+
+        cts.Cancel();
+        await loop;
+
+        LogEntry completionEntry = sink.Entries.Single(e => e.Category == "app_request");
+        completionEntry.Properties.Should().NotBeNull();
+        completionEntry.Properties!.Should().ContainKey("rq.x-correlationid");
+        completionEntry.Properties.Should().ContainKey("rs.x-correlationid");
+        completionEntry.Properties.Should().NotContainKey("rq.x-not-allowed-request");
+        completionEntry.Properties.Should().NotContainKey("rs.x-not-allowed-response");
+    }
+
+    [Fact]
+    public async Task RequestLoggingMiddleware_ShouldAddDistinctRequestAndResponsePayloadUrls_WhenPayloadStored()
+    {
+        ServiceCollection services = new();
+        CaptureSink sink = new();
+        services.AddCommonSharedKernelLogging(builder =>
+        {
+            builder.SetServiceName("Catalog.Api");
+            builder.SetMinimumLevel(LogLevel.Trace);
+            builder.AddSink(sink);
+        });
+
+        using ServiceProvider provider = services.BuildServiceProvider();
+        LogDispatcher dispatcher = provider.GetRequiredService<LogDispatcher>();
+
+        RequestLoggingMiddleware middleware = new(
+            async context =>
+            {
+                context.Response.ContentType = "application/json";
+                context.Response.StatusCode = StatusCodes.Status200OK;
+                await context.Response.WriteAsync("{\"ok\":true}", TestContext.Current.CancellationToken);
+            },
+            provider.GetRequiredService<ILogger<RequestLoggingMiddlewareBase>>(),
+            provider.GetRequiredService<ILogContextAccessor>(),
+            provider.GetRequiredService<IOptions<LoggingMiddlewareOptions>>(),
+            provider.GetRequiredService<IPayloadProtectionPipeline>(),
+            new FixedPayloadStore("http://log-store/api/v1/logs/payload-123"));
+
+        using CancellationTokenSource cts = new();
+        Task loop = dispatcher.RunAsync(cts.Token);
+
+        DefaultHttpContext http = new();
+        http.Request.Method = HttpMethods.Post;
+        http.Request.Path = "/products/1";
+        http.Request.ContentType = "application/json";
+        http.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes("{\"id\":1}"));
+
+        await middleware.InvokeAsync(http);
+        await sink.WaitForCountAsync(1, TimeSpan.FromSeconds(5));
+
+        cts.Cancel();
+        await loop;
+
+        LogEntry completionEntry = sink.Entries.Single(e => e.Category == "app_request");
+        completionEntry.Properties.Should().NotBeNull();
+        completionEntry.Properties!.Should().ContainKey("request.url");
+        completionEntry.Properties.Should().ContainKey("response.url");
+        completionEntry.Properties["request.url"].Should().NotBe(completionEntry.Properties["response.url"]);
     }
 
     private sealed class CaptureSink : ILogSink
@@ -178,4 +286,23 @@ public sealed class LoggingMiddlewareTests
             throw new TimeoutException($"Expected at least {count} entries.");
         }
     }
+
+    private sealed class FixedPayloadStore(string payloadRef) : IPayloadStore
+    {
+        private readonly string _payloadRef = payloadRef;
+        private int _counter;
+
+        public Task<PayloadStoreWriteResult> StoreAsync(PayloadStoreWriteRequest request, CancellationToken cancellationToken = default)
+        {
+            int callNumber = Interlocked.Increment(ref _counter);
+            return Task.FromResult(new PayloadStoreWriteResult(
+                PayloadRef: $"{_payloadRef}-{callNumber}",
+                PayloadHash: $"hash-123-{callNumber}",
+                PayloadSizeBytes: 123,
+                PayloadEncoding: "application/json",
+                Compressed: false,
+                Encrypted: false));
+        }
+    }
+
 }

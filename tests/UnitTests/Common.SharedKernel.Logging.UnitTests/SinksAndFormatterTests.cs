@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 
 namespace Common.SharedKernel.Logging.UnitTests;
 
@@ -93,7 +93,7 @@ public sealed class SinksAndFormatterTests
 
         LogEntry entry = LogEntry.Create(
             LogLevel.Information,
-            "Products.Api",
+            "products-api",
             "Products.Api.Features.Products.GetProduct",
             "products.get",
             "fetched product",
@@ -118,7 +118,7 @@ public sealed class SinksAndFormatterTests
 
         LogEntry entry = LogEntry.Create(
             LogLevel.Warning,
-            "Products.Api",
+            "products-api",
             "Microsoft.AspNetCore.Hosting.Diagnostics",
             "host.lifecycle",
             "application started",
@@ -127,6 +127,129 @@ public sealed class SinksAndFormatterTests
         string index = sink.ResolveIndexName(entry);
 
         index.Should().Be("infra-logs-2026.06.07");
+    }
+
+    [Fact]
+    public void ElasticsearchLogSink_ShouldRouteMessagingLog_ToMessagingLogsDailyIndex()
+    {
+        ElasticsearchLogSink sink = new(new ElasticsearchSinkOptions
+        {
+            Endpoint = new Uri("http://localhost:9200"),
+            ApiIndexPrefix = "api-logs",
+            InfraIndexPrefix = "infra-logs",
+            MessagingIndexPrefix = "messaging-log",
+            UseDailyIndexes = true,
+            RouteInfrastructureLogs = true,
+            RouteMessagingLogs = true
+        });
+
+        LogEntry entry = LogEntry.Create(
+            LogLevel.Information,
+            "products-api",
+            "Common.SharedKernel.Messaging.Kafka.Producers.KafkaMessageProducer",
+            "messaging.publish",
+            "message published",
+            DateTimeOffset.Parse("2026-06-07T10:00:00Z", CultureInfo.InvariantCulture),
+            properties: new Dictionary<string, object?>
+            {
+                ["provider"] = "Kafka"
+            });
+
+        string index = sink.ResolveIndexName(entry);
+
+        index.Should().Be("messaging-log-2026.06.07");
+    }
+
+    [Fact]
+    public void ElasticsearchLogSink_ShouldRouteEventLog_ToEventLogsDailyIndex()
+    {
+        ElasticsearchLogSink sink = new(new ElasticsearchSinkOptions
+        {
+            Endpoint = new Uri("http://localhost:9200"),
+            MessagingIndexPrefix = "messaging-log",
+            UseDailyIndexes = true,
+            RouteMessagingLogs = true
+        });
+
+        LogEntry entry = LogEntry.Create(
+            LogLevel.Information,
+            "products-api",
+            "Products.Api.Features.Products.PublishEvent",
+            "event.product.updated",
+            "product updated event",
+            DateTimeOffset.Parse("2026-06-07T10:00:00Z", CultureInfo.InvariantCulture),
+            properties: new Dictionary<string, object?>
+            {
+                ["logType"] = "event",
+                ["eventName"] = "ProductUpdated",
+                ["eventVersion"] = "1"
+            });
+
+        string index = sink.ResolveIndexName(entry);
+
+        index.Should().Be("messaging-log-2026.06.07");
+    }
+
+    [Fact]
+    public void ElasticsearchLogSink_ShouldRouteAuditLog_ToAuditLogsDailyIndex()
+    {
+        ElasticsearchLogSink sink = new(new ElasticsearchSinkOptions
+        {
+            Endpoint = new Uri("http://localhost:9200"),
+            AuditIndexPrefix = "audit-log",
+            UseDailyIndexes = true,
+            RouteAuditLogs = true
+        });
+
+        LogEntry entry = LogEntry.Create(
+            LogLevel.Information,
+            "products-api",
+            "Products.Api.Features.Products.DeleteProduct",
+            "audit.product.delete",
+            "product deleted",
+            DateTimeOffset.Parse("2026-06-07T10:00:00Z", CultureInfo.InvariantCulture),
+            properties: new Dictionary<string, object?>
+            {
+                ["logType"] = "audit",
+                ["action"] = "Delete",
+                ["resourceType"] = "Product",
+                ["resourceId"] = "42",
+                ["performedBy"] = "admin"
+            });
+
+        string index = sink.ResolveIndexName(entry);
+
+        index.Should().Be("audit-log-2026.06.07");
+    }
+
+    [Fact]
+    public void ElasticsearchLogSink_ShouldRouteSecurityLog_ToSecurityLogsDailyIndex()
+    {
+        ElasticsearchLogSink sink = new(new ElasticsearchSinkOptions
+        {
+            Endpoint = new Uri("http://localhost:9200"),
+            SecurityIndexPrefix = "security-log",
+            UseDailyIndexes = true,
+            RouteSecurityLogs = true
+        });
+
+        LogEntry entry = LogEntry.Create(
+            LogLevel.Warning,
+            "products-api",
+            "Products.Api.Security.Authorization",
+            "security.authorization.denied",
+            "access denied",
+            DateTimeOffset.Parse("2026-06-07T10:00:00Z", CultureInfo.InvariantCulture),
+            properties: new Dictionary<string, object?>
+            {
+                ["logType"] = "security",
+                ["action"] = "authorize",
+                ["result"] = "denied"
+            });
+
+        string index = sink.ResolveIndexName(entry);
+
+        index.Should().Be("security-log-2026.06.07");
     }
 
     [Fact]

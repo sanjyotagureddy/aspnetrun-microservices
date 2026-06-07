@@ -4,6 +4,10 @@
 
 Implement ADR-0001 as a complete logging-library roadmap, not only hardening slices.
 
+## Related Checklists
+
+- `ADR-0002-Implementation-Checklist.md` for recursive payload protection, payload storage references, and log-type classification.
+
 ## Principles
 
 - Keep changes additive and backward compatible.
