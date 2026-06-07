@@ -17,9 +17,20 @@ internal sealed class JsonLogFormatter : ILogFormatter
             ["category"] = entry.Category,
             ["message"] = entry.Message,
             ["namespace"] = entry.Namespace,
-            ["correlationId"] = entry.CorrelationId,
-            ["properties"] = entry.Properties
+            ["correlationId"] = entry.CorrelationId
         };
+
+        if (entry.Properties is not null)
+        {
+            foreach (KeyValuePair<string, object?> property in entry.Properties)
+            {
+                // Keep envelope fields authoritative; flatten custom fields at the top level.
+                if (!payload.ContainsKey(property.Key))
+                {
+                    payload[property.Key] = property.Value;
+                }
+            }
+        }
 
         if (entry.Exception is not null)
         {

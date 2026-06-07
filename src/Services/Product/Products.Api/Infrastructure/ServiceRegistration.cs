@@ -28,11 +28,52 @@ internal static class ServiceRegistration
             services.AddSingleton(NpgsqlDataSource.Create(connectionString));
             services.AddHostedService<ProductCatalogSchemaInitializer>();
 
+            IConfigurationSection loggingSection = configuration.GetSection("Logging:CommonSharedKernel");
+            string loggingServiceName = loggingSection["ServiceName"] ?? "Products.Api";
+            bool hasMinimumLevel = Enum.TryParse(
+                loggingSection["MinimumLevel"],
+                true,
+                out Common.SharedKernel.Logging.LogLevel configuredMinimumLevel);
+            Common.SharedKernel.Logging.LogLevel minimumLevel = hasMinimumLevel
+                ? configuredMinimumLevel
+                : Common.SharedKernel.Logging.LogLevel.Trace;
+
+            bool hasConsoleFormatter = Enum.TryParse(
+                loggingSection["Console:FormatterKind"],
+                true,
+                out LogFormatterKind configuredConsoleFormatter);
+            LogFormatterKind consoleFormatter = hasConsoleFormatter
+                ? configuredConsoleFormatter
+                : LogFormatterKind.Json;
+
+            IConfigurationSection openSearchSection = loggingSection.GetSection("OpenSearch");
+            bool openSearchEnabled = bool.TryParse(openSearchSection["Enabled"], out bool enabled) && enabled;
+            bool hasOpenSearchEndpoint = Uri.TryCreate(openSearchSection["Endpoint"], UriKind.Absolute, out Uri? openSearchEndpoint);
+            string openSearchApiIndexPrefix = string.IsNullOrWhiteSpace(openSearchSection["ApiIndexPrefix"])
+                ? "api-logs"
+                : openSearchSection["ApiIndexPrefix"]!;
+            string openSearchInfraIndexPrefix = string.IsNullOrWhiteSpace(openSearchSection["InfraIndexPrefix"])
+                ? "infra-logs"
+                : openSearchSection["InfraIndexPrefix"]!;
+            bool useDailyIndexes = !bool.TryParse(openSearchSection["UseDailyIndexes"], out bool configuredUseDailyIndexes)
+                || configuredUseDailyIndexes;
+
             services.AddCommonSharedKernelLogging(builder =>
             {
-                builder.SetServiceName("Products.Api");
-                builder.SetMinimumLevel(Common.SharedKernel.Logging.LogLevel.Trace);
-                builder.UseConsole(opts => opts.FormatterKind = LogFormatterKind.Json);
+                builder.SetServiceName(loggingServiceName);
+                builder.SetMinimumLevel(minimumLevel);
+                builder.UseConsole(opts => opts.FormatterKind = consoleFormatter);
+
+                if (openSearchEnabled && hasOpenSearchEndpoint && openSearchEndpoint is not null)
+                {
+                    builder.UseElasticsearch(opts =>
+                    {
+                        opts.Endpoint = openSearchEndpoint;
+                        opts.ApiIndexPrefix = openSearchApiIndexPrefix;
+                        opts.InfraIndexPrefix = openSearchInfraIndexPrefix;
+                        opts.UseDailyIndexes = useDailyIndexes;
+                    });
+                }
             });
 
             services.AddMessaging(builder =>

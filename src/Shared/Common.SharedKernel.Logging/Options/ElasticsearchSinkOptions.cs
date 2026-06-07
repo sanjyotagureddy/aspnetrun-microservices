@@ -4,7 +4,18 @@ public sealed record ElasticsearchSinkOptions
 {
     public Uri Endpoint { get; set; } = new("http://localhost:9200");
 
-    public string IndexName { get; set; } = "logs";
+    // Backward-compatible fallback base index name when ApiIndexPrefix is not set.
+    public string IndexName { get; set; } = "api-logs";
+
+    // Base prefix for business/API logs. Final index uses daily suffix: <prefix>-yyyy.MM.dd.
+    public string ApiIndexPrefix { get; set; } = "api-logs";
+
+    // Base prefix for platform/framework/infra logs. Final index uses daily suffix: <prefix>-yyyy.MM.dd.
+    public string InfraIndexPrefix { get; set; } = "infra-logs";
+
+    public bool RouteInfrastructureLogs { get; set; } = true;
+
+    public bool UseDailyIndexes { get; set; } = true;
 
     public int BatchSize { get; set; } = 1000;
 
