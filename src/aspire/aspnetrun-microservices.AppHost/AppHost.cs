@@ -2,6 +2,28 @@
 
 IDistributedApplicationBuilder builder = DistributedApplication.CreateBuilder(args);
 
+const string dashboardsBootstrapScript = """
+set -eu
+
+echo "Waiting for OpenSearch Dashboards..."
+until curl -fsS "http://opensearch-dashboards:5601/api/status" >/dev/null; do
+    sleep 3
+done
+
+echo "Creating data views..."
+curl -fsS -X POST "http://opensearch-dashboards:5601/api/saved_objects/index-pattern/api-logs?overwrite=true" \
+    -H "osd-xsrf: true" \
+    -H "Content-Type: application/json" \
+    -d '{"attributes":{"title":"api-logs-*","timeFieldName":"timestampUtc"}}' >/dev/null
+
+curl -fsS -X POST "http://opensearch-dashboards:5601/api/saved_objects/index-pattern/infra-logs?overwrite=true" \
+    -H "osd-xsrf: true" \
+    -H "Content-Type: application/json" \
+    -d '{"attributes":{"title":"infra-logs-*","timeFieldName":"timestampUtc"}}' >/dev/null
+
+echo "OpenSearch Dashboards data views are ready."
+""";
+
 // ReSharper disable once EmptyRegion
 #region Persistence
 
@@ -32,6 +54,10 @@ IResourceBuilder<ContainerResource> openSearchDashboards = builder.AddContainer(
     .WithHttpEndpoint(port: 5601, targetPort: 5601, name: "http")
     .WaitFor(openSearch);
 
+builder.AddContainer("opensearch-dashboards-init", "curlimages/curl", "8.8.0")
+    .WithEntrypoint("sh")
+    .WithArgs("-c", dashboardsBootstrapScript)
+    .WaitFor(openSearchDashboards);
 
 
 #endregion
