@@ -8,6 +8,8 @@ public interface ILoggingBuilder
 
     ILoggingBuilder SetMinimumLevel(LogLevel minimumLevel);
 
+    ILoggingBuilder SetEnabledLogTypes(IEnumerable<string> enabledLogTypes);
+
     ILoggingBuilder AddSink(ILogSink sink);
 
     ILoggingBuilder UseConsole(Action<ConsoleSinkOptions>? configure = null);
@@ -16,7 +18,11 @@ public interface ILoggingBuilder
 
     ILoggingBuilder UseElasticsearch(Action<ElasticsearchSinkOptions>? configure = null);
 
+    ILoggingBuilder UseLogStore(Action<LogStoreSinkOptions>? configure = null);
+
     ILoggingBuilder AddEnricher(ILogEnricher enricher);
+
+    ILoggingBuilder AddMasker(IMask masker);
 
     ILoggingBuilder AddFilter(ILogFilter filter);
 

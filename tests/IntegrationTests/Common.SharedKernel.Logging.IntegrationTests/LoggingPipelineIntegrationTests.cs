@@ -22,6 +22,7 @@ public sealed class LoggingPipelineIntegrationTests
         services.AddCommonSharedKernelLogging(builder =>
         {
             builder.SetServiceName("CatalogService");
+            builder.SetEnabledLogTypes(["*"]);
             builder.AddSink(sink);
         });
 

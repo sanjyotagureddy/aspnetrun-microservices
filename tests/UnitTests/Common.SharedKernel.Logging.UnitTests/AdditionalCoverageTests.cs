@@ -82,7 +82,8 @@ public sealed class AdditionalCoverageTests
             ServiceName = "Catalog",
             MinimumLevel = LogLevel.Trace,
             BatchSize = 1,
-            QueueCapacity = 32
+            QueueCapacity = 32,
+            EnabledLogTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "*" }
         }));
 
         LoggingPipeline pipeline = new(
@@ -92,7 +93,8 @@ public sealed class AdditionalCoverageTests
                 ServiceName = "Catalog",
                 MinimumLevel = LogLevel.Trace,
                 BatchSize = 1,
-                QueueCapacity = 32
+                QueueCapacity = 32,
+                EnabledLogTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "*" }
             }),
             [],
             [],
@@ -131,7 +133,8 @@ public sealed class AdditionalCoverageTests
             MinimumLevel = LogLevel.Trace,
             BatchSize = 1,
             QueueCapacity = 32,
-            CaptureActivityContext = true
+            CaptureActivityContext = true,
+            EnabledLogTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "*" }
         }));
 
         LoggingPipeline pipeline = new(
@@ -142,7 +145,8 @@ public sealed class AdditionalCoverageTests
                 MinimumLevel = LogLevel.Trace,
                 BatchSize = 1,
                 QueueCapacity = 32,
-                CaptureActivityContext = true
+                CaptureActivityContext = true,
+                EnabledLogTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "*" }
             }),
             [new CorrelationEnricher(), new TraceEnricher(), new TenantEnricher(), new UserEnricher()],
             [],
@@ -190,6 +194,7 @@ public sealed class AdditionalCoverageTests
         {
             builder.SetServiceName("Catalog.Api");
             builder.SetMinimumLevel(LogLevel.Trace);
+            builder.SetEnabledLogTypes(["*"]);
             builder.AddSink(sink);
         });
 
@@ -200,7 +205,8 @@ public sealed class AdditionalCoverageTests
             provider.GetRequiredService<ILogger<RequestLoggingMiddleware>>(),
             provider.GetRequiredService<ILogContextAccessor>(),
             Options.Create(new LoggingMiddlewareOptions { IncludeRequestStartLog = false }),
-            provider.GetRequiredService<TimeProvider>());
+            provider.GetRequiredService<IPayloadProtectionPipeline>(),
+            provider.GetRequiredService<IPayloadStore>());
 
         using CancellationTokenSource cts = new();
         Task loop = dispatcher.RunAsync(cts.Token);

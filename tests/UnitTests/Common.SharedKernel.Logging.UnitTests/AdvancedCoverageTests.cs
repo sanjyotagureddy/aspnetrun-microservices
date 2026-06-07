@@ -21,8 +21,12 @@ public sealed class AdvancedCoverageTests
         await logger.LogCriticalAsync(new Exception("e2"), cancellationToken: token);
         await logger.LogErrorAsync("error-msg", "error.cat", new Exception("e3"), cancellationToken: token);
         await logger.LogCriticalAsync("critical-msg", "critical.cat", new Exception("e4"), cancellationToken: token);
+        await logger.LogApiAsync("api-msg", cancellationToken: token);
+        await logger.LogEventAsync("evt", cancellationToken: token);
+        await logger.LogAuditAsync("aud", cancellationToken: token);
+        await logger.LogSecurityAsync("sec", cancellationToken: token);
 
-        await sink.WaitForCountAsync(5, TimeSpan.FromSeconds(5));
+        await sink.WaitForCountAsync(9, TimeSpan.FromSeconds(5));
 
         cts.Cancel();
         await loop;
@@ -31,6 +35,30 @@ public sealed class AdvancedCoverageTests
         sink.Entries.Should().Contain(e => e.Category == "fatal");
         sink.Entries.Should().Contain(e => e.Category == "error.cat");
         sink.Entries.Should().Contain(e => e.Category == "critical.cat");
+        sink.Entries.Should().Contain(e => e.Category == "api");
+        sink.Entries.Should().Contain(e => e.Category == "event");
+        sink.Entries.Should().Contain(e => e.Category == "audit");
+        sink.Entries.Should().Contain(e => e.Category == "security");
+        sink.Entries.Any(e =>
+            e.Properties is not null
+            && e.Properties.TryGetValue("logType", out object? value)
+            && string.Equals(value?.ToString(), "api", StringComparison.OrdinalIgnoreCase))
+            .Should().BeTrue();
+        sink.Entries.Any(e =>
+                e.Properties is not null
+                && e.Properties.TryGetValue("logType", out object? value)
+                && string.Equals(value?.ToString(), "event", StringComparison.OrdinalIgnoreCase))
+            .Should().BeTrue();
+        sink.Entries.Any(e =>
+                e.Properties is not null
+                && e.Properties.TryGetValue("logType", out object? value)
+                && string.Equals(value?.ToString(), "audit", StringComparison.OrdinalIgnoreCase))
+            .Should().BeTrue();
+        sink.Entries.Any(e =>
+                e.Properties is not null
+                && e.Properties.TryGetValue("logType", out object? value)
+                && string.Equals(value?.ToString(), "security", StringComparison.OrdinalIgnoreCase))
+            .Should().BeTrue();
     }
 
     [Fact]
@@ -43,7 +71,8 @@ public sealed class AdvancedCoverageTests
             MinimumLevel = LogLevel.Warning,
             BatchSize = 1,
             QueueCapacity = 32,
-            CaptureActivityContext = false
+            CaptureActivityContext = false,
+            EnabledLogTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "*" }
         };
 
         LogDispatcher dispatcher = new([sink], Options.Create(options));
@@ -119,7 +148,8 @@ public sealed class AdvancedCoverageTests
             ServiceName = "Catalog",
             MinimumLevel = minimumLevel,
             BatchSize = 1,
-            QueueCapacity = 32
+            QueueCapacity = 32,
+            EnabledLogTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "*" }
         };
 
         return new LoggingPipeline(
@@ -138,7 +168,8 @@ public sealed class AdvancedCoverageTests
             ServiceName = "Catalog",
             MinimumLevel = LogLevel.Trace,
             BatchSize = 1,
-            QueueCapacity = 32
+            QueueCapacity = 32,
+            EnabledLogTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "*" }
         }));
 
     private sealed class MemorySink : ILogSink

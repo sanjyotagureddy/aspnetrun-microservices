@@ -1,4 +1,4 @@
-using Common.SharedKernel.Messaging;
+﻿using Common.SharedKernel.Messaging;
 using Common.SharedKernel.Observability.Context;
 using Products.Api.Features.Products.Events;
 
@@ -40,8 +40,8 @@ internal sealed class UpdateProductCommandHandler(
                 metadata.CorrelationId = appContext?.CorrelationId;
                 metadata.TraceId = appContext?.TraceId;
                 metadata.SpanId = appContext?.SpanId;
-                metadata.TenantId = appContext?.Headers.TryGetValue("X-Tenant-Id", out string? tenantId) == true ? tenantId : null;
-                metadata.Headers["Source"] = "Products.Api";
+                metadata.TenantId = appContext?.Headers.TryGetValue("X-Tenant-Id", out var tenantId) == true ? tenantId : null;
+                metadata.Headers["Source"] = "products-api";
                 metadata.Headers["Entity"] = nameof(Product);
                 metadata.Headers["EventType"] = nameof(ProductUpdatedIntegrationEvent);
             },

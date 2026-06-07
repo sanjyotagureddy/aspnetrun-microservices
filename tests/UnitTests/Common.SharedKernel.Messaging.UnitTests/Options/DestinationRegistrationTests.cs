@@ -1,4 +1,4 @@
-namespace Common.SharedKernel.Messaging.UnitTests.Options;
+﻿namespace Common.SharedKernel.Messaging.UnitTests.Options;
 
 public sealed class DestinationRegistrationTests
 {
@@ -9,7 +9,7 @@ public sealed class DestinationRegistrationTests
         {
             DestinationName = "products.events.v1",
             Kind = DestinationKind.Topic,
-            OwnerService = "Products.Api",
+            OwnerService = "products-api",
             Contract = new MessageContractDescriptor("ProductLifecycleEvent", "1.0", "application/json"),
             PartitioningStrategy = PartitioningStrategy.ByAggregateId,
             PartitionKeySelector = "payload.productId",
@@ -23,7 +23,7 @@ public sealed class DestinationRegistrationTests
 
         clone.DestinationName.Should().Be("products.events.v1");
         clone.Kind.Should().Be(DestinationKind.Topic);
-        clone.OwnerService.Should().Be("Products.Api");
+        clone.OwnerService.Should().Be("products-api");
         clone.Contract.MessageType.Should().Be("ProductLifecycleEvent");
         clone.Contract.Version.Should().Be("1.0");
         clone.PartitioningStrategy.Should().Be(PartitioningStrategy.ByAggregateId);

@@ -2,27 +2,6 @@
 
 IDistributedApplicationBuilder builder = DistributedApplication.CreateBuilder(args);
 
-const string dashboardsBootstrapScript = """
-set -eu
-
-echo "Waiting for OpenSearch Dashboards..."
-until curl -fsS "http://opensearch-dashboards:5601/api/status" >/dev/null; do
-    sleep 3
-done
-
-echo "Creating data views..."
-curl -fsS -X POST "http://opensearch-dashboards:5601/api/saved_objects/index-pattern/api-logs?overwrite=true" \
-    -H "osd-xsrf: true" \
-    -H "Content-Type: application/json" \
-    -d '{"attributes":{"title":"api-logs-*","timeFieldName":"timestampUtc"}}' >/dev/null
-
-curl -fsS -X POST "http://opensearch-dashboards:5601/api/saved_objects/index-pattern/infra-logs?overwrite=true" \
-    -H "osd-xsrf: true" \
-    -H "Content-Type: application/json" \
-    -d '{"attributes":{"title":"infra-logs-*","timeFieldName":"timestampUtc"}}' >/dev/null
-
-echo "OpenSearch Dashboards data views are ready."
-""";
 
 // ReSharper disable once EmptyRegion
 #region Persistence
@@ -46,19 +25,34 @@ IResourceBuilder<ContainerResource> openSearch = builder.AddContainer("opensearc
     .WithEnvironment("plugins.security.disabled", "true")
     .WithEnvironment("OPENSEARCH_INITIAL_ADMIN_PASSWORD", openSearchInitialAdminPassword)
     .WithEnvironment("OPENSEARCH_JAVA_OPTS", "-Xms512m -Xmx512m")
-    .WithHttpEndpoint(port: 9200, targetPort: 9200, name: "http");
+    .WithHttpEndpoint(port: 9200, targetPort: 9200, name: "http")
+    .WithVolume("opensearch-data", "/usr/share/opensearch/data");
 
 IResourceBuilder<ContainerResource> openSearchDashboards = builder.AddContainer("opensearch-dashboards", "opensearchproject/opensearch-dashboards")
     .WithEnvironment("OPENSEARCH_HOSTS", "[\"http://opensearch:9200\"]")
     .WithEnvironment("DISABLE_SECURITY_DASHBOARDS_PLUGIN", "true")
     .WithHttpEndpoint(port: 5601, targetPort: 5601, name: "http")
+    .WithVolume("opensearch-dashboards-data", "/usr/share/opensearch-dashboards/data")
     .WaitFor(openSearch);
 
-builder.AddContainer("opensearch-dashboards-init", "curlimages/curl", "8.8.0")
-    .WithEntrypoint("sh")
-    .WithArgs("-c", dashboardsBootstrapScript)
-    .WaitFor(openSearchDashboards);
+IResourceBuilder<ContainerResource> otelCollector = builder.AddContainer("otel-collector", "otel/opentelemetry-collector-contrib", "0.108.0")
+    .WithBindMount("./otel-collector-config.yaml", "/etc/otelcol-contrib/config.yaml")
+    .WithArgs("--config=/etc/otelcol-contrib/config.yaml")
+    .WithHttpEndpoint(port: 4318, targetPort: 4318, name: "otlp-http")
+    .WithEndpoint(port: 4317, targetPort: 4317, scheme: "tcp", name: "otlp-grpc")
+    .WaitFor(openSearch);
 
+IResourceBuilder<ProjectResource> logStoreApi = builder.AddProject<LogStore_Api>("log-store-api")
+    .WithEnvironment("OTEL_EXPORTER_OTLP_ENDPOINT", "http://otel-collector:4318")
+    .WithEnvironment("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
+    .WithEnvironment("LogStorage__OpenSearch__Endpoint", "http://localhost:9200")
+    .WithEnvironment("LogStorage__OpenSearch__ApiIndexPrefix", "api-logs")
+    .WithEnvironment("LogStorage__OpenSearch__InfraIndexPrefix", "infra-logs")
+    .WithEnvironment("LogStorage__OpenSearch__MessagingIndexPrefix", "messaging-log")
+    .WithEnvironment("LogStorage__OpenSearch__UseDailyIndexes", "true")
+    .WaitFor(openSearch)
+    .WaitFor(otelCollector)
+    .WithUrl("/swagger", "Swagger");
 
 #endregion
 #region Services
@@ -67,42 +61,72 @@ builder.AddContainer("opensearch-dashboards-init", "curlimages/curl", "8.8.0")
 
 IResourceBuilder<ProjectResource> inventoryApi = builder.AddProject<Inventory_Api>("inventory-api")
     .WithReference(inventory)
+    .WithReference(logStoreApi)
+    .WithEnvironment("OTEL_EXPORTER_OTLP_ENDPOINT", "http://otel-collector:4318")
+    .WithEnvironment("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
     .WithEnvironment("ConnectionStrings__inventory", inventory.Resource.ConnectionStringExpression)
     .WithEnvironment("ConnectionStrings__inventorydb", inventory.Resource.ConnectionStringExpression)
     .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__Enabled", "true")
     .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__Endpoint", "http://localhost:9200")
     .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__ApiIndexPrefix", "api-logs")
     .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__InfraIndexPrefix", "infra-logs")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__MessagingIndexPrefix", "messaging-log")
     .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__UseDailyIndexes", "true")
+    .WithEnvironment("Logging__CommonSharedKernel__LogStore__Enabled", "true")
+    .WithEnvironment("Logging__CommonSharedKernel__LogStore__Endpoint", "http://log-store-api")
+    .WithEnvironment("Logging__CommonSharedKernel__LogStore__CreateRoutePath", "/api/v1/logs")
     .WaitFor(inventory)
+    .WaitFor(logStoreApi)
     .WaitFor(openSearch)
+    .WaitFor(otelCollector)
     .WithUrl("/swagger", "Swagger");
 
 builder.AddProject<Products_Api>("products-api")
     .WithReference(productDb)
     .WithReference(messaging)
+    .WithReference(logStoreApi)
     .WithReference(inventoryApi)
+    .WithEnvironment("OTEL_EXPORTER_OTLP_ENDPOINT", "http://otel-collector:4318")
+    .WithEnvironment("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
     .WithEnvironment("ConnectionStrings__productsdb", productDb.Resource.ConnectionStringExpression)
     .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__Enabled", "true")
     .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__Endpoint", "http://localhost:9200")
     .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__ApiIndexPrefix", "api-logs")
     .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__InfraIndexPrefix", "infra-logs")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__MessagingIndexPrefix", "messaging-log")
     .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__UseDailyIndexes", "true")
+    .WithEnvironment("Logging__CommonSharedKernel__LogStore__Enabled", "true")
+    .WithEnvironment("Logging__CommonSharedKernel__LogStore__Endpoint", "http://log-store-api")
+    .WithEnvironment("Logging__CommonSharedKernel__LogStore__CreateRoutePath", "/api/v1/logs")
     .WaitFor(productDb)
     .WaitFor(messaging)
+    .WaitFor(logStoreApi)
     .WaitFor(inventoryApi)
     .WaitFor(openSearch)
+    .WaitFor(otelCollector)
     .WithUrl("/swagger", "Swagger");
 
 builder.AddProject<Cart_Api>("cart-api")
+    .WithEnvironment("OTEL_EXPORTER_OTLP_ENDPOINT", "http://otel-collector:4318")
+    .WithEnvironment("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
+    .WaitFor(otelCollector)
     .WithUrl("/openapi/v1.json", "OpenAPI");
 
-builder.AddProject<Discount_Grpc>("discount-grpc");
+builder.AddProject<Discount_Grpc>("discount-grpc")
+    .WithEnvironment("OTEL_EXPORTER_OTLP_ENDPOINT", "http://otel-collector:4318")
+    .WithEnvironment("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
+    .WaitFor(otelCollector);
 
 builder.AddProject<Order_Api>("order-api")
+    .WithEnvironment("OTEL_EXPORTER_OTLP_ENDPOINT", "http://otel-collector:4318")
+    .WithEnvironment("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
+    .WaitFor(otelCollector)
     .WithUrl("/openapi/v1.json", "OpenAPI");
 
 builder.AddProject<Gateway_Yarp>("gateway-yarp")
+    .WithEnvironment("OTEL_EXPORTER_OTLP_ENDPOINT", "http://otel-collector:4318")
+    .WithEnvironment("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
+    .WaitFor(otelCollector)
     .WithUrl("/openapi/v1.json", "OpenAPI");
 
 openSearchDashboards.WithUrl("/", "OpenSearch Dashboards");

@@ -15,6 +15,24 @@ public sealed record ElasticsearchSinkOptions
 
     public bool RouteInfrastructureLogs { get; set; } = true;
 
+    // Base prefix for messaging and event logs (Kafka, consumer/producer pipeline, domain/business events).
+    // Final index uses daily suffix: <prefix>-yyyy.MM.dd.
+    public string MessagingIndexPrefix { get; set; } = "messaging-log";
+
+    public bool RouteMessagingLogs { get; set; } = true;
+
+    // Base prefix for audit logs.
+    // Final index uses daily suffix: <prefix>-yyyy.MM.dd.
+    public string AuditIndexPrefix { get; set; } = "audit-log";
+
+    public bool RouteAuditLogs { get; set; } = true;
+
+    // Base prefix for security logs.
+    // Final index uses daily suffix: <prefix>-yyyy.MM.dd.
+    public string SecurityIndexPrefix { get; set; } = "security-log";
+
+    public bool RouteSecurityLogs { get; set; } = true;
+
     public bool UseDailyIndexes { get; set; } = true;
 
     public int BatchSize { get; set; } = 1000;

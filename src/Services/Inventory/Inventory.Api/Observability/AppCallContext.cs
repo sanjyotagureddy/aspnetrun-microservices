@@ -1,4 +1,4 @@
-using Common.SharedKernel.Observability.Context;
+﻿using Common.SharedKernel.Observability.Context;
 
 namespace Inventory.Api.Observability;
 
@@ -10,7 +10,7 @@ internal sealed class AppCallContext(
     string? tenantId = null,
     IDictionary<string, string>? headers = null,
     IDictionary<string, object?>? items = null)
-    : AppCallContextBase(correlationId, parentCorrelationId, traceId, spanId, headers, items, "Inventory.Api")
+    : AppCallContextBase(correlationId, parentCorrelationId, traceId, spanId, headers, items, "inventory-api")
 {
     public string? TenantId { get; } = string.IsNullOrWhiteSpace(tenantId) ? null : tenantId;
 }
