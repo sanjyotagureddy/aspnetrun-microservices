@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Text;
 using Common.SharedKernel.Logging;
 using Confluent.Kafka;
@@ -72,14 +72,15 @@ internal sealed class KafkaMessageProducer(
 
                 stopwatch.Stop();
                 instrumentation.PublishDurationMs.Record(stopwatch.Elapsed.TotalMilliseconds);
-                await logger.LogInformationAsync("Message published", "messaging.publish", new Dictionary<string, object?>
+                await logger.LogEventAsync("Message published", "messaging.publish", new Dictionary<string, object?>
                 {
                     ["messageId"] = envelope.MessageId,
                     ["topic"] = resolvedTopic,
                     ["provider"] = "Kafka",
                     ["durationMs"] = stopwatch.Elapsed.TotalMilliseconds,
                     ["partition"] = report.Partition.Value,
-                    ["offset"] = report.Offset.Value
+                    ["offset"] = report.Offset.Value,
+                    ["event"] = metadata.Headers["EventType"]
                 }, cancellationToken);
                 return;
             }

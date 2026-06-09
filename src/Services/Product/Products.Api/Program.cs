@@ -53,7 +53,7 @@ public class Program
 
         WebApplication app = builder.Build();
 
-        app.UseSwaggerSupport("Products API");
+        app.UseSwaggerSupport("Products");
         app.UseForwardedHeaders();
         app.UseAppCallContextMiddleware<AppCallContextMiddleware>();
         app.UseExceptionHandler(); // early

@@ -96,15 +96,52 @@ public sealed class LogStorePayloadStoreTests
         }
     }
 
+    [Fact]
+    public async Task StoreAsync_ShouldForwardCorrelationAndTraceHeaders()
+    {
+        CountingHandler handler = new();
+        HttpClient client = new(handler);
+        LogStorePayloadStore store = new(
+            new LogStoreSinkOptions
+            {
+                Endpoint = new Uri("http://localhost:5000"),
+                CreateRoutePath = "/api/v1/logs",
+                EnablePayloadDeduplication = false,
+                MaxPayloadDedupEntries = 100
+            },
+            client);
+
+        PayloadStoreWriteRequest request = new(
+            ProtectedPayload: new { token = "abc", value = 42 },
+            ContentType: "application/json",
+            CorrelationId: "corr-xyz",
+            TraceId: "trace-xyz");
+
+        await store.StoreAsync(request, TestContext.Current.CancellationToken);
+
+        handler.LastHeaders.TryGetValue(Common.SharedKernel.Constants.Headers.CorrelationId, out string? correlationId);
+        handler.LastHeaders.TryGetValue(Common.SharedKernel.Constants.Headers.TraceId, out string? traceId);
+
+        correlationId.Should().Be("corr-xyz");
+        traceId.Should().Be("trace-xyz");
+    }
+
     private sealed class CountingHandler : HttpMessageHandler
     {
         private int _requestCount;
 
         public int RequestCount => _requestCount;
 
+        public IReadOnlyDictionary<string, string> LastHeaders { get; private set; } = new Dictionary<string, string>();
+
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             int count = Interlocked.Increment(ref _requestCount);
+            LastHeaders = request.Headers.ToDictionary(
+                pair => pair.Key,
+                pair => pair.Value.FirstOrDefault() ?? string.Empty,
+                StringComparer.OrdinalIgnoreCase);
+
             string responseJson = JsonSerializer.Serialize(new
             {
                 id = $"id-{count}",

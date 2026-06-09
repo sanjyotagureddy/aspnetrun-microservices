@@ -29,7 +29,7 @@ public class Program
 
         app.UseHttpsRedirection();
 
-        app.UseAppCallContextMiddleware<OrderAppCallContextMiddlewareBase>();
+        app.UseAppCallContextMiddleware<OrderAppCallContextMiddleware>();
 
         app.UseAuthorization();
 

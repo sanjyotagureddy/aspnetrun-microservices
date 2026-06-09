@@ -1,15 +1,18 @@
 ﻿using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Common.SharedKernel;
 using Common.SharedKernel.Exceptions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Primitives;
 
 namespace LogStore.Api.Infrastructure;
 
 internal sealed class PayloadProtectionService(
     HttpClient httpClient,
     IOptions<LogStorageOptions> options,
-    ILogger<PayloadProtectionService> logger) : ILogStorageService
+    ILogger<PayloadProtectionService> logger,
+    IHttpContextAccessor httpContextAccessor) : ILogStorageService
 {
     private readonly LogStorageOptions _options = options.Value;
 
@@ -26,8 +29,14 @@ internal sealed class PayloadProtectionService(
 
         var index = ResolveTargetIndex(request.IndexPrefix, document);
 
-        using StringContent content = new(document.ToJsonString(), Encoding.UTF8, "application/json");
-        using HttpResponseMessage response = await httpClient.PutAsync($"{index}/_doc/{id}", content, cancellationToken);
+        using HttpRequestMessage httpRequest = new(HttpMethod.Put, $"{index}/_doc/{id}")
+        {
+            Content = new StringContent(document.ToJsonString(), Encoding.UTF8, "application/json")
+        };
+
+        AddPropagationHeaders(httpRequest, httpContextAccessor.HttpContext);
+
+        using HttpResponseMessage response = await httpClient.SendAsync(httpRequest, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
             var details = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -59,8 +68,14 @@ internal sealed class PayloadProtectionService(
             }
         };
 
-        using StringContent content = new(searchQuery.ToJsonString(), Encoding.UTF8, "application/json");
-        using HttpResponseMessage response = await httpClient.PostAsync($"{searchIndexes}/_search", content, cancellationToken);
+        using HttpRequestMessage httpRequest = new(HttpMethod.Post, $"{searchIndexes}/_search")
+        {
+            Content = new StringContent(searchQuery.ToJsonString(), Encoding.UTF8, "application/json")
+        };
+
+        AddPropagationHeaders(httpRequest, httpContextAccessor.HttpContext);
+
+        using HttpResponseMessage response = await httpClient.SendAsync(httpRequest, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
             var details = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -133,12 +148,18 @@ internal sealed class PayloadProtectionService(
         }
 
         var logType = obj["logType"]?.GetValue<string>();
+        if (string.Equals(logType, "payload", StringComparison.OrdinalIgnoreCase))
+        {
+            return _options.PayloadIndexPrefix;
+        }
+
         if (string.Equals(logType, "infra", StringComparison.OrdinalIgnoreCase))
         {
             return _options.InfraIndexPrefix;
         }
 
-        if (string.Equals(logType, "messaging", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(logType, "messaging", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(logType, "event", StringComparison.OrdinalIgnoreCase))
         {
             return _options.MessagingIndexPrefix;
         }
@@ -191,10 +212,37 @@ internal sealed class PayloadProtectionService(
     private IEnumerable<string> BuildSearchPatterns()
     {
         yield return BuildPattern(_options.ApiIndexPrefix);
+        yield return BuildPattern(_options.PayloadIndexPrefix);
         yield return BuildPattern(_options.InfraIndexPrefix);
         yield return BuildPattern(_options.MessagingIndexPrefix);
     }
 
     private string BuildPattern(string prefix)
         => _options.UseDailyIndexes ? $"{prefix.TrimEnd('-')}-*" : prefix.TrimEnd('-');
+
+    private static void AddPropagationHeaders(HttpRequestMessage request, HttpContext? httpContext)
+    {
+        if (httpContext is null)
+        {
+            return;
+        }
+
+        CopyHeader(httpContext, request, Constants.Headers.CorrelationId);
+        CopyHeader(httpContext, request, Constants.Headers.ParentCorrelationId);
+        CopyHeader(httpContext, request, Constants.Headers.TraceId);
+        CopyHeader(httpContext, request, Constants.Headers.SpanId);
+        CopyHeader(httpContext, request, Constants.Headers.TenantId);
+        CopyHeader(httpContext, request, Constants.Headers.CallerService);
+    }
+
+    private static void CopyHeader(HttpContext source, HttpRequestMessage target, string headerName)
+    {
+        if (!source.Request.Headers.TryGetValue(headerName, out var values) || StringValues.IsNullOrEmpty(values))
+        {
+            return;
+        }
+
+        target.Headers.Remove(headerName);
+        target.Headers.TryAddWithoutValidation(headerName, values.ToString());
+    }
 }

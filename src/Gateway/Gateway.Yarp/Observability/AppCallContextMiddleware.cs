@@ -3,13 +3,16 @@ using Common.SharedKernel.Helpers;
 using Common.SharedKernel.Observability.Context;
 using Microsoft.Extensions.Primitives;
 
-namespace Inventory.Api.Observability;
+namespace Gateway.Yarp.Observability;
 
 internal sealed class AppCallContextMiddleware(RequestDelegate next)
     : AppCallContextMiddlewareBase<AppCallContext>(next, BuildContext)
 {
     protected override void ConfigureContext(HttpContext httpContext, AppCallContext context)
     {
+        httpContext.Items["app.call.context"] = context;
+        context.Items["serviceName"] = context.ServiceName;
+
         if (!string.IsNullOrWhiteSpace(context.TenantId))
         {
             context.Items["tenantId"] = context.TenantId;
@@ -22,8 +25,12 @@ internal sealed class AppCallContextMiddleware(RequestDelegate next)
     {
         Guard.Against.Null(httpContext);
 
-        string correlationId = GetHeader(httpContext, Constants.Headers.CorrelationId) ?? Guid.NewGuid().ToString();
+        string correlationId = GetHeader(httpContext, Constants.Headers.CorrelationId) ?? Guid.NewGuid().ToString("N");
+
+        // Ensure downstream proxied requests receive correlation headers even when client did not provide one.
+        httpContext.Request.Headers[Constants.Headers.CorrelationId] = correlationId;
         httpContext.Response.Headers.TryAdd(Constants.Headers.CorrelationId, correlationId);
+
         string? parentCorrelationId = GetHeader(httpContext, Constants.Headers.ParentCorrelationId);
         string? traceId = GetHeader(httpContext, Constants.Headers.TraceId);
         string? spanId = GetHeader(httpContext, Constants.Headers.SpanId);

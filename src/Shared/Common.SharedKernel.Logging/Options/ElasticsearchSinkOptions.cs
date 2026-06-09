@@ -10,6 +10,9 @@ public sealed record ElasticsearchSinkOptions
     // Base prefix for business/API logs. Final index uses daily suffix: <prefix>-yyyy.MM.dd.
     public string ApiIndexPrefix { get; set; } = "api-logs";
 
+    // Base prefix for protected payload documents. Final index uses daily suffix: <prefix>-yyyy.MM.dd.
+    public string PayloadIndexPrefix { get; set; } = "api-payload";
+
     // Base prefix for platform/framework/infra logs. Final index uses daily suffix: <prefix>-yyyy.MM.dd.
     public string InfraIndexPrefix { get; set; } = "infra-logs";
 

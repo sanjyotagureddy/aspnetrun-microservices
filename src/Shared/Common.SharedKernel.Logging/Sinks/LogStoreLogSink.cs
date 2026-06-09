@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using Common.SharedKernel;
 
 namespace Common.SharedKernel.Logging;
 
@@ -29,9 +30,26 @@ internal sealed class LogStoreLogSink(LogStoreSinkOptions options) : ILogSink, I
                 ["document"] = document
             };
 
-            using StringContent content = new(payload.ToJsonString(), Encoding.UTF8, "application/json");
-            using HttpResponseMessage response = await _httpClient.PostAsync(route, content, cancellationToken).ConfigureAwait(false);
+            using var request = new HttpRequestMessage(HttpMethod.Post, route)
+            {
+                Content = new StringContent(payload.ToJsonString(), Encoding.UTF8, "application/json")
+            };
+
+            AddHeader(request, Constants.Headers.CorrelationId, entry.CorrelationId);
+
+            using HttpResponseMessage response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
         }
+    }
+
+    private static void AddHeader(HttpRequestMessage request, string headerName, string? headerValue)
+    {
+        if (string.IsNullOrWhiteSpace(headerValue))
+        {
+            return;
+        }
+
+        request.Headers.Remove(headerName);
+        request.Headers.TryAddWithoutValidation(headerName, headerValue);
     }
 }

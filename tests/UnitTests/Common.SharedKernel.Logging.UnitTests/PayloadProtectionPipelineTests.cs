@@ -281,6 +281,29 @@ public sealed class PayloadProtectionPipelineTests
         root["authorization"]!.GetValue<string>().Should().Be(options.MaskValue);
     }
 
+    [Fact]
+    public void DefaultPayloadMaskingEngine_ShouldPreserveProductIdField()
+    {
+        DefaultPayloadMaskingEngine engine = new();
+        PayloadProtectionOptions options = new();
+        options.EnsureDefaults();
+
+        var payload = new
+        {
+            productId = "PRD-0f6f7a2f9d4e4f9f8a6d5c3b2a1e9d7c",
+            authorization = "Bearer abc.def.ghi"
+        };
+
+        PayloadProtectionResult result = engine.Apply(new PayloadProtectionRequest(payload, "unit-test"), options);
+
+        result.Success.Should().BeTrue();
+
+        string protectedPayload = result.ProtectedPayload.Should().BeOfType<string>().Subject;
+        JsonNode? root = JsonNode.Parse(protectedPayload);
+        root!["productId"]!.GetValue<string>().Should().Be("PRD-0f6f7a2f9d4e4f9f8a6d5c3b2a1e9d7c");
+        root["authorization"]!.GetValue<string>().Should().Be(options.MaskValue);
+    }
+
     private sealed class CircularNode
     {
         public string? Name { get; init; }

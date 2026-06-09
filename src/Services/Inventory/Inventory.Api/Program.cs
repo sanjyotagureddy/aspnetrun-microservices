@@ -1,4 +1,4 @@
-using Serilog;
+﻿using Serilog;
 using Common.SharedKernel.Observability.Context;
 
 using Inventory.Api.Observability;
@@ -27,7 +27,7 @@ public class Program
         WebApplication app = builder.Build();
 
         app.MapDefaultEndpoints();
-        app.UseSwaggerSupport("Inventory API");
+        app.UseSwaggerSupport("Inventory");
         app.UseForwardedHeaders();
         app.UseAppCallContextMiddleware<AppCallContextMiddleware>();
         app.UseExceptionHandler();

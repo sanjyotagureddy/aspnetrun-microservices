@@ -1,6 +1,19 @@
 @Gateway.Yarp_HostAddress = http://localhost:5237
+@Gateway.ApiKey = dev-gateway-key
 
-GET {{Gateway.Yarp_HostAddress}}/weatherforecast/
+GET {{Gateway.Yarp_HostAddress}}/health
+Accept: application/json
+
+###
+
+GET {{Gateway.Yarp_HostAddress}}/api/v1/products
+Accept: application/json
+
+###
+
+GET {{Gateway.Yarp_HostAddress}}/api/v1/orders
+X-Gateway-Key: {{Gateway.ApiKey}}
+x-correlationid: local-manual-test-001
 Accept: application/json
 
 ###

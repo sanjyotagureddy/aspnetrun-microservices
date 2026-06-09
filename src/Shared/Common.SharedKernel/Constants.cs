@@ -13,6 +13,7 @@ public static class Constants
         public const string TraceId = "x-traceid";
         public const string SpanId = "x-spanid";
         public const string ParentSpanId = "x-parent-spanid";
+        public const string ParentCorrelationId = "x-parent-correlation-id";
 
         // Multi-Tenancy & Identity
         public const string TenantId = "x-tenantid";

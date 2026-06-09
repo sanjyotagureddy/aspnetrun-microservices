@@ -38,6 +38,7 @@ internal sealed class ElasticsearchLogSink : ILogSink, IBulkLogSink
     private static readonly string[] EventCategoryPrefixes =
     [
         "event.",
+        "events.",
         "domain.event.",
         "business.event."
     ];
@@ -99,6 +100,7 @@ internal sealed class ElasticsearchLogSink : ILogSink, IBulkLogSink
     internal string ResolveIndexName(LogEntry entry)
     {
         string apiPrefix = NormalizePrefix(_options.ApiIndexPrefix, _options.IndexName, "api-logs");
+        string payloadPrefix = NormalizePrefix(_options.PayloadIndexPrefix, "api-payload", "api-payload");
         string infraPrefix = NormalizePrefix(_options.InfraIndexPrefix, "infra-logs", "infra-logs");
         string messagingPrefix = NormalizePrefix(_options.MessagingIndexPrefix, "messaging-log", "messaging-log");
         string auditPrefix = NormalizePrefix(_options.AuditIndexPrefix, "audit-log", "audit-log");
@@ -112,6 +114,10 @@ internal sealed class ElasticsearchLogSink : ILogSink, IBulkLogSink
         else if (_options.RouteAuditLogs && IsAuditLog(entry))
         {
             prefix = auditPrefix;
+        }
+        else if (IsPayloadLog(entry))
+        {
+            prefix = payloadPrefix;
         }
         else if (_options.RouteMessagingLogs && (IsMessagingLog(entry) || IsEventLog(entry)))
         {
@@ -194,7 +200,14 @@ internal sealed class ElasticsearchLogSink : ILogSink, IBulkLogSink
             return true;
         }
 
-        return HasLogType(entry, "event");
+        if (HasLogType(entry, "event"))
+        {
+            return true;
+        }
+
+        // Event logs emitted via generic information APIs may omit category/logType,
+        // but still include event semantic fields.
+        return HasAnyProperty(entry, "eventName", "eventVersion", "eventType");
     }
 
     private static bool IsAuditLog(LogEntry entry)
@@ -219,11 +232,35 @@ internal sealed class ElasticsearchLogSink : ILogSink, IBulkLogSink
         return HasLogType(entry, "security");
     }
 
+    private static bool IsPayloadLog(LogEntry entry)
+    {
+        return HasLogType(entry, "payload");
+    }
+
     private static bool HasLogType(LogEntry entry, string expected)
     {
         return entry.Properties is not null
                && entry.Properties.TryGetValue("logType", out object? logType)
                && string.Equals(logType?.ToString(), expected, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool HasAnyProperty(LogEntry entry, params string[] propertyNames)
+    {
+        if (entry.Properties is null)
+        {
+            return false;
+        }
+
+        foreach (string propertyName in propertyNames)
+        {
+            if (entry.Properties.TryGetValue(propertyName, out object? value)
+                && !string.IsNullOrWhiteSpace(value?.ToString()))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static string NormalizePrefix(string? value, string? fallback, string @default)

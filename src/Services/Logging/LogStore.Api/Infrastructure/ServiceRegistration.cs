@@ -21,6 +21,9 @@ internal static class ServiceRegistration
                     options.ApiIndexPrefix = string.IsNullOrWhiteSpace(openSearchSection["ApiIndexPrefix"])
                         ? "api-logs"
                         : openSearchSection["ApiIndexPrefix"]!;
+                    options.PayloadIndexPrefix = string.IsNullOrWhiteSpace(openSearchSection["PayloadIndexPrefix"])
+                        ? "api-payload"
+                        : openSearchSection["PayloadIndexPrefix"]!;
                     options.InfraIndexPrefix = string.IsNullOrWhiteSpace(openSearchSection["InfraIndexPrefix"])
                         ? "infra-logs"
                         : openSearchSection["InfraIndexPrefix"]!;
@@ -42,6 +45,8 @@ internal static class ServiceRegistration
                 LogStorageOptions options = serviceProvider.GetRequiredService<IOptions<LogStorageOptions>>().Value;
                 client.BaseAddress = options.Endpoint;
             });
+
+            services.AddHttpContextAccessor();
 
             services.AddExceptionHandler<GlobalExceptionHandler>();
             services.AddProblemDetails();

@@ -1,4 +1,4 @@
-namespace Common.SharedKernel.Logging;
+﻿namespace Common.SharedKernel.Logging;
 
 internal static class StrictMaskingFields
 {
@@ -12,10 +12,12 @@ internal static class StrictMaskingFields
         "traceparent",
         "topic",
         "messageid",
-        "routeTemplate",
+        "routetemplate",
         "requestpath",
         "requesturl",
         "endpoint",
+        "productid",
+        "event",
         "path"
     ];
 
@@ -88,7 +90,7 @@ internal static class StrictMaskingFields
     private static bool IsStrictField(string key, IReadOnlySet<string> strictFields)
     {
         string normalizedKey = NormalizeKey(key);
-        if (strictFields.Contains(normalizedKey))
+        if (strictFields.Contains(normalizedKey, StringComparer.OrdinalIgnoreCase))
         {
             return true;
         }

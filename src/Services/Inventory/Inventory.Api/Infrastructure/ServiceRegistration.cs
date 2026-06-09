@@ -26,18 +26,18 @@ internal static class ServiceRegistration
             services.AddHostedService<InventorySchemaInitializer>();
 
             IConfigurationSection loggingSection = configuration.GetSection("Logging:CommonSharedKernel");
-            string loggingServiceName = loggingSection["ServiceName"] ?? "inventory-api";
-            bool hasMinimumLevel = Enum.TryParse(
+            var loggingServiceName = loggingSection["ServiceName"] ?? "inventory-api";
+            var hasMinimumLevel = Enum.TryParse(
                 loggingSection["MinimumLevel"],
                 true,
                 out Common.SharedKernel.Logging.LogLevel configuredMinimumLevel);
             Common.SharedKernel.Logging.LogLevel minimumLevel = hasMinimumLevel
                 ? configuredMinimumLevel
                 : Common.SharedKernel.Logging.LogLevel.Trace;
-            string[] enabledLogTypes = loggingSection.GetSection("EnabledLogTypes").Get<string[]>()
-                ?? ["api", "trace", "event"];
+            var enabledLogTypes = loggingSection.GetSection("EnabledLogTypes").Get<string[]>()
+                                  ?? ["api", "trace", "event"];
 
-            bool hasConsoleFormatter = Enum.TryParse(
+            var hasConsoleFormatter = Enum.TryParse(
                 loggingSection["Console:FormatterKind"],
                 true,
                 out LogFormatterKind configuredConsoleFormatter);
@@ -46,24 +46,27 @@ internal static class ServiceRegistration
                 : LogFormatterKind.Json;
 
             IConfigurationSection openSearchSection = loggingSection.GetSection("OpenSearch");
-            bool openSearchEnabled = bool.TryParse(openSearchSection["Enabled"], out bool enabled) && enabled;
-            bool hasOpenSearchEndpoint = Uri.TryCreate(openSearchSection["Endpoint"], UriKind.Absolute, out Uri? openSearchEndpoint);
-            string openSearchApiIndexPrefix = string.IsNullOrWhiteSpace(openSearchSection["ApiIndexPrefix"])
+            var openSearchEnabled = bool.TryParse(openSearchSection["Enabled"], out var enabled) && enabled;
+            var hasOpenSearchEndpoint = Uri.TryCreate(openSearchSection["Endpoint"], UriKind.Absolute, out Uri? openSearchEndpoint);
+            var openSearchApiIndexPrefix = string.IsNullOrWhiteSpace(openSearchSection["ApiIndexPrefix"])
                 ? "api-logs"
                 : openSearchSection["ApiIndexPrefix"]!;
-            string openSearchInfraIndexPrefix = string.IsNullOrWhiteSpace(openSearchSection["InfraIndexPrefix"])
+            var openSearchPayloadIndexPrefix = string.IsNullOrWhiteSpace(openSearchSection["PayloadIndexPrefix"])
+                ? "api-payload"
+                : openSearchSection["PayloadIndexPrefix"]!;
+            var openSearchInfraIndexPrefix = string.IsNullOrWhiteSpace(openSearchSection["InfraIndexPrefix"])
                 ? "infra-logs"
                 : openSearchSection["InfraIndexPrefix"]!;
-            string openSearchMessagingIndexPrefix = string.IsNullOrWhiteSpace(openSearchSection["MessagingIndexPrefix"])
+            var openSearchMessagingIndexPrefix = string.IsNullOrWhiteSpace(openSearchSection["MessagingIndexPrefix"])
                 ? "messaging-log"
                 : openSearchSection["MessagingIndexPrefix"]!;
-            bool useDailyIndexes = !bool.TryParse(openSearchSection["UseDailyIndexes"], out bool configuredUseDailyIndexes)
-                || configuredUseDailyIndexes;
+            var useDailyIndexes = !bool.TryParse(openSearchSection["UseDailyIndexes"], out var configuredUseDailyIndexes)
+                                  || configuredUseDailyIndexes;
 
             IConfigurationSection logStoreSection = loggingSection.GetSection("LogStore");
-            bool logStoreEnabled = bool.TryParse(logStoreSection["Enabled"], out bool configuredLogStoreEnabled) && configuredLogStoreEnabled;
-            bool hasLogStoreEndpoint = Uri.TryCreate(logStoreSection["Endpoint"], UriKind.Absolute, out Uri? logStoreEndpoint);
-            string logStoreCreateRoutePath = string.IsNullOrWhiteSpace(logStoreSection["CreateRoutePath"])
+            var logStoreEnabled = bool.TryParse(logStoreSection["Enabled"], out var configuredLogStoreEnabled) && configuredLogStoreEnabled;
+            var hasLogStoreEndpoint = Uri.TryCreate(logStoreSection["Endpoint"], UriKind.Absolute, out Uri? logStoreEndpoint);
+            var logStoreCreateRoutePath = string.IsNullOrWhiteSpace(logStoreSection["CreateRoutePath"])
                 ? "/api/v1/logs"
                 : logStoreSection["CreateRoutePath"]!;
 
@@ -80,6 +83,7 @@ internal static class ServiceRegistration
                     {
                         opts.Endpoint = openSearchEndpoint;
                         opts.ApiIndexPrefix = openSearchApiIndexPrefix;
+                        opts.PayloadIndexPrefix = openSearchPayloadIndexPrefix;
                         opts.InfraIndexPrefix = openSearchInfraIndexPrefix;
                         opts.MessagingIndexPrefix = openSearchMessagingIndexPrefix;
                         opts.UseDailyIndexes = useDailyIndexes;

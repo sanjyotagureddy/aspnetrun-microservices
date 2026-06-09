@@ -1,10 +1,22 @@
-﻿namespace Products.Api.Infrastructure;
+﻿using System.Net.Http.Json;
+using Common.SharedKernel;
+using Common.SharedKernel.Observability.Context;
+
+namespace Products.Api.Infrastructure;
 
 internal sealed class InventoryStockAdapter(HttpClient httpClient, ILogger<InventoryStockAdapter> logger) : IInventoryStockAdapter
 {
     public async Task InitializeAsync(Guid productId, int stockQuantity, CancellationToken cancellationToken)
     {
-        using HttpResponseMessage response = await httpClient.PutAsJsonAsync($"/api/v1/inventory/{productId}/initialize", new InitializeInventoryRequest(stockQuantity), cancellationToken);
+        using JsonContent content = JsonContent.Create(new InitializeInventoryRequest(stockQuantity));
+        using var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/inventory/{productId}/initialize")
+        {
+            Content = content
+        };
+
+        AddObservabilityHeaders(request);
+
+        using HttpResponseMessage response = await httpClient.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();
     }
 
@@ -12,8 +24,14 @@ internal sealed class InventoryStockAdapter(HttpClient httpClient, ILogger<Inven
     {
         try
         {
-            InventoryStockResponse? response = await httpClient.GetFromJsonAsync<InventoryStockResponse>($"/api/v1/inventory/{productId}", cancellationToken);
-            return response?.StockQuantity;
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/inventory/{productId}");
+            AddObservabilityHeaders(request);
+
+            using HttpResponseMessage response = await httpClient.SendAsync(request, cancellationToken);
+            response.EnsureSuccessStatusCode();
+
+            InventoryStockResponse? payload = await response.Content.ReadFromJsonAsync<InventoryStockResponse>(cancellationToken);
+            return payload?.StockQuantity;
         }
         catch (OperationCanceledException)
         {
@@ -37,10 +55,15 @@ internal sealed class InventoryStockAdapter(HttpClient httpClient, ILogger<Inven
 
         try
         {
-            using HttpResponseMessage response = await httpClient.PostAsJsonAsync(
-                "/api/v1/inventory/batch",
-                new InventoryBatchRequest(distinctProductIds),
-                cancellationToken);
+            using JsonContent content = JsonContent.Create(new InventoryBatchRequest(distinctProductIds));
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/inventory/batch")
+            {
+                Content = content
+            };
+
+            AddObservabilityHeaders(request);
+
+            using HttpResponseMessage response = await httpClient.SendAsync(request, cancellationToken);
 
             response.EnsureSuccessStatusCode();
 
@@ -69,4 +92,34 @@ internal sealed class InventoryStockAdapter(HttpClient httpClient, ILogger<Inven
     private sealed record InventoryBatchRequest(IReadOnlyCollection<Guid> ProductIds);
 
     private sealed record InventoryBatchResponse(IReadOnlyDictionary<Guid, int> StockByProductId);
+
+    private static void AddObservabilityHeaders(HttpRequestMessage request)
+    {
+        AppCallContextBase? appContext = AppCallContextBase.Current;
+        if (appContext is null)
+        {
+            return;
+        }
+
+        AddHeader(request, Constants.Headers.CorrelationId, appContext.CorrelationId);
+        AddHeader(request, Constants.Headers.ParentCorrelationId, appContext.ParentCorrelationId);
+        AddHeader(request, Constants.Headers.TraceId, appContext.TraceId);
+        AddHeader(request, Constants.Headers.SpanId, appContext.SpanId);
+
+        if (appContext.Headers.TryGetValue(Constants.Headers.TenantId, out string? tenantId))
+        {
+            AddHeader(request, Constants.Headers.TenantId, tenantId);
+        }
+    }
+
+    private static void AddHeader(HttpRequestMessage request, string headerName, string? headerValue)
+    {
+        if (string.IsNullOrWhiteSpace(headerValue))
+        {
+            return;
+        }
+
+        request.Headers.Remove(headerName);
+        request.Headers.TryAddWithoutValidation(headerName, headerValue);
+    }
 }

@@ -1,4 +1,12 @@
 ﻿
+using System.Threading.RateLimiting;
+using Common.SharedKernel.Observability.Context;
+using Gateway.Yarp.Observability;
+using Gateway.Yarp.Security;
+
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.RateLimiting;
+
 namespace Gateway.Yarp;
 
 public class Program
@@ -9,7 +17,44 @@ public class Program
         builder.AddServiceDefaults();
 
         // Add services to the container.
+        builder.Services.AddAuthentication(ApiKeyAuthenticationHandler.SchemeName)
+            .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(
+                ApiKeyAuthenticationHandler.SchemeName,
+                _ =>
+                {
+                });
+
         builder.Services.AddAuthorization();
+        builder.Services.AddAuthorizationBuilder()
+            .AddPolicy("GatewayApiKeyPolicy", policy =>
+            {
+                policy.AddAuthenticationSchemes(ApiKeyAuthenticationHandler.SchemeName);
+                policy.RequireAuthenticatedUser();
+            });
+
+        builder.Services.AddRateLimiter(options =>
+        {
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+            options.AddFixedWindowLimiter("public-read", limiterOptions =>
+            {
+                limiterOptions.PermitLimit = 300;
+                limiterOptions.Window = TimeSpan.FromMinutes(1);
+                limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+                limiterOptions.QueueLimit = 0;
+            });
+
+            options.AddFixedWindowLimiter("protected-write", limiterOptions =>
+            {
+                limiterOptions.PermitLimit = 100;
+                limiterOptions.Window = TimeSpan.FromMinutes(1);
+                limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+                limiterOptions.QueueLimit = 0;
+            });
+        });
+
+        builder.Services.AddReverseProxy()
+            .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
 
         // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
         builder.Services.AddOpenApi();
@@ -26,26 +71,12 @@ public class Program
 
         app.UseHttpsRedirection();
 
+        app.UseAppCallContextMiddleware<AppCallContextMiddleware>();
+        app.UseAuthentication();
+        app.UseRateLimiter();
         app.UseAuthorization();
 
-        var summaries = new[]
-        {
-            "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-        };
-
-        app.MapGet("/weatherforecast", (HttpContext httpContext) =>
-        {
-            var forecast =  Enumerable.Range(1, 5).Select(index =>
-                new WeatherForecast
-                {
-                    Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-                    TemperatureC = Random.Shared.Next(-20, 55),
-                    Summary = summaries[Random.Shared.Next(summaries.Length)]
-                })
-                .ToArray();
-            return forecast;
-        })
-        .WithName("GetWeatherForecast");
+        app.MapReverseProxy();
 
         app.Run();
     }

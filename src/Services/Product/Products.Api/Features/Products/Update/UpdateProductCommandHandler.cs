@@ -1,6 +1,7 @@
 ﻿using Common.SharedKernel.Messaging;
 using Common.SharedKernel.Observability.Context;
 using Products.Api.Features.Products.Events;
+using Common.SharedKernel;
 
 namespace Products.Api.Features.Products.Update;
 
@@ -40,7 +41,7 @@ internal sealed class UpdateProductCommandHandler(
                 metadata.CorrelationId = appContext?.CorrelationId;
                 metadata.TraceId = appContext?.TraceId;
                 metadata.SpanId = appContext?.SpanId;
-                metadata.TenantId = appContext?.Headers.TryGetValue("X-Tenant-Id", out var tenantId) == true ? tenantId : null;
+                metadata.TenantId = ResolveTenantId(appContext);
                 metadata.Headers["Source"] = "products-api";
                 metadata.Headers["Entity"] = nameof(Product);
                 metadata.Headers["EventType"] = nameof(ProductUpdatedIntegrationEvent);
@@ -59,5 +60,17 @@ internal sealed class UpdateProductCommandHandler(
             cancellationToken);
 
         return Result<ProductResponse>.Success(normalizedProduct.ToResponse(stockQuantity));
+    }
+
+    private static string? ResolveTenantId(AppCallContextBase? appContext)
+    {
+        if (appContext?.Headers is null)
+        {
+            return null;
+        }
+
+        return appContext.Headers.TryGetValue(Constants.Headers.TenantId, out string? tenantId)
+            ? tenantId
+            : null;
     }
 }

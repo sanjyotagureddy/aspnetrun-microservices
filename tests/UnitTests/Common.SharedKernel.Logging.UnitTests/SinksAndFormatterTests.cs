@@ -1,4 +1,11 @@
-﻿using System.Globalization;
+﻿using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+using FluentAssertions;
+using Xunit;
 
 namespace Common.SharedKernel.Logging.UnitTests;
 
@@ -188,6 +195,87 @@ public sealed class SinksAndFormatterTests
         string index = sink.ResolveIndexName(entry);
 
         index.Should().Be("messaging-log-2026.06.07");
+    }
+
+    [Fact]
+    public void ElasticsearchLogSink_ShouldRoutePluralEventsCategory_ToMessagingLogsDailyIndex()
+    {
+        ElasticsearchLogSink sink = new(new ElasticsearchSinkOptions
+        {
+            Endpoint = new Uri("http://localhost:9200"),
+            MessagingIndexPrefix = "messaging-log",
+            UseDailyIndexes = true,
+            RouteMessagingLogs = true
+        });
+
+        LogEntry entry = LogEntry.Create(
+            LogLevel.Information,
+            "products-api",
+            "Products.Api.Features.Products.PublishEvent",
+            "events.product.updated",
+            "product updated event",
+            DateTimeOffset.Parse("2026-06-07T10:00:00Z", CultureInfo.InvariantCulture));
+
+        string index = sink.ResolveIndexName(entry);
+
+        index.Should().Be("messaging-log-2026.06.07");
+    }
+
+    [Fact]
+    public void ElasticsearchLogSink_ShouldRouteEventMetadataOnlyLog_ToMessagingLogsDailyIndex()
+    {
+        ElasticsearchLogSink sink = new(new ElasticsearchSinkOptions
+        {
+            Endpoint = new Uri("http://localhost:9200"),
+            MessagingIndexPrefix = "messaging-log",
+            UseDailyIndexes = true,
+            RouteMessagingLogs = true
+        });
+
+        LogEntry entry = LogEntry.Create(
+            LogLevel.Information,
+            "products-api",
+            "Products.Api.Features.Products.PublishEvent",
+            null,
+            "product updated event",
+            DateTimeOffset.Parse("2026-06-07T10:00:00Z", CultureInfo.InvariantCulture),
+            properties: new Dictionary<string, object?>
+            {
+                ["eventName"] = "ProductUpdated",
+                ["eventVersion"] = "1"
+            });
+
+        string index = sink.ResolveIndexName(entry);
+
+        index.Should().Be("messaging-log-2026.06.07");
+    }
+
+    [Fact]
+    public void ElasticsearchLogSink_ShouldRoutePayloadLog_ToPayloadDailyIndex()
+    {
+        ElasticsearchLogSink sink = new(new ElasticsearchSinkOptions
+        {
+            Endpoint = new Uri("http://localhost:9200"),
+            ApiIndexPrefix = "api-logs",
+            PayloadIndexPrefix = "api-payload",
+            UseDailyIndexes = true
+        });
+
+        LogEntry entry = LogEntry.Create(
+            LogLevel.Information,
+            "products-api",
+            "Products.Api.Features.Products.GetProduct",
+            "request.payload",
+            "payload stored",
+            DateTimeOffset.Parse("2026-06-07T10:00:00Z", CultureInfo.InvariantCulture),
+            properties: new Dictionary<string, object?>
+            {
+                ["logType"] = "payload"
+            });
+
+        string index = sink.ResolveIndexName(entry);
+
+        index.Should().Be("api-payload-2026.06.07");
     }
 
     [Fact]

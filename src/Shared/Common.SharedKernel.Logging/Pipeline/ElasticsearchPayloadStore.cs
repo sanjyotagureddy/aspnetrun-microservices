@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text.Json.Nodes;
+using Common.SharedKernel;
 
 namespace Common.SharedKernel.Logging;
 
@@ -31,7 +32,15 @@ internal sealed class ElasticsearchPayloadStore(ElasticsearchSinkOptions options
 
         using StringContent content = new(document.ToJsonString(), Encoding.UTF8, "application/json");
         Uri docUri = new(_options.Endpoint, $"/{index}/_doc/{id}");
-        using HttpResponseMessage response = await _httpClient.PutAsync(docUri, content, cancellationToken).ConfigureAwait(false);
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Put, docUri)
+        {
+            Content = content
+        };
+
+        AddHeader(httpRequest, Constants.Headers.CorrelationId, request.CorrelationId);
+        AddHeader(httpRequest, Constants.Headers.TraceId, request.TraceId);
+
+        using HttpResponseMessage response = await _httpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
 
         return new PayloadStoreWriteResult(
@@ -45,7 +54,9 @@ internal sealed class ElasticsearchPayloadStore(ElasticsearchSinkOptions options
 
     private string BuildPayloadIndexName()
     {
-        string prefix = "api-payload";
+        string prefix = string.IsNullOrWhiteSpace(_options.PayloadIndexPrefix)
+            ? "api-payload"
+            : _options.PayloadIndexPrefix.Trim().TrimEnd('-');
 
         if (!_options.UseDailyIndexes)
         {
@@ -75,5 +86,16 @@ internal sealed class ElasticsearchPayloadStore(ElasticsearchSinkOptions options
 
         return JsonSerializer.SerializeToNode(protectedPayload)
                ?? JsonValue.Create(string.Empty);
+    }
+
+    private static void AddHeader(HttpRequestMessage request, string headerName, string? headerValue)
+    {
+        if (string.IsNullOrWhiteSpace(headerValue))
+        {
+            return;
+        }
+
+        request.Headers.Remove(headerName);
+        request.Headers.TryAddWithoutValidation(headerName, headerValue);
     }
 }

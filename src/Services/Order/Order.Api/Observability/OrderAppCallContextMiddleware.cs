@@ -1,9 +1,11 @@
-using Common.SharedKernel.Observability.Context;
+using Common.SharedKernel;
 using Common.SharedKernel.Helpers;
+using Common.SharedKernel.Observability.Context;
+using Microsoft.Extensions.Primitives;
 
 namespace Order.Api.Observability;
 
-internal sealed class OrderAppCallContextMiddlewareBase(RequestDelegate next)
+internal sealed class OrderAppCallContextMiddleware(RequestDelegate next)
     : AppCallContextMiddlewareBase<OrderAppCallContext>(next, BuildContext)
 {
     protected override void ConfigureContext(HttpContext httpContext, OrderAppCallContext context)
@@ -22,11 +24,13 @@ internal sealed class OrderAppCallContextMiddlewareBase(RequestDelegate next)
     {
         Guard.Against.Null(httpContext);
 
-        string correlationId = GetHeader(httpContext, "X-Correlation-Id") ?? Guid.NewGuid().ToString("N");
-        string? parentCorrelationId = GetHeader(httpContext, "X-Parent-Correlation-Id");
-        string? traceId = GetHeader(httpContext, "X-Trace-Id");
-        string? spanId = GetHeader(httpContext, "X-Span-Id");
-        string? tenantId = GetHeader(httpContext, "X-Tenant-Id");
+        string correlationId = GetHeader(httpContext, Constants.Headers.CorrelationId) ?? Guid.NewGuid().ToString("N");
+        httpContext.Response.Headers.TryAdd(Constants.Headers.CorrelationId, correlationId);
+
+        string? parentCorrelationId = GetHeader(httpContext, Constants.Headers.ParentCorrelationId);
+        string? traceId = GetHeader(httpContext, Constants.Headers.TraceId);
+        string? spanId = GetHeader(httpContext, Constants.Headers.SpanId);
+        string? tenantId = GetHeader(httpContext, Constants.Headers.TenantId);
 
         return new OrderAppCallContext(
             correlationId,
@@ -43,6 +47,9 @@ internal sealed class OrderAppCallContextMiddlewareBase(RequestDelegate next)
 
     private static string? GetHeader(HttpContext httpContext, string headerName)
     {
-        return httpContext.Request.Headers.TryGetValue(headerName, out var values) ? values.ToString() : null;
+        return httpContext.Request.Headers.TryGetValue(headerName, out StringValues values)
+            && !StringValues.IsNullOrEmpty(values)
+            ? values.ToString()
+            : null;
     }
 }

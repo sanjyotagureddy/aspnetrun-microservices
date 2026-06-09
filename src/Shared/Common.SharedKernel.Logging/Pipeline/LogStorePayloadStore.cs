@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text.Json.Nodes;
+using Common.SharedKernel;
 
 namespace Common.SharedKernel.Logging;
 
@@ -39,8 +40,15 @@ internal sealed class LogStorePayloadStore(LogStoreSinkOptions options) : IPaylo
         };
 
         Uri route = new(_resolvedEndpoint, _options.CreateRoutePath);
-        using StringContent content = new(payload.ToJsonString(), Encoding.UTF8, "application/json");
-        using HttpResponseMessage response = await _httpClient.PostAsync(route, content, cancellationToken).ConfigureAwait(false);
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, route)
+        {
+            Content = new StringContent(payload.ToJsonString(), Encoding.UTF8, "application/json")
+        };
+
+        AddHeader(httpRequest, Constants.Headers.CorrelationId, request.CorrelationId);
+        AddHeader(httpRequest, Constants.Headers.TraceId, request.TraceId);
+
+        using HttpResponseMessage response = await _httpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
 
         string json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
@@ -114,5 +122,16 @@ internal sealed class LogStorePayloadStore(LogStoreSinkOptions options) : IPaylo
 
         Uri getUri = new(_resolvedEndpoint, $"{basePath}/{id}");
         return getUri.ToString();
+    }
+
+    private static void AddHeader(HttpRequestMessage request, string headerName, string? headerValue)
+    {
+        if (string.IsNullOrWhiteSpace(headerValue))
+        {
+            return;
+        }
+
+        request.Headers.Remove(headerName);
+        request.Headers.TryAddWithoutValidation(headerName, headerValue);
     }
 }
