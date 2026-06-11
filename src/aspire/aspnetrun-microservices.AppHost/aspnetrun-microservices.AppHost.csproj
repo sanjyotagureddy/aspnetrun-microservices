@@ -20,7 +20,6 @@
     <ProjectReference Include="..\..\Services\Cart\Cart.Api\Cart.Api.csproj" />
     <ProjectReference Include="..\..\Services\Discount\Discount.Grpc\Discount.Grpc.csproj" />
     <ProjectReference Include="..\..\Services\Inventory\Inventory.Api\Inventory.Api.csproj" />
-    <ProjectReference Include="..\..\Services\Logging\LogStore.Api\LogStore.Api.csproj" />
     <ProjectReference Include="..\..\Services\Order\Order.Api\Order.Api.csproj" />
     <ProjectReference Include="..\..\Services\Product\Products.Api\Products.Api.csproj" />
   </ItemGroup>

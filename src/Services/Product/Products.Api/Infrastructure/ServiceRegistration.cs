@@ -64,13 +64,6 @@ internal static class ServiceRegistration
             bool useDailyIndexes = !bool.TryParse(openSearchSection["UseDailyIndexes"], out bool configuredUseDailyIndexes)
                 || configuredUseDailyIndexes;
 
-            IConfigurationSection logStoreSection = loggingSection.GetSection("LogStore");
-            bool logStoreEnabled = bool.TryParse(logStoreSection["Enabled"], out bool configuredLogStoreEnabled) && configuredLogStoreEnabled;
-            bool hasLogStoreEndpoint = Uri.TryCreate(logStoreSection["Endpoint"], UriKind.Absolute, out Uri? logStoreEndpoint);
-            string logStoreCreateRoutePath = string.IsNullOrWhiteSpace(logStoreSection["CreateRoutePath"])
-                ? "/api/v1/logs"
-                : logStoreSection["CreateRoutePath"]!;
-
             services.AddCommonSharedKernelLogging(builder =>
             {
                 builder.SetServiceName(loggingServiceName);
@@ -87,15 +80,6 @@ internal static class ServiceRegistration
                         opts.InfraIndexPrefix = openSearchInfraIndexPrefix;
                         opts.MessagingIndexPrefix = openSearchMessagingIndexPrefix;
                         opts.UseDailyIndexes = useDailyIndexes;
-                    });
-                }
-
-                if (logStoreEnabled && hasLogStoreEndpoint && logStoreEndpoint is not null)
-                {
-                    builder.UseLogStore(opts =>
-                    {
-                        opts.Endpoint = logStoreEndpoint;
-                        opts.CreateRoutePath = logStoreCreateRoutePath;
                     });
                 }
             });
