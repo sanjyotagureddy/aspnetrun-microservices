@@ -16,25 +16,21 @@ public sealed class AdvancedCoverageTests
         Task loop = dispatcher.RunAsync(cts.Token);
         CancellationToken token = TestContext.Current.CancellationToken;
 
-        await logger.LogInformationAsync("info", category: null, properties: null, cancellationToken: token);
-        await logger.LogErrorAsync(new InvalidOperationException("e1"), cancellationToken: token);
-        await logger.LogCriticalAsync(new Exception("e2"), cancellationToken: token);
-        await logger.LogErrorAsync("error-msg", "error.cat", new Exception("e3"), cancellationToken: token);
-        await logger.LogCriticalAsync("critical-msg", "critical.cat", new Exception("e4"), cancellationToken: token);
-        await logger.LogApiAsync("api-msg", cancellationToken: token);
-        await logger.LogEventAsync("evt", cancellationToken: token);
-        await logger.LogAuditAsync("aud", cancellationToken: token);
-        await logger.LogSecurityAsync("sec", cancellationToken: token);
+        await logger.LogTraceAsync(new TraceLog { Message = "info" }, cancellationToken: token);
+        await logger.LogErrorAsync(new ErrorLog { Message = "error-msg", Category = "error.cat", Exception = new InvalidOperationException("e1") }, cancellationToken: token);
+        await logger.LogApiAsync(
+            new ApiLog { Message = "api-msg", Method = "GET", Path = "/products", StatusCode = 200, DurationMs = 5 },
+            cancellationToken: token);
+        await logger.LogTraceAsync(new TraceLog { Message = "evt", Category = "event" }, LogType.Event, token);
+        await logger.LogTraceAsync(new TraceLog { Message = "aud", Category = "audit" }, LogType.Audit, token);
+        await logger.LogTraceAsync(new TraceLog { Message = "sec", Category = "security" }, LogType.Security, token);
 
-        await sink.WaitForCountAsync(9, TimeSpan.FromSeconds(5));
+        await sink.WaitForCountAsync(6, TimeSpan.FromSeconds(5));
 
         cts.Cancel();
         await loop;
 
-        sink.Entries.Should().Contain(e => e.Category == "exception");
-        sink.Entries.Should().Contain(e => e.Category == "fatal");
         sink.Entries.Should().Contain(e => e.Category == "error.cat");
-        sink.Entries.Should().Contain(e => e.Category == "critical.cat");
         sink.Entries.Should().Contain(e => e.Category == "api");
         sink.Entries.Should().Contain(e => e.Category == "event");
         sink.Entries.Should().Contain(e => e.Category == "audit");
@@ -42,7 +38,7 @@ public sealed class AdvancedCoverageTests
         sink.Entries.Any(e =>
             e.Properties is not null
             && e.Properties.TryGetValue("logType", out object? value)
-            && string.Equals(value?.ToString(), "api", StringComparison.OrdinalIgnoreCase))
+            && string.Equals(value?.ToString(), "app", StringComparison.OrdinalIgnoreCase))
             .Should().BeTrue();
         sink.Entries.Any(e =>
                 e.Properties is not null

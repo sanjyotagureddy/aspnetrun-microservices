@@ -1,4 +1,5 @@
 ﻿using Common.SharedKernel.Messaging;
+using Common.SharedKernel.Logging;
 using Common.SharedKernel.Observability.Context;
 using Products.Api.Features.Products.Events;
 
@@ -41,14 +42,18 @@ internal sealed class DeleteProductCommandHandler(
             },
             cancellationToken);
 
-        await logger.LogInformationAsync(
-            "Product deleted",
-            new Dictionary<string, object?>
+        await logger.LogTraceAsync(
+            new TraceLog
             {
-                ["productId"] = request.Id,
-                ["eventId"] = productDeleted.EventId,
-                ["topic"] = ProductDeletedIntegrationEvent.Topic
+                Message = "Product deleted",
+                Context = new Dictionary<string, object?>
+                {
+                    ["productId"] = request.Id,
+                    ["eventId"] = productDeleted.EventId,
+                    ["topic"] = ProductDeletedIntegrationEvent.Topic
+                }
             },
+            LogType.Application,
             cancellationToken);
 
         return Result.Success();

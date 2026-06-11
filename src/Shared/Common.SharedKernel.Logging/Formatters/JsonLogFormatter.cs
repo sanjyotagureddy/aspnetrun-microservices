@@ -37,8 +37,7 @@ internal sealed class JsonLogFormatter : ILogFormatter
             payload["exception"] = new
             {
                 type = entry.Exception.GetType().FullName,
-                entry.Exception.Message,
-                stackTrace = entry.Exception.StackTrace
+                entry.Exception.Message
             };
         }
 

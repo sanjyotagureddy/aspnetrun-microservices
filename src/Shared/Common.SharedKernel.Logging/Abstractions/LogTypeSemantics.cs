@@ -11,7 +11,7 @@ public static class LogTypeSemantics
             "serviceName",
             "message",
             "logType",
-            "level",
+            "logCategory",
             "environment",
             "correlationId"
         };
@@ -23,7 +23,7 @@ public static class LogTypeSemantics
             "serviceName",
             "message",
             "logType",
-            "level",
+            "logCategory",
             "environment",
             "correlationId"
         };
@@ -35,7 +35,7 @@ public static class LogTypeSemantics
             "serviceName",
             "message",
             "logType",
-            "level",
+            "logCategory",
             "environment",
             "correlationId",
             "method",
@@ -51,54 +51,10 @@ public static class LogTypeSemantics
             "serviceName",
             "message",
             "logType",
-            "level",
+            "logCategory",
             "environment",
             "correlationId",
             "exceptionType"
-        };
-
-    public static readonly IReadOnlySet<string> EventRequiredFields =
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "timestampUtc",
-            "serviceName",
-            "message",
-            "logType",
-            "level",
-            "environment",
-            "correlationId",
-            "eventName",
-            "eventVersion"
-        };
-
-    public static readonly IReadOnlySet<string> AuditRequiredFields =
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "timestampUtc",
-            "serviceName",
-            "message",
-            "logType",
-            "level",
-            "environment",
-            "correlationId",
-            "action",
-            "resourceType",
-            "resourceId",
-            "performedBy"
-        };
-
-    public static readonly IReadOnlySet<string> SecurityRequiredFields =
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "timestampUtc",
-            "serviceName",
-            "message",
-            "logType",
-            "level",
-            "environment",
-            "correlationId",
-            "action",
-            "result"
         };
 
     public static readonly IReadOnlySet<string> TraceRecommendedFields =
@@ -141,80 +97,27 @@ public static class LogTypeSemantics
             "traceId",
             "spanId",
             "exceptionMessage",
-            "stackTrace",
             "errorCode",
-            "eventCode",
-            "severity",
             "category",
-            "source",
-            "innerException",
             "tenantId",
             "userId"
         };
 
-    public static readonly IReadOnlySet<string> EventRecommendedFields =
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    public static IReadOnlySet<string> GetRequiredFields(LogCategory logCategory)
+        => logCategory switch
         {
-            "eventId",
-            "aggregateId",
-            "aggregateType",
-            "causationId",
-            "topic",
-            "partition",
-            "offset",
-            "tenantId",
-            "traceId",
-            "spanId"
-        };
-
-    public static readonly IReadOnlySet<string> AuditRecommendedFields =
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "traceId",
-            "spanId",
-            "tenantId",
-            "ipAddress",
-            "userAgent",
-            "result",
-            "beforeStatePayloadRef",
-            "afterStatePayloadRef"
-        };
-
-    public static readonly IReadOnlySet<string> SecurityRecommendedFields =
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "traceId",
-            "spanId",
-            "userId",
-            "tenantId",
-            "ipAddress",
-            "userAgent",
-            "resource",
-            "reason",
-            "riskLevel"
-        };
-
-    public static IReadOnlySet<string> GetRequiredFields(LogType logType)
-        => logType switch
-        {
-            LogType.Trace => TraceRequiredFields,
-            LogType.Api => ApiRequiredFields,
-            LogType.Error => ErrorRequiredFields,
-            LogType.Event => EventRequiredFields,
-            LogType.Audit => AuditRequiredFields,
-            LogType.Security => SecurityRequiredFields,
+            LogCategory.Trace => TraceRequiredFields,
+            LogCategory.Api => ApiRequiredFields,
+            LogCategory.Error => ErrorRequiredFields,
             _ => CommonRequiredFields
         };
 
-    public static IReadOnlySet<string> GetRecommendedFields(LogType logType)
-        => logType switch
+    public static IReadOnlySet<string> GetRecommendedFields(LogCategory logCategory)
+        => logCategory switch
         {
-            LogType.Trace => TraceRecommendedFields,
-            LogType.Api => ApiRecommendedFields,
-            LogType.Error => ErrorRecommendedFields,
-            LogType.Event => EventRecommendedFields,
-            LogType.Audit => AuditRecommendedFields,
-            LogType.Security => SecurityRecommendedFields,
+            LogCategory.Trace => TraceRecommendedFields,
+            LogCategory.Api => ApiRecommendedFields,
+            LogCategory.Error => ErrorRecommendedFields,
             _ => EmptyFields
         };
 }

@@ -101,7 +101,7 @@ public abstract class RequestLoggingMiddlewareBase(
 
             if (capturedException is null)
             {
-                completionProperties["logType"] = LogType.Api.ToString().ToLowerInvariant();
+                completionProperties["logType"] = "app";
 
                 if (!string.IsNullOrWhiteSpace(requestPayloadCandidate))
                 {
@@ -135,15 +135,25 @@ public abstract class RequestLoggingMiddlewareBase(
 
                 EnrichCompletionProperties(httpContext, completionProperties, capturedException);
 
-                await logger.LogInformationAsync(
-                    "HTTP request completed",
-                    "app_request",
-                    completionProperties,
+                await logger.LogApiAsync(
+                    new ApiLog
+                    {
+                        Message = "HTTP request completed",
+                        Category = "app_request",
+                        Method = httpContext.Request.Method,
+                        Path = requestPath,
+                        RouteTemplate = routeTemplate,
+                        Url = BuildRequestUrl(httpContext),
+                        StatusCode = httpContext.Response.StatusCode,
+                        DurationMs = duration.TotalMilliseconds,
+                        Context = completionProperties
+                    },
+                    LogType.Application,
                     CancellationToken.None).ConfigureAwait(false);
             }
             else
             {
-                completionProperties["logType"] = LogType.Error.ToString().ToLowerInvariant();
+                completionProperties["logType"] = "app";
                 completionProperties["exceptionType"] = capturedException.GetType().FullName;
                 completionProperties["exceptionMessage"] = capturedException.Message;
 
@@ -201,10 +211,16 @@ public abstract class RequestLoggingMiddlewareBase(
                 EnrichCompletionProperties(httpContext, completionProperties, capturedException);
 
                 await logger.LogErrorAsync(
-                    "HTTP request failed",
-                    "http.request.failed",
-                    capturedException,
-                    completionProperties,
+                    new ErrorLog
+                    {
+                        Message = "HTTP request failed",
+                        Category = "http.request.failed",
+                        Exception = capturedException,
+                        ExceptionType = capturedException.GetType().FullName,
+                        ExceptionMessage = capturedException.Message,
+                        Context = completionProperties
+                    },
+                    LogType.Application,
                     CancellationToken.None).ConfigureAwait(false);
             }
         }

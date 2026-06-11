@@ -80,15 +80,13 @@ public sealed class SinksAndFormatterTests
     }
 
     [Fact]
-    public void ElasticsearchLogSink_ShouldRouteApiLog_ToApiLogsDailyIndex()
+    public void ElasticsearchLogSink_ShouldRouteApplicationLog_ToAppLogsDailyIndex()
     {
         ElasticsearchLogSink sink = new(new ElasticsearchSinkOptions
         {
             Endpoint = new Uri("http://localhost:9200"),
-            ApiIndexPrefix = "api-logs",
-            InfraIndexPrefix = "infra-logs",
-            UseDailyIndexes = true,
-            RouteInfrastructureLogs = true
+            AppIndexPrefix = "app-log",
+            UseDailyIndexes = true
         });
 
         LogEntry entry = LogEntry.Create(
@@ -101,32 +99,7 @@ public sealed class SinksAndFormatterTests
 
         string index = sink.ResolveIndexName(entry);
 
-        index.Should().Be("api-logs-2026.06.07");
-    }
-
-    [Fact]
-    public void ElasticsearchLogSink_ShouldRouteMicrosoftLog_ToInfraLogsDailyIndex()
-    {
-        ElasticsearchLogSink sink = new(new ElasticsearchSinkOptions
-        {
-            Endpoint = new Uri("http://localhost:9200"),
-            ApiIndexPrefix = "api-logs",
-            InfraIndexPrefix = "infra-logs",
-            UseDailyIndexes = true,
-            RouteInfrastructureLogs = true
-        });
-
-        LogEntry entry = LogEntry.Create(
-            LogLevel.Warning,
-            "products-api",
-            "Microsoft.AspNetCore.Hosting.Diagnostics",
-            "host.lifecycle",
-            "application started",
-            DateTimeOffset.Parse("2026-06-07T10:00:00Z", CultureInfo.InvariantCulture));
-
-        string index = sink.ResolveIndexName(entry);
-
-        index.Should().Be("infra-logs-2026.06.07");
+        index.Should().Be("app-log-2026.06.07");
     }
 
     [Fact]
@@ -135,12 +108,8 @@ public sealed class SinksAndFormatterTests
         ElasticsearchLogSink sink = new(new ElasticsearchSinkOptions
         {
             Endpoint = new Uri("http://localhost:9200"),
-            ApiIndexPrefix = "api-logs",
-            InfraIndexPrefix = "infra-logs",
             MessagingIndexPrefix = "messaging-log",
-            UseDailyIndexes = true,
-            RouteInfrastructureLogs = true,
-            RouteMessagingLogs = true
+            UseDailyIndexes = true
         });
 
         LogEntry entry = LogEntry.Create(
@@ -152,6 +121,7 @@ public sealed class SinksAndFormatterTests
             DateTimeOffset.Parse("2026-06-07T10:00:00Z", CultureInfo.InvariantCulture),
             properties: new Dictionary<string, object?>
             {
+                ["logType"] = "event",
                 ["provider"] = "Kafka"
             });
 
@@ -167,8 +137,7 @@ public sealed class SinksAndFormatterTests
         {
             Endpoint = new Uri("http://localhost:9200"),
             MessagingIndexPrefix = "messaging-log",
-            UseDailyIndexes = true,
-            RouteMessagingLogs = true
+            UseDailyIndexes = true
         });
 
         LogEntry entry = LogEntry.Create(
@@ -197,8 +166,7 @@ public sealed class SinksAndFormatterTests
         {
             Endpoint = new Uri("http://localhost:9200"),
             AuditIndexPrefix = "audit-log",
-            UseDailyIndexes = true,
-            RouteAuditLogs = true
+            UseDailyIndexes = true
         });
 
         LogEntry entry = LogEntry.Create(
@@ -229,8 +197,7 @@ public sealed class SinksAndFormatterTests
         {
             Endpoint = new Uri("http://localhost:9200"),
             SecurityIndexPrefix = "security-log",
-            UseDailyIndexes = true,
-            RouteSecurityLogs = true
+            UseDailyIndexes = true
         });
 
         LogEntry entry = LogEntry.Create(

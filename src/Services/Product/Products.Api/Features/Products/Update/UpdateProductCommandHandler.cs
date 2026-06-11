@@ -1,4 +1,5 @@
 ﻿using Common.SharedKernel.Messaging;
+using Common.SharedKernel.Logging;
 using Common.SharedKernel.Observability.Context;
 using Products.Api.Features.Products.Events;
 
@@ -47,15 +48,19 @@ internal sealed class UpdateProductCommandHandler(
             },
             cancellationToken);
 
-        await logger.LogInformationAsync(
-            "Product updated",
-            new Dictionary<string, object?>
+        await logger.LogTraceAsync(
+            new TraceLog
             {
-                ["productId"] = normalizedProduct.Id,
-                ["sku"] = normalizedProduct.Sku,
-                ["eventId"] = productUpdated.EventId,
-                ["topic"] = ProductUpdatedIntegrationEvent.Topic
+                Message = "Product updated",
+                Context = new Dictionary<string, object?>
+                {
+                    ["productId"] = normalizedProduct.Id,
+                    ["sku"] = normalizedProduct.Sku,
+                    ["eventId"] = productUpdated.EventId,
+                    ["topic"] = ProductUpdatedIntegrationEvent.Topic
+                }
             },
+            LogType.Application,
             cancellationToken);
 
         return Result<ProductResponse>.Success(normalizedProduct.ToResponse(stockQuantity));

@@ -112,6 +112,13 @@ internal sealed class LoggingPipeline(
         }
 
         if (properties is not null
+            && properties.TryGetValue("logCategory", out object? logCategory)
+            && ContainsType(enabledLogTypes, logCategory?.ToString()))
+        {
+            return true;
+        }
+
+        if (properties is not null
             && properties.TryGetValue("logType", out object? logType)
             && ContainsType(enabledLogTypes, logType?.ToString()))
         {
@@ -138,18 +145,6 @@ internal sealed class LoggingPipeline(
 
         string normalized = token.Trim();
         if (enabledLogTypes.Contains(normalized))
-        {
-            return true;
-        }
-
-        if (normalized.Equals("events", StringComparison.OrdinalIgnoreCase)
-            && enabledLogTypes.Contains("event"))
-        {
-            return true;
-        }
-
-        if (normalized.Equals("event", StringComparison.OrdinalIgnoreCase)
-            && enabledLogTypes.Contains("events"))
         {
             return true;
         }

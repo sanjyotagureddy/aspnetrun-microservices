@@ -1,4 +1,5 @@
 ﻿using Common.SharedKernel.Messaging;
+using Common.SharedKernel.Logging;
 using Common.SharedKernel.Observability.Context;
 using Products.Api.Features.Products.Events;
 using Products.Api.Observability;
@@ -37,24 +38,36 @@ internal sealed class CreateProductCommandHandler(
             }
             catch (Exception rollbackException)
             {
-                await logger.LogCriticalAsync(
-                    "Product rollback failed after inventory initialization error",
-                    exception: rollbackException,
-                    cancellationToken: cancellationToken);
+                await logger.LogErrorAsync(
+                    new ErrorLog
+                    {
+                        Message = "Product rollback failed after inventory initialization error",
+                        Exception = rollbackException,
+                        ExceptionType = rollbackException.GetType().FullName,
+                        ExceptionMessage = rollbackException.Message
+                    },
+                    LogType.Application,
+                    cancellationToken);
 
                 throw new Common.SharedKernel.Exceptions.ConflictException("Product creation failed because inventory initialization could not be completed.");
             }
 
-            await logger.LogWarningAsync(
-                "Inventory initialization failed for product; create operation was rolled back",
-                "inventory_initialize_failed_product_rolled_back",
-                new Dictionary<string, object?>
+            await logger.LogErrorAsync(
+                new ErrorLog
                 {
-                    ["productId"] = normalizedProduct.Id,
-                    ["stockQuantity"] = request.StockQuantity,
-                    ["exceptionType"] = ex.GetType().Name,
-                    ["rollbackSucceeded"] = rollbackSucceeded
+                    Message = "Inventory initialization failed for product; create operation was rolled back",
+                    Category = "inventory_initialize_failed_product_rolled_back",
+                    Exception = ex,
+                    ExceptionType = ex.GetType().FullName,
+                    ExceptionMessage = ex.Message,
+                    Context = new Dictionary<string, object?>
+                    {
+                        ["productId"] = normalizedProduct.Id,
+                        ["stockQuantity"] = request.StockQuantity,
+                        ["rollbackSucceeded"] = rollbackSucceeded
+                    }
                 },
+                LogType.Application,
                 cancellationToken);
 
             throw new Common.SharedKernel.Exceptions.ConflictException("Product creation failed because inventory initialization could not be completed.");
@@ -81,17 +94,21 @@ internal sealed class CreateProductCommandHandler(
             },
             cancellationToken);
 
-        await logger.LogInformationAsync(
-            "Product created",
-            "product_created",
-            new Dictionary<string, object?>
+        await logger.LogTraceAsync(
+            new TraceLog
             {
-                ["productId"] = normalizedProduct.Id,
-                ["sku"] = normalizedProduct.Sku,
-                ["stockQuantity"] = confirmedStockQuantity,
-                ["eventId"] = productCreated.EventId,
-                ["topic"] = ProductCreatedIntegrationEvent.Topic
+                Message = "Product created",
+                Category = "product_created",
+                Context = new Dictionary<string, object?>
+                {
+                    ["productId"] = normalizedProduct.Id,
+                    ["sku"] = normalizedProduct.Sku,
+                    ["stockQuantity"] = confirmedStockQuantity,
+                    ["eventId"] = productCreated.EventId,
+                    ["topic"] = ProductCreatedIntegrationEvent.Topic
+                }
             },
+            LogType.Application,
             cancellationToken);
 
         return Result<ProductResponse>.Success(normalizedProduct.ToResponse(confirmedStockQuantity));
