@@ -157,45 +157,11 @@ internal sealed class KafkaMessageConsumer(
 
                 stopwatch.Stop();
                 instrumentation.ConsumeDurationMs.Record(stopwatch.Elapsed.TotalMilliseconds);
-                await logger.LogEventAsync(
-                    new TraceLog
-                    {
-                        Message = "Message consumed",
-                        Category = "messaging.consume",
-                        DurationMs = stopwatch.Elapsed.TotalMilliseconds,
-                        Context = new Dictionary<string, object?>
-                        {
-                            ["messageId"] = envelope.MessageId,
-                            ["eventType"] = eventType,
-                            ["contractVersion"] = envelope.Contract.Version,
-                            ["contractCompatibility"] = envelope.Contract.Compatibility.ToString(),
-                            ["consumerGroup"] = _options.Kafka.ConsumerGroup,
-                            ["handler"] = handler.GetType().Name,
-                            ["topic"] = topic
-                        }
-                    },
-                    cancellationToken);
                 return;
             }
             catch (Exception) when (attempt < attempts)
             {
                 instrumentation.RetryCount.Add(1);
-                await logger.LogEventAsync(
-                    new TraceLog
-                    {
-                        Message = "Message consume retry",
-                        Category = "messaging.retry",
-                        Context = new Dictionary<string, object?>
-                        {
-                            ["messageId"] = envelope.MessageId,
-                            ["eventType"] = eventType,
-                            ["contractVersion"] = envelope.Contract.Version,
-                            ["contractCompatibility"] = envelope.Contract.Compatibility.ToString(),
-                            ["consumerGroup"] = _options.Kafka.ConsumerGroup,
-                            ["attempt"] = attempt
-                        }
-                        },
-                        cancellationToken);
             }
             catch (Exception ex)
             {

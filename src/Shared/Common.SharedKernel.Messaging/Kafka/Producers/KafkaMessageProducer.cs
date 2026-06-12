@@ -67,54 +67,22 @@ internal sealed class KafkaMessageProducer(
         {
             try
             {
-                DeliveryResult<string, byte[]> report = explicitPartition.HasValue
-                    ? await _producer.ProduceAsync(new TopicPartition(resolvedTopic, new Partition(explicitPartition.Value)), kafkaMessage, cancellationToken)
-                    : await _producer.ProduceAsync(resolvedTopic, kafkaMessage, cancellationToken);
+                if (explicitPartition.HasValue)
+                {
+                    await _producer.ProduceAsync(new TopicPartition(resolvedTopic, new Partition(explicitPartition.Value)), kafkaMessage, cancellationToken);
+                }
+                else
+                {
+                    await _producer.ProduceAsync(resolvedTopic, kafkaMessage, cancellationToken);
+                }
 
                 stopwatch.Stop();
                 instrumentation.PublishDurationMs.Record(stopwatch.Elapsed.TotalMilliseconds);
-                await logger.LogEventAsync(
-                    new TraceLog
-                    {
-                        Message = "Message published",
-                        Category = "messaging.publish",
-                        DurationMs = stopwatch.Elapsed.TotalMilliseconds,
-                        Context = new Dictionary<string, object?>
-                        {
-                            ["messageId"] = envelope.MessageId,
-                            ["eventType"] = eventType,
-                            ["contractVersion"] = envelope.Contract.Version,
-                            ["contractCompatibility"] = envelope.Contract.Compatibility.ToString(),
-                            ["topic"] = resolvedTopic,
-                            ["provider"] = "Kafka",
-                            ["partition"] = report.Partition.Value,
-                            ["offset"] = report.Offset.Value
-                        }
-                    },
-                    cancellationToken);
                 return;
             }
             catch (Exception) when (attempt < attempts)
             {
                 instrumentation.RetryCount.Add(1);
-                await logger.LogEventAsync(
-                    new TraceLog
-                    {
-                        Message = "Message publish retry",
-                        Category = "messaging.retry",
-                        Context = new Dictionary<string, object?>
-                        {
-                            ["messageId"] = envelope.MessageId,
-                            ["eventType"] = eventType,
-                            ["contractVersion"] = envelope.Contract.Version,
-                            ["contractCompatibility"] = envelope.Contract.Compatibility.ToString(),
-                            ["topic"] = resolvedTopic,
-                            ["provider"] = "Kafka",
-                            ["attempt"] = attempt
-                        }
-                    },
-                    cancellationToken);
-
                 await Task.Delay(GetDelay(attempt), cancellationToken);
             }
             catch (Exception ex)

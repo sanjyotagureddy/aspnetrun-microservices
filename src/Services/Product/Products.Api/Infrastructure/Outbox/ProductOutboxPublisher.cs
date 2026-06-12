@@ -1,5 +1,6 @@
 using Common.SharedKernel.Messaging;
 using Common.SharedKernel.Messaging.Outbox;
+using Common.SharedKernel.Logging;
 using Products.Api.Features.Products.Events;
 
 namespace Products.Api.Infrastructure.Outbox;
@@ -7,11 +8,9 @@ namespace Products.Api.Infrastructure.Outbox;
 internal sealed class ProductOutboxPublisher(
     IProductOutboxStore outboxStore,
     IMessageBus messageBus,
-    ILogger<ProductOutboxPublisher> logger)
+    Common.SharedKernel.Logging.ILogger<ProductOutboxPublisher> logger)
     : OutboxPublisherBase<ProductOutboxMessage>(outboxStore, logger)
 {
-    protected override string FailureLogTemplate => "Failed to publish outbox message {OutboxId} for event type {EventType}.";
-
     protected override async Task PublishAsync(ProductOutboxMessage outboxMessage, CancellationToken cancellationToken)
     {
         ProductOutboxMetadata metadata = OutboxPublisherHelpers.DeserializeMetadata<ProductOutboxMetadata>(outboxMessage.MetadataJson);
