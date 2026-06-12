@@ -329,10 +329,10 @@ public sealed class ProductFeatureTests
             return Task.CompletedTask;
         }
 
-        Task IProductOutboxStore.EnqueueAsync(ProductOutboxMessage message, Npgsql.NpgsqlConnection connection, Npgsql.NpgsqlTransaction transaction, CancellationToken cancellationToken)
+        public Task EnqueueAsync(ProductOutboxMessage message, Npgsql.NpgsqlConnection connection, Npgsql.NpgsqlTransaction transaction, CancellationToken cancellationToken)
             => EnqueueAsync(message, cancellationToken);
 
-        Task<IReadOnlyList<ProductOutboxMessage>> IProductOutboxStore.ClaimPendingAsync(int batchSize, TimeSpan claimDuration, CancellationToken cancellationToken)
+        public Task<IReadOnlyList<ProductOutboxMessage>> ClaimPendingAsync(int batchSize, TimeSpan claimDuration, CancellationToken cancellationToken)
             => Task.FromResult((IReadOnlyList<ProductOutboxMessage>)Messages.Take(batchSize).ToList());
 
         public Task MarkPublishedAsync(Guid id, CancellationToken cancellationToken)
@@ -367,3 +367,4 @@ public sealed class ProductFeatureTests
             => operation(null!, null!, cancellationToken);
     }
 }
+
