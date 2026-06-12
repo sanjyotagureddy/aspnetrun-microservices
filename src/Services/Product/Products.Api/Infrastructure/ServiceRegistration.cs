@@ -124,6 +124,9 @@ internal static class ServiceRegistration
 
 
             services.AddSingleton<IProductCatalogStore, ProductCatalogStore>();
+            services.AddSingleton<IProductOutboxStore, ProductOutboxStore>();
+            services.AddSingleton<IProductDomainEventDispatcher, ProductDomainEventDispatcher>();
+            services.AddHostedService<ProductOutboxPublisher>();
             services.AddHttpClient<IInventoryStockAdapter, InventoryStockAdapter>((provider, client) =>
                 {
                     IConfiguration config = provider.GetRequiredService<IConfiguration>();

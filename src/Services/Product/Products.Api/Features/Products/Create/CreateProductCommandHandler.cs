@@ -1,6 +1,6 @@
-﻿using Common.SharedKernel.Messaging;
-using Common.SharedKernel.Logging;
+﻿using Common.SharedKernel.Logging;
 using Common.SharedKernel.Observability.Context;
+using Products.Api.Domain.Events;
 using Products.Api.Features.Products.Events;
 using Products.Api.Observability;
 
@@ -11,7 +11,7 @@ internal sealed class CreateProductCommandHandler(
     IInventoryStockAdapter inventoryStockAdapter,
     TimeProvider timeProvider,
     Common.SharedKernel.Logging.ILogger<CreateProductCommandHandler> logger,
-    IMessageBus messageBus)
+    IProductDomainEventDispatcher domainEventDispatcher)
     : IRequestHandler<CreateProductCommand, Result<ProductResponse>>
 {
     public async Task<Result<ProductResponse>> Handle(CreateProductCommand request, CancellationToken cancellationToken)
@@ -38,7 +38,7 @@ internal sealed class CreateProductCommandHandler(
             }
             catch (Exception rollbackException)
             {
-                await logger.LogErrorAsync(
+                await logger.LogApplicationAsync(
                     new ErrorLog
                     {
                         Message = "Product rollback failed after inventory initialization error",
@@ -46,13 +46,12 @@ internal sealed class CreateProductCommandHandler(
                         ExceptionType = rollbackException.GetType().FullName,
                         ExceptionMessage = rollbackException.Message
                     },
-                    LogType.Application,
                     cancellationToken);
 
                 throw new Common.SharedKernel.Exceptions.ConflictException("Product creation failed because inventory initialization could not be completed.");
             }
 
-            await logger.LogErrorAsync(
+            await logger.LogApplicationAsync(
                 new ErrorLog
                 {
                     Message = "Inventory initialization failed for product; create operation was rolled back",
@@ -67,34 +66,17 @@ internal sealed class CreateProductCommandHandler(
                         ["rollbackSucceeded"] = rollbackSucceeded
                     }
                 },
-                LogType.Application,
                 cancellationToken);
 
             throw new Common.SharedKernel.Exceptions.ConflictException("Product creation failed because inventory initialization could not be completed.");
         }
 
-        ProductCreatedIntegrationEvent productCreated = normalizedProduct.ToCreatedIntegrationEvent(occurredOnUtc, confirmedStockQuantity);
         AppCallContext? appContext = AppCallContextBase.CurrentAs<AppCallContext>();
+        normalizedProduct.RaiseCreatedDomainEvent(confirmedStockQuantity, occurredOnUtc);
+        await domainEventDispatcher.DispatchAsync(normalizedProduct.DomainEvents, appContext, cancellationToken);
+        normalizedProduct.ClearDomainEvents();
 
-        await messageBus.PublishAsync(
-            ProductCreatedIntegrationEvent.Topic,
-            productCreated,
-            metadata =>
-            {
-                metadata.MessageId = productCreated.EventId.ToString("N");
-                metadata.OrderingKey = normalizedProduct.Id.ToString("N");
-                metadata.Contract = new MessageContractDescriptor(nameof(ProductCreatedIntegrationEvent), "1.0", "application/json");
-                metadata.CorrelationId = appContext?.CorrelationId;
-                metadata.TraceId = appContext?.TraceId;
-                metadata.SpanId = appContext?.SpanId;
-                metadata.TenantId = appContext?.TenantId;
-                metadata.Headers["Source"] = "products-api";
-                metadata.Headers["Entity"] = nameof(Product);
-                metadata.Headers["EventType"] = nameof(ProductCreatedIntegrationEvent);
-            },
-            cancellationToken);
-
-        await logger.LogTraceAsync(
+        await logger.LogApplicationAsync(
             new TraceLog
             {
                 Message = "Product created",
@@ -104,11 +86,10 @@ internal sealed class CreateProductCommandHandler(
                     ["productId"] = normalizedProduct.Id,
                     ["sku"] = normalizedProduct.Sku,
                     ["stockQuantity"] = confirmedStockQuantity,
-                    ["eventId"] = productCreated.EventId,
+                    ["eventType"] = ProductCreatedDomainEvent.EventTypeName,
                     ["topic"] = ProductCreatedIntegrationEvent.Topic
                 }
             },
-            LogType.Application,
             cancellationToken);
 
         return Result<ProductResponse>.Success(normalizedProduct.ToResponse(confirmedStockQuantity));

@@ -135,10 +135,10 @@ public abstract class RequestLoggingMiddlewareBase(
 
                 EnrichCompletionProperties(httpContext, completionProperties, capturedException);
 
-                await logger.LogApiAsync(
+                await logger.LogApplicationAsync(
                     new ApiLog
                     {
-                        Message = "HTTP request completed",
+                        Message = "app_request",
                         Category = "app_request",
                         Method = httpContext.Request.Method,
                         Path = requestPath,
@@ -148,7 +148,6 @@ public abstract class RequestLoggingMiddlewareBase(
                         DurationMs = duration.TotalMilliseconds,
                         Context = completionProperties
                     },
-                    LogType.Application,
                     CancellationToken.None).ConfigureAwait(false);
             }
             else
@@ -210,7 +209,7 @@ public abstract class RequestLoggingMiddlewareBase(
 
                 EnrichCompletionProperties(httpContext, completionProperties, capturedException);
 
-                await logger.LogErrorAsync(
+                await logger.LogApplicationAsync(
                     new ErrorLog
                     {
                         Message = "HTTP request failed",
@@ -220,7 +219,6 @@ public abstract class RequestLoggingMiddlewareBase(
                         ExceptionMessage = capturedException.Message,
                         Context = completionProperties
                     },
-                    LogType.Application,
                     CancellationToken.None).ConfigureAwait(false);
             }
         }

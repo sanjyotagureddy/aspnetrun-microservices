@@ -87,33 +87,6 @@ To map aliases to a specific Docker host IP:
 
 The script is idempotent and creates a timestamped backup of the hosts file before editing.
 
-## OpenTelemetry To OpenSearch
-
-The repository now routes OpenTelemetry signals through an OpenTelemetry Collector bridge:
-
-1. Services emit OTLP using `OTEL_EXPORTER_OTLP_ENDPOINT`.
-2. AppHost runs `otel-collector` (contrib image) and exposes OTLP ports.
-3. Collector exports logs and traces into OpenSearch indexes.
-
-Collector config location:
-
-```text
-src/aspire/aspnetrun-microservices.AppHost/otel-collector-config.yaml
-```
-
-Default telemetry indexes:
-
-- `otel-logs`
-- `otel-traces`
-
-After running AppHost, validate ingestion with OpenSearch APIs:
-
-```powershell
-curl http://localhost:9200/_cat/indices?v
-curl http://localhost:9200/otel-logs/_search?pretty
-curl http://localhost:9200/otel-traces/_search?pretty
-```
-
 ## Build And Test
 
 Run the full solution:

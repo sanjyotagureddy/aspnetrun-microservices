@@ -1,5 +1,6 @@
 ﻿using Common.SharedKernel.Abstractions.Auditing;
 using Common.SharedKernel.Helpers;
+using Products.Api.Domain.Events;
 
 namespace Products.Api.Domain;
 
@@ -56,6 +57,39 @@ internal sealed class Product : AuditableEntity<Guid>
     {
         UpdateCore(name, description, sku, price, currency, category, brand, isActive);
         SetUpdatedAudit(updatedAtUtc);
+    }
+
+    public void RaiseCreatedDomainEvent(int stockQuantity, DateTime occurredOnUtc)
+    {
+        AddDomainEvent(new ProductCreatedDomainEvent(
+            occurredOnUtc,
+            Id,
+            Name,
+            Sku,
+            Price,
+            Currency,
+            Category,
+            Brand,
+            stockQuantity,
+            IsActive,
+            CreatedAt));
+    }
+
+    public void RaiseUpdatedDomainEvent(int stockQuantity, DateTime occurredOnUtc)
+    {
+        AddDomainEvent(new ProductUpdatedDomainEvent(
+            occurredOnUtc,
+            Id,
+            Name,
+            Sku,
+            Price,
+            Currency,
+            Category,
+            Brand,
+            stockQuantity,
+            IsActive,
+            CreatedAt,
+            UpdatedAt));
     }
 
     private void UpdateCore(

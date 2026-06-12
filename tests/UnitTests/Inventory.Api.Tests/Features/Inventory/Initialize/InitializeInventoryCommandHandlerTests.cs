@@ -1,8 +1,11 @@
 using Moq;
+using Common.SharedKernel.Abstractions.Events;
 using Common.SharedKernel.Results;
 using Inventory.Api.Domain;
+using Inventory.Api.Domain.Events;
 using Inventory.Api.Features.Inventory.Initialize;
 using Inventory.Api.Infrastructure;
+using Inventory.Api.Infrastructure.Outbox;
 
 namespace Inventory.Api.Tests.Features.Inventory.Initialize;
 
@@ -12,8 +15,9 @@ public sealed class InitializeInventoryCommandHandlerTests
     public async Task Handle_ShouldInitializeStoreAndReturnSuccess()
     {
         FakeInventoryStore store = new();
+        FakeInventoryDomainEventDispatcher dispatcher = new();
         Mock<Common.SharedKernel.Logging.ILogger<InitializeInventoryCommandHandler>> logger = new();
-        InitializeInventoryCommandHandler handler = new(store, new FixedTimeProvider(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero)), logger.Object);
+        InitializeInventoryCommandHandler handler = new(store, new FixedTimeProvider(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero)), logger.Object, dispatcher);
         Guid productId = Guid.NewGuid();
 
         Result result = await handler.Handle(new InitializeInventoryCommand(productId, 6), CancellationToken.None);
@@ -22,6 +26,8 @@ public sealed class InitializeInventoryCommandHandlerTests
         Assert.NotNull(store.LastInitialized);
         Assert.Equal(productId, store.LastInitialized!.ProductId);
         Assert.Equal(6, store.LastInitialized.StockQuantity);
+        Assert.Single(dispatcher.Events);
+        Assert.Equal(InventoryInitializedDomainEvent.EventTypeName, dispatcher.Events[0].EventType);
     }
 
     private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
@@ -42,6 +48,17 @@ public sealed class InitializeInventoryCommandHandlerTests
         public Task InitializeAsync(InventoryItem item, CancellationToken cancellationToken)
         {
             LastInitialized = item;
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FakeInventoryDomainEventDispatcher : IInventoryDomainEventDispatcher
+    {
+        public List<IDomainEvent> Events { get; } = [];
+
+        public Task DispatchAsync(IEnumerable<IDomainEvent> domainEvents, Common.SharedKernel.Observability.Context.AppCallContextBase? appContext, CancellationToken cancellationToken)
+        {
+            Events.AddRange(domainEvents);
             return Task.CompletedTask;
         }
     }

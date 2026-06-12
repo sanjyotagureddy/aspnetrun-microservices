@@ -6,6 +6,9 @@ namespace Products.Api.Features.Products.Events;
 internal sealed record ProductUpdatedIntegrationEvent : IntegrationEventBase
 {
     public const string Topic = "products.events.v1";
+    public const string EventTypeName = "product.updated";
+
+    public override string EventType => EventTypeName;
 
     [JsonConstructor]
     public ProductUpdatedIntegrationEvent(

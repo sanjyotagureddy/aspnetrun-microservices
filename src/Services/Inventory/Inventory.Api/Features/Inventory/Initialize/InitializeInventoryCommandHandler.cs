@@ -1,11 +1,15 @@
 ﻿namespace Inventory.Api.Features.Inventory.Initialize;
 
 using Common.SharedKernel.Logging;
+using Common.SharedKernel.Observability.Context;
+using InventoryInitializedDomainEvent = global::Inventory.Api.Domain.Events.InventoryInitializedDomainEvent;
+using InventoryInitializedIntegrationEvent = global::Inventory.Api.Features.Inventory.Events.InventoryInitializedIntegrationEvent;
 
 internal sealed class InitializeInventoryCommandHandler(
     IInventoryStore store,
     TimeProvider timeProvider,
-    Common.SharedKernel.Logging.ILogger<InitializeInventoryCommandHandler> logger)
+    ILogger<InitializeInventoryCommandHandler> logger,
+    IInventoryDomainEventDispatcher domainEventDispatcher)
     : IRequestHandler<InitializeInventoryCommand, Result>
 {
     public async Task<Result> Handle(InitializeInventoryCommand request, CancellationToken cancellationToken)
@@ -15,17 +19,23 @@ internal sealed class InitializeInventoryCommandHandler(
 
         await store.InitializeAsync(item, cancellationToken);
 
-        await logger.LogTraceAsync(
+        AppCallContextBase? appContext = AppCallContextBase.Current;
+        item.RaiseInitializedDomainEvent(occurredOnUtc);
+        await domainEventDispatcher.DispatchAsync(item.DomainEvents, appContext, cancellationToken);
+        item.ClearDomainEvents();
+
+        await logger.LogApplicationAsync(
             new TraceLog
             {
                 Message = "Inventory initialized",
                 Context = new Dictionary<string, object?>
                 {
                     ["productId"] = request.ProductId,
-                    ["stockQuantity"] = request.StockQuantity
+                    ["stockQuantity"] = request.StockQuantity,
+                    ["eventType"] = InventoryInitializedDomainEvent.EventTypeName,
+                    ["topic"] = InventoryInitializedIntegrationEvent.Topic
                 }
             },
-            LogType.Application,
             cancellationToken);
 
         return Result.Success();

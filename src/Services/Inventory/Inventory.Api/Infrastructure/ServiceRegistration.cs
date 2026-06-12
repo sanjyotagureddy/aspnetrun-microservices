@@ -2,6 +2,8 @@
 using System.Reflection;
 using Common.SharedKernel.Exceptions;
 using Common.SharedKernel.Logging;
+using Common.SharedKernel.Messaging;
+using Inventory.Api.Features.Inventory.Events;
 using Inventory.Api.Infrastructure.Persistence;
 using Inventory.Api.Observability;
 using Npgsql;
@@ -23,7 +25,10 @@ internal static class ServiceRegistration
             services.AddSingleton(TimeProvider.System);
             services.AddSingleton(NpgsqlDataSource.Create(connectionString));
             services.AddSingleton<IInventoryStore, InventoryStore>();
+            services.AddSingleton<IInventoryOutboxStore, InventoryOutboxStore>();
+            services.AddSingleton<IInventoryDomainEventDispatcher, InventoryDomainEventDispatcher>();
             services.AddHostedService<InventorySchemaInitializer>();
+            services.AddHostedService<InventoryOutboxPublisher>();
 
             IConfigurationSection loggingSection = configuration.GetSection("Logging:CommonSharedKernel");
             string loggingServiceName = loggingSection["ServiceName"] ?? "inventory-api";
@@ -89,6 +94,29 @@ internal static class ServiceRegistration
             });
 
             services.UseRequestLoggingMiddleware<InventoryRequestLoggingMiddleware>();
+
+            services.AddMessaging(builder =>
+            {
+                builder.Options.TopicPrefix = configuration["Messaging:TopicPrefix"] ?? string.Empty;
+                builder.Options.ProvisioningMode = ProvisioningMode.ValidateOnly;
+
+                builder.RegisterDestination(destination =>
+                {
+                    destination.DestinationName = InventoryInitializedIntegrationEvent.Topic;
+                    destination.OwnerService = "inventory-api";
+                    destination.Contract = new MessageContractDescriptor(InventoryInitializedIntegrationEvent.EventTypeName, "1.0", "application/json");
+                    destination.PartitioningStrategy = PartitioningStrategy.ByAggregateId;
+                    destination.PartitionKeySelector = "payload.productId";
+                });
+
+                builder.UseKafka(options =>
+                {
+                    options.BootstrapServers = configuration.GetConnectionString("message-broker")
+                                               ?? configuration["Messaging:Kafka:BootstrapServers"]
+                                               ?? "localhost:9092";
+                    options.ConsumerGroup = configuration["Messaging:Kafka:ConsumerGroup"] ?? "inventory-api";
+                });
+            });
 
             services.AddMediatR(cfg =>
             {

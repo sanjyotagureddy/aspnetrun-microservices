@@ -1,4 +1,4 @@
-using Common.SharedKernel.Abstractions.Events;
+﻿using Common.SharedKernel.Abstractions.Events;
 
 namespace Common.SharedKernel.Abstractions.Entities;
 

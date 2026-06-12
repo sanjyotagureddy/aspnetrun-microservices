@@ -45,6 +45,7 @@ internal sealed class KafkaMessageProducer(
         ValidatePartitionPolicy(metadata, registration, resolvedTopic, explicitPartition);
 
         MessageEnvelope<T> envelope = MessageEnvelope<T>.Create(resolvedTopic, message, metadata);
+        string eventType = ResolveEventType(metadata, envelope);
         string messageKey = ResolveMessageKey(envelope, metadata);
         byte[] payload = serializer.Serialize(envelope);
         Message<string, byte[]> kafkaMessage = new()
@@ -72,7 +73,7 @@ internal sealed class KafkaMessageProducer(
 
                 stopwatch.Stop();
                 instrumentation.PublishDurationMs.Record(stopwatch.Elapsed.TotalMilliseconds);
-                await logger.LogTraceAsync(
+                await logger.LogEventAsync(
                     new TraceLog
                     {
                         Message = "Message published",
@@ -81,20 +82,22 @@ internal sealed class KafkaMessageProducer(
                         Context = new Dictionary<string, object?>
                         {
                             ["messageId"] = envelope.MessageId,
+                            ["eventType"] = eventType,
+                            ["contractVersion"] = envelope.Contract.Version,
+                            ["contractCompatibility"] = envelope.Contract.Compatibility.ToString(),
                             ["topic"] = resolvedTopic,
                             ["provider"] = "Kafka",
                             ["partition"] = report.Partition.Value,
                             ["offset"] = report.Offset.Value
                         }
                     },
-                    LogType.Event,
                     cancellationToken);
                 return;
             }
             catch (Exception) when (attempt < attempts)
             {
                 instrumentation.RetryCount.Add(1);
-                await logger.LogTraceAsync(
+                await logger.LogEventAsync(
                     new TraceLog
                     {
                         Message = "Message publish retry",
@@ -102,12 +105,14 @@ internal sealed class KafkaMessageProducer(
                         Context = new Dictionary<string, object?>
                         {
                             ["messageId"] = envelope.MessageId,
+                            ["eventType"] = eventType,
+                            ["contractVersion"] = envelope.Contract.Version,
+                            ["contractCompatibility"] = envelope.Contract.Compatibility.ToString(),
                             ["topic"] = resolvedTopic,
                             ["provider"] = "Kafka",
                             ["attempt"] = attempt
                         }
                     },
-                    LogType.Event,
                     cancellationToken);
 
                 await Task.Delay(GetDelay(attempt), cancellationToken);
@@ -116,7 +121,7 @@ internal sealed class KafkaMessageProducer(
             {
                 stopwatch.Stop();
                 instrumentation.PublishFailures.Add(1);
-                await logger.LogErrorAsync(
+                await logger.LogEventAsync(
                     new ErrorLog
                     {
                         Message = "Message publish failed",
@@ -127,12 +132,14 @@ internal sealed class KafkaMessageProducer(
                         Context = new Dictionary<string, object?>
                         {
                             ["messageId"] = envelope.MessageId,
+                            ["eventType"] = eventType,
+                            ["contractVersion"] = envelope.Contract.Version,
+                            ["contractCompatibility"] = envelope.Contract.Compatibility.ToString(),
                             ["topic"] = resolvedTopic,
                             ["provider"] = "Kafka",
                             ["durationMs"] = stopwatch.Elapsed.TotalMilliseconds
                         }
                     },
-                    LogType.Event,
                     cancellationToken);
                 throw new MessagingException($"Failed to publish message to topic '{resolvedTopic}'.", ex);
             }
@@ -188,6 +195,17 @@ internal sealed class KafkaMessageProducer(
         }
 
         return envelope.MessageId;
+    }
+
+    private static string ResolveEventType<T>(MessageMetadata metadata, IMessageEnvelope<T> envelope)
+    {
+        if (metadata.Headers.TryGetValue("EventType", out string? eventTypeFromHeader)
+            && !string.IsNullOrWhiteSpace(eventTypeFromHeader))
+        {
+            return eventTypeFromHeader;
+        }
+
+        return envelope.Contract.MessageType;
     }
 
     private DestinationRegistration? ResolveRegistration(string topic, string resolvedTopic)

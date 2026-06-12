@@ -5,3 +5,4 @@ global using MediatR;
 global using Inventory.Api.Contracts;
 global using Inventory.Api.Domain;
 global using Inventory.Api.Infrastructure;
+global using Inventory.Api.Infrastructure.Outbox;

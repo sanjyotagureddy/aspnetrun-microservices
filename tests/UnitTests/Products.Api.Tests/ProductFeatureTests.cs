@@ -1,4 +1,5 @@
-﻿using Common.SharedKernel.Logging;
+﻿using System.Text.Json;
+using Common.SharedKernel.Logging;
 using Common.SharedKernel.Messaging;
 using Moq;
 
@@ -7,23 +8,27 @@ using Products.Api.Features.Products.Create;
 using Products.Api.Features.Products.Events;
 using Products.Api.Features.Products.Get;
 using Products.Api.Infrastructure;
+using Products.Api.Infrastructure.Outbox;
 
 namespace Products.Api.Tests;
 
 public sealed class ProductFeatureTests
 {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
     [Fact]
     public async Task CreateProductHandler_ShouldCreateProductWithNormalizedFields()
     {
         var store = new FakeProductCatalogStore();
-        var messageBus = new FakeMessageBus();
+        var outboxStore = new FakeProductOutboxStore();
+        var dispatcher = new ProductDomainEventDispatcher(outboxStore);
         var inventory = new FakeInventoryStockAdapter();
         var handler = new CreateProductCommandHandler(
             store,
             inventory,
             new FixedTimeProvider(new DateTimeOffset(2026, 5, 28, 12, 0, 0, TimeSpan.Zero)),
             new Mock<ILogger<CreateProductCommandHandler>>().Object,
-            messageBus);
+            dispatcher);
 
         var command = new CreateProductCommand(
             "Laptop",
@@ -45,22 +50,54 @@ public sealed class ProductFeatureTests
         Assert.Equal(new DateTime(2026, 5, 28, 12, 0, 0, DateTimeKind.Utc), result.Value.CreatedAt);
         Assert.Equal(10, result.Value.StockQuantity);
         Assert.Single(store.Products);
-        Assert.Equal(ProductCreatedIntegrationEvent.Topic, messageBus.Topic);
-        var integrationEvent = Assert.IsType<ProductCreatedIntegrationEvent>(messageBus.Message);
+        Assert.Single(outboxStore.Messages);
+        ProductOutboxMessage outboxMessage = outboxStore.Messages[0];
+        Assert.Equal(ProductCreatedIntegrationEvent.Topic, outboxMessage.Topic);
+
+        var integrationEvent = JsonSerializer.Deserialize<ProductCreatedIntegrationEvent>(outboxMessage.PayloadJson, JsonOptions)!;
+        ProductOutboxMetadata metadata = JsonSerializer.Deserialize<ProductOutboxMetadata>(outboxMessage.MetadataJson, JsonOptions)!;
+
         Assert.NotEqual(Guid.Empty, integrationEvent.EventId);
         Assert.Equal(result.Value.Id, integrationEvent.ProductId);
         Assert.Equal("SKU-001", integrationEvent.Sku);
         Assert.Equal("USD", integrationEvent.Currency);
         Assert.Equal(new DateTime(2026, 5, 28, 12, 0, 0, DateTimeKind.Utc), integrationEvent.OccurredOnUtc);
-        Assert.Equal(integrationEvent.EventId.ToString("N"), messageBus.Metadata?.MessageId);
-        Assert.Equal("products-api", messageBus.Metadata?.Headers["Source"]);
-        Assert.Equal(nameof(ProductCreatedIntegrationEvent), messageBus.Metadata?.Headers["EventType"]);
+        Assert.Equal(integrationEvent.EventId.ToString("N"), metadata.MessageId);
+        Assert.Equal("products-api", metadata.Headers["Source"]);
+        Assert.Equal(ProductCreatedIntegrationEvent.EventTypeName, metadata.Headers["EventType"]);
 
         SystemTextJsonMessageSerializer serializer = new();
+        MessageMetadata envelopeMetadata = new()
+        {
+            MessageId = metadata.MessageId,
+            CorrelationId = metadata.CorrelationId,
+            CausationId = metadata.CausationId,
+            TraceId = metadata.TraceId,
+            SpanId = metadata.SpanId,
+            TenantId = metadata.TenantId,
+            RoutingKey = metadata.RoutingKey,
+            OrderingKey = metadata.OrderingKey,
+            Contract = new Common.SharedKernel.Messaging.MessageContractDescriptor(
+                metadata.Contract.MessageType,
+                metadata.Contract.Version,
+                metadata.Contract.ContentType,
+                Compatibility: metadata.Contract.Compatibility)
+        };
+
+        foreach (KeyValuePair<string, string> header in metadata.Headers)
+        {
+            envelopeMetadata.Headers[header.Key] = header.Value;
+        }
+
+        foreach (KeyValuePair<string, string> hint in metadata.TransportHints)
+        {
+            envelopeMetadata.TransportHints[hint.Key] = hint.Value;
+        }
+
         MessageEnvelope<ProductCreatedIntegrationEvent> envelope = MessageEnvelope<ProductCreatedIntegrationEvent>.Create(
             ProductCreatedIntegrationEvent.Topic,
             integrationEvent,
-            messageBus.Metadata!);
+            envelopeMetadata);
         IMessageEnvelope<ProductCreatedIntegrationEvent> restored = serializer.Deserialize<ProductCreatedIntegrationEvent>(serializer.Serialize(envelope));
         Assert.Equal(integrationEvent.EventId, restored.Payload.EventId);
         Assert.Equal(integrationEvent.ProductId, restored.Payload.ProductId);
@@ -70,14 +107,15 @@ public sealed class ProductFeatureTests
     public async Task CreateProductHandler_ShouldRollbackAndFail_WhenInventoryInitializationFails()
     {
         var store = new FakeProductCatalogStore();
-        var messageBus = new FakeMessageBus();
+        var outboxStore = new FakeProductOutboxStore();
+        var dispatcher = new ProductDomainEventDispatcher(outboxStore);
         var inventory = new FakeInventoryStockAdapter { ThrowOnInitialize = true };
         var handler = new CreateProductCommandHandler(
             store,
             inventory,
             new FixedTimeProvider(new DateTimeOffset(2026, 5, 28, 12, 0, 0, TimeSpan.Zero)),
             new Mock<ILogger<CreateProductCommandHandler>>().Object,
-            messageBus);
+            dispatcher);
 
         var command = new CreateProductCommand(
             "Laptop",
@@ -94,8 +132,7 @@ public sealed class ProductFeatureTests
             handler.Handle(command, CancellationToken.None));
 
         Assert.Empty(store.Products);
-        Assert.Null(messageBus.Topic);
-        Assert.Null(messageBus.Message);
+        Assert.Empty(outboxStore.Messages);
     }
 
     [Fact]
@@ -157,9 +194,11 @@ public sealed class ProductFeatureTests
 
         public Task<int?> GetStockQuantityAsync(Guid productId, CancellationToken cancellationToken)
         {
-            return Task.FromResult(_stockByProductId.TryGetValue(productId, out int stockQuantity)
-                ? (int?)stockQuantity
-                : null);
+            int? stockQuantity = _stockByProductId.TryGetValue(productId, out int value)
+                ? value
+                : null;
+
+            return Task.FromResult(stockQuantity);
         }
 
         public Task<IReadOnlyDictionary<Guid, int>> GetStockQuantitiesAsync(IReadOnlyCollection<Guid> productIds, CancellationToken cancellationToken)
@@ -266,39 +305,23 @@ public sealed class ProductFeatureTests
         public override DateTimeOffset GetUtcNow() => value;
     }
 
-    private sealed class FakeMessageBus : IMessageBus
+    private sealed class FakeProductOutboxStore : IProductOutboxStore
     {
-        public string? Topic { get; private set; }
+        public List<ProductOutboxMessage> Messages { get; } = [];
 
-        public object? Message { get; private set; }
-
-        public MessageMetadata? Metadata { get; private set; }
-
-        public Task PublishAsync<T>(string topic, T message, CancellationToken cancellationToken = default)
-            => PublishAsync(topic, message, null, cancellationToken);
-
-        public Task PublishAsync<T>(
-            string topic,
-            T message,
-            Action<MessageMetadata>? configureMetadata,
-            CancellationToken cancellationToken = default)
+        public Task EnqueueAsync(ProductOutboxMessage message, CancellationToken cancellationToken)
         {
-            MessageMetadata metadata = new();
-            configureMetadata?.Invoke(metadata);
-            Topic = topic;
-            Message = message;
-            Metadata = metadata;
+            Messages.Add(message);
             return Task.CompletedTask;
         }
 
-        public Task PublishBatchAsync<T>(string topic, IReadOnlyCollection<T> messages, CancellationToken cancellationToken = default)
+        public Task<IReadOnlyList<ProductOutboxMessage>> GetPendingAsync(int batchSize, CancellationToken cancellationToken)
+            => Task.FromResult((IReadOnlyList<ProductOutboxMessage>)Messages.Take(batchSize).ToList());
+
+        public Task MarkPublishedAsync(Guid id, CancellationToken cancellationToken)
             => Task.CompletedTask;
 
-        public Task PublishBatchAsync<T>(
-            string topic,
-            IReadOnlyCollection<T> messages,
-            Action<MessageMetadata>? configureMetadata,
-            CancellationToken cancellationToken = default)
+        public Task MarkFailedAsync(Guid id, int attemptCount, string error, CancellationToken cancellationToken)
             => Task.CompletedTask;
     }
 }

@@ -21,6 +21,23 @@ internal sealed class InventorySchemaInitializer(NpgsqlDataSource dataSource, IL
             );
 
             create index if not exists ix_inventory_items_updated_at on inventory_items (updated_at);
+
+            create table if not exists inventory_outbox
+            (
+                id uuid primary key,
+                occurred_on_utc timestamptz not null,
+                event_type text not null,
+                topic text not null,
+                payload_json jsonb not null,
+                metadata_json jsonb not null,
+                status text not null,
+                attempt_count integer not null default 0,
+                next_attempt_on_utc timestamptz null,
+                processed_on_utc timestamptz null,
+                last_error text null
+            );
+
+            create index if not exists ix_inventory_outbox_status_next_attempt on inventory_outbox (status, next_attempt_on_utc, occurred_on_utc);
             """,
             cancellationToken: cancellationToken));
 

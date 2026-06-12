@@ -14,6 +14,7 @@ public sealed class DomainEventTests
         var after = DateTime.UtcNow;
 
         Assert.InRange(domainEvent.OccurredOnUtc, before, after);
+        Assert.Equal(nameof(TestDomainEvent), domainEvent.EventType);
     }
 
     private sealed record TestDomainEvent : DomainEvent;

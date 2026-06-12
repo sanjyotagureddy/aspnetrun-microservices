@@ -1,6 +1,6 @@
-﻿using Common.SharedKernel.Messaging;
-using Common.SharedKernel.Logging;
+﻿using Common.SharedKernel.Logging;
 using Common.SharedKernel.Observability.Context;
+using Products.Api.Domain.Events;
 using Products.Api.Features.Products.Events;
 
 namespace Products.Api.Features.Products.Update;
@@ -10,7 +10,7 @@ internal sealed class UpdateProductCommandHandler(
     IInventoryStockAdapter inventoryStockAdapter,
     TimeProvider timeProvider,
     Common.SharedKernel.Logging.ILogger<UpdateProductCommandHandler> logger,
-    IMessageBus messageBus)
+    IProductDomainEventDispatcher domainEventDispatcher)
     : IRequestHandler<UpdateProductCommand, Result<ProductResponse>>
 {
     public async Task<Result<ProductResponse>> Handle(UpdateProductCommand request, CancellationToken cancellationToken)
@@ -27,28 +27,12 @@ internal sealed class UpdateProductCommandHandler(
         await store.UpdateAsync(normalizedProduct, cancellationToken);
 
         int stockQuantity = await inventoryStockAdapter.GetStockQuantityAsync(normalizedProduct.Id, cancellationToken) ?? 0;
-        ProductUpdatedIntegrationEvent productUpdated = normalizedProduct.ToUpdatedIntegrationEvent(occurredOnUtc, stockQuantity);
         AppCallContextBase? appContext = AppCallContextBase.Current;
+        normalizedProduct.RaiseUpdatedDomainEvent(stockQuantity, occurredOnUtc);
+        await domainEventDispatcher.DispatchAsync(normalizedProduct.DomainEvents, appContext, cancellationToken);
+        normalizedProduct.ClearDomainEvents();
 
-        await messageBus.PublishAsync(
-            ProductUpdatedIntegrationEvent.Topic,
-            productUpdated,
-            metadata =>
-            {
-                metadata.MessageId = productUpdated.EventId.ToString("N");
-                metadata.OrderingKey = normalizedProduct.Id.ToString("N");
-                metadata.Contract = new MessageContractDescriptor(nameof(ProductUpdatedIntegrationEvent), "1.0", "application/json");
-                metadata.CorrelationId = appContext?.CorrelationId;
-                metadata.TraceId = appContext?.TraceId;
-                metadata.SpanId = appContext?.SpanId;
-                metadata.TenantId = appContext?.Headers.TryGetValue("X-Tenant-Id", out var tenantId) == true ? tenantId : null;
-                metadata.Headers["Source"] = "products-api";
-                metadata.Headers["Entity"] = nameof(Product);
-                metadata.Headers["EventType"] = nameof(ProductUpdatedIntegrationEvent);
-            },
-            cancellationToken);
-
-        await logger.LogTraceAsync(
+        await logger.LogApplicationAsync(
             new TraceLog
             {
                 Message = "Product updated",
@@ -56,11 +40,10 @@ internal sealed class UpdateProductCommandHandler(
                 {
                     ["productId"] = normalizedProduct.Id,
                     ["sku"] = normalizedProduct.Sku,
-                    ["eventId"] = productUpdated.EventId,
+                    ["eventType"] = ProductUpdatedDomainEvent.EventTypeName,
                     ["topic"] = ProductUpdatedIntegrationEvent.Topic
                 }
             },
-            LogType.Application,
             cancellationToken);
 
         return Result<ProductResponse>.Success(normalizedProduct.ToResponse(stockQuantity));
