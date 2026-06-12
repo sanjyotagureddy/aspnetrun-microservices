@@ -6,6 +6,7 @@ internal sealed class LogDispatcher
     private readonly LoggingOptions _options;
     private readonly Channel<LogEntry> _channel;
     private long _sinkFailureCount;
+    private long _droppedCount;
 
     public LogDispatcher(IReadOnlyList<ILogSink> sinks, IOptions<LoggingOptions> options)
     {
@@ -20,9 +21,25 @@ internal sealed class LogDispatcher
     }
 
     public ValueTask EnqueueAsync(LogEntry entry, CancellationToken cancellationToken = default)
-        => _channel.Writer.WriteAsync(entry, cancellationToken);
+    {
+        TryEnqueue(entry);
+        return ValueTask.CompletedTask;
+    }
+
+    public bool TryEnqueue(LogEntry entry)
+    {
+        if (_channel.Writer.TryWrite(entry))
+        {
+            return true;
+        }
+
+        Interlocked.Increment(ref _droppedCount);
+        return false;
+    }
 
     public long SinkFailureCount => Interlocked.Read(ref _sinkFailureCount);
+
+    public long DroppedCount => Interlocked.Read(ref _droppedCount);
 
     public async Task RunAsync(CancellationToken cancellationToken)
     {

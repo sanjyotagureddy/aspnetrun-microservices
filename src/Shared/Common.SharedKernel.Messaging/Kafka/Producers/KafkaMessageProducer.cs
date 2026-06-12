@@ -72,27 +72,43 @@ internal sealed class KafkaMessageProducer(
 
                 stopwatch.Stop();
                 instrumentation.PublishDurationMs.Record(stopwatch.Elapsed.TotalMilliseconds);
-                await logger.LogInformationAsync("Message published", "messaging.publish", new Dictionary<string, object?>
-                {
-                    ["messageId"] = envelope.MessageId,
-                    ["topic"] = resolvedTopic,
-                    ["provider"] = "Kafka",
-                    ["durationMs"] = stopwatch.Elapsed.TotalMilliseconds,
-                    ["partition"] = report.Partition.Value,
-                    ["offset"] = report.Offset.Value
-                }, cancellationToken);
+                await logger.LogTraceAsync(
+                    new TraceLog
+                    {
+                        Message = "Message published",
+                        Category = "messaging.publish",
+                        DurationMs = stopwatch.Elapsed.TotalMilliseconds,
+                        Context = new Dictionary<string, object?>
+                        {
+                            ["messageId"] = envelope.MessageId,
+                            ["topic"] = resolvedTopic,
+                            ["provider"] = "Kafka",
+                            ["partition"] = report.Partition.Value,
+                            ["offset"] = report.Offset.Value
+                        }
+                    },
+                    LogType.Event,
+                    cancellationToken);
                 return;
             }
             catch (Exception) when (attempt < attempts)
             {
                 instrumentation.RetryCount.Add(1);
-                await logger.LogWarningAsync("Message publish retry", "messaging.retry", new Dictionary<string, object?>
-                {
-                    ["messageId"] = envelope.MessageId,
-                    ["topic"] = resolvedTopic,
-                    ["provider"] = "Kafka",
-                    ["attempt"] = attempt
-                }, cancellationToken);
+                await logger.LogTraceAsync(
+                    new TraceLog
+                    {
+                        Message = "Message publish retry",
+                        Category = "messaging.retry",
+                        Context = new Dictionary<string, object?>
+                        {
+                            ["messageId"] = envelope.MessageId,
+                            ["topic"] = resolvedTopic,
+                            ["provider"] = "Kafka",
+                            ["attempt"] = attempt
+                        }
+                    },
+                    LogType.Event,
+                    cancellationToken);
 
                 await Task.Delay(GetDelay(attempt), cancellationToken);
             }
@@ -100,13 +116,24 @@ internal sealed class KafkaMessageProducer(
             {
                 stopwatch.Stop();
                 instrumentation.PublishFailures.Add(1);
-                await logger.LogErrorAsync("Message publish failed", "messaging.publish", ex, new Dictionary<string, object?>
-                {
-                    ["messageId"] = envelope.MessageId,
-                    ["topic"] = resolvedTopic,
-                    ["provider"] = "Kafka",
-                    ["durationMs"] = stopwatch.Elapsed.TotalMilliseconds
-                }, cancellationToken);
+                await logger.LogErrorAsync(
+                    new ErrorLog
+                    {
+                        Message = "Message publish failed",
+                        Category = "messaging.publish",
+                        Exception = ex,
+                        ExceptionType = ex.GetType().FullName,
+                        ExceptionMessage = ex.Message,
+                        Context = new Dictionary<string, object?>
+                        {
+                            ["messageId"] = envelope.MessageId,
+                            ["topic"] = resolvedTopic,
+                            ["provider"] = "Kafka",
+                            ["durationMs"] = stopwatch.Elapsed.TotalMilliseconds
+                        }
+                    },
+                    LogType.Event,
+                    cancellationToken);
                 throw new MessagingException($"Failed to publish message to topic '{resolvedTopic}'.", ex);
             }
         }

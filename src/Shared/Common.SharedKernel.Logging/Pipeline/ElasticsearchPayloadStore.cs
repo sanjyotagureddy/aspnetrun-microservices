@@ -45,7 +45,9 @@ internal sealed class ElasticsearchPayloadStore(ElasticsearchSinkOptions options
 
     private string BuildPayloadIndexName()
     {
-        string prefix = "api-payload";
+        string prefix = string.IsNullOrWhiteSpace(_options.PayloadIndexPrefix)
+            ? "payload-log"
+            : _options.PayloadIndexPrefix.Trim().TrimEnd('-');
 
         if (!_options.UseDailyIndexes)
         {

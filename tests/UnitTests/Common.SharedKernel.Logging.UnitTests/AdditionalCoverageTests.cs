@@ -107,10 +107,10 @@ public sealed class AdditionalCoverageTests
         Task loop = dispatcher.RunAsync(cts.Token);
         CancellationToken token = TestContext.Current.CancellationToken;
 
-        await logger.LogInformationAsync("m1", category: null, properties: null, cancellationToken: token);
-        await logger.LogInformationAsync("m2", "cat", cancellationToken: token);
-        await logger.LogErrorAsync(new Exception("e"), cancellationToken: token);
-        await logger.LogCriticalAsync(new Exception("f"), cancellationToken: token);
+        await logger.LogTraceAsync(new TraceLog { Message = "m1" }, cancellationToken: token);
+        await logger.LogApiAsync(new ApiLog { Message = "m2", Category = "cat", Method = "GET", Path = "/health", StatusCode = 200, DurationMs = 1 }, cancellationToken: token);
+        await logger.LogErrorAsync(new ErrorLog { Message = "e", Category = "exception", Exception = new Exception("e") }, cancellationToken: token);
+        await logger.LogErrorAsync(new ErrorLog { Message = "f", Category = "fatal", Exception = new Exception("f") }, cancellationToken: token);
 
         await sink.WaitForCountAsync(4, TimeSpan.FromSeconds(5));
 
@@ -121,6 +121,69 @@ public sealed class AdditionalCoverageTests
         sink.Entries.Should().Contain(e => e.Category == "cat");
         sink.Entries.Should().Contain(e => e.Category == "exception");
         sink.Entries.Should().Contain(e => e.Category == "fatal");
+    }
+
+    [Fact]
+    public async Task Logger_DestinationHelpers_ShouldRouteWithoutExplicitLogType()
+    {
+        CollectSink sink = new();
+        LogDispatcher dispatcher = new([sink], Options.Create(new LoggingOptions
+        {
+            ServiceName = "Catalog",
+            MinimumLevel = LogLevel.Trace,
+            BatchSize = 1,
+            QueueCapacity = 32,
+            EnabledLogTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "*" }
+        }));
+
+        LoggingPipeline pipeline = new(
+            new LogContextAccessor(),
+            Options.Create(new LoggingOptions
+            {
+                ServiceName = "Catalog",
+                MinimumLevel = LogLevel.Trace,
+                BatchSize = 1,
+                QueueCapacity = 32,
+                EnabledLogTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "*" }
+            }),
+            [],
+            [],
+            new DefaultLogRedactor(Options.Create(new LoggingPolicyOptions())),
+            dispatcher,
+            TimeProvider.System);
+
+        Logger logger = new(pipeline, "Catalog.Api");
+
+        using CancellationTokenSource cts = new();
+        Task loop = dispatcher.RunAsync(cts.Token);
+        CancellationToken token = TestContext.Current.CancellationToken;
+
+        await logger.LogEventAsync(new TraceLog { Message = "evt" }, token);
+        await logger.LogAuditAsync(new ApiLog { Message = "aud", Method = "GET", Path = "/a", StatusCode = 200, DurationMs = 1 }, token);
+        await logger.LogSecurityAsync(new ErrorLog { Message = "sec", Exception = new InvalidOperationException("x") }, token);
+
+        await sink.WaitForCountAsync(3, TimeSpan.FromSeconds(5));
+
+        cts.Cancel();
+        await loop;
+
+        sink.Entries.Any(e =>
+                e.Message == "evt"
+                && e.Properties is not null
+                && string.Equals(e.Properties["logType"]?.ToString(), "event", StringComparison.OrdinalIgnoreCase))
+            .Should().BeTrue();
+
+        sink.Entries.Any(e =>
+                e.Message == "aud"
+                && e.Properties is not null
+                && string.Equals(e.Properties["logType"]?.ToString(), "audit", StringComparison.OrdinalIgnoreCase))
+            .Should().BeTrue();
+
+        sink.Entries.Any(e =>
+                e.Message == "sec"
+                && e.Properties is not null
+                && string.Equals(e.Properties["logType"]?.ToString(), "security", StringComparison.OrdinalIgnoreCase))
+            .Should().BeTrue();
     }
 
     [Fact]

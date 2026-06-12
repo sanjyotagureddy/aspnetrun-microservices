@@ -39,7 +39,7 @@ internal static class ServiceRegistration
                 ? configuredMinimumLevel
                 : Common.SharedKernel.Logging.LogLevel.Trace;
             string[] enabledLogTypes = loggingSection.GetSection("EnabledLogTypes").Get<string[]>()
-                ?? ["api", "trace", "event"];
+                ?? ["api", "trace", "error"];
 
             bool hasConsoleFormatter = Enum.TryParse(
                 loggingSection["Console:FormatterKind"],
@@ -52,24 +52,23 @@ internal static class ServiceRegistration
             IConfigurationSection openSearchSection = loggingSection.GetSection("OpenSearch");
             bool openSearchEnabled = bool.TryParse(openSearchSection["Enabled"], out bool enabled) && enabled;
             bool hasOpenSearchEndpoint = Uri.TryCreate(openSearchSection["Endpoint"], UriKind.Absolute, out Uri? openSearchEndpoint);
-            string openSearchApiIndexPrefix = string.IsNullOrWhiteSpace(openSearchSection["ApiIndexPrefix"])
-                ? "api-logs"
-                : openSearchSection["ApiIndexPrefix"]!;
-            string openSearchInfraIndexPrefix = string.IsNullOrWhiteSpace(openSearchSection["InfraIndexPrefix"])
-                ? "infra-logs"
-                : openSearchSection["InfraIndexPrefix"]!;
+            string openSearchAppIndexPrefix = string.IsNullOrWhiteSpace(openSearchSection["AppIndexPrefix"])
+                ? "app-log"
+                : openSearchSection["AppIndexPrefix"]!;
             string openSearchMessagingIndexPrefix = string.IsNullOrWhiteSpace(openSearchSection["MessagingIndexPrefix"])
                 ? "messaging-log"
                 : openSearchSection["MessagingIndexPrefix"]!;
+            string openSearchAuditIndexPrefix = string.IsNullOrWhiteSpace(openSearchSection["AuditIndexPrefix"])
+                ? "audit-log"
+                : openSearchSection["AuditIndexPrefix"]!;
+            string openSearchSecurityIndexPrefix = string.IsNullOrWhiteSpace(openSearchSection["SecurityIndexPrefix"])
+                ? "security-log"
+                : openSearchSection["SecurityIndexPrefix"]!;
+            string openSearchPayloadIndexPrefix = string.IsNullOrWhiteSpace(openSearchSection["PayloadIndexPrefix"])
+                ? "payload-log"
+                : openSearchSection["PayloadIndexPrefix"]!;
             bool useDailyIndexes = !bool.TryParse(openSearchSection["UseDailyIndexes"], out bool configuredUseDailyIndexes)
                 || configuredUseDailyIndexes;
-
-            IConfigurationSection logStoreSection = loggingSection.GetSection("LogStore");
-            bool logStoreEnabled = bool.TryParse(logStoreSection["Enabled"], out bool configuredLogStoreEnabled) && configuredLogStoreEnabled;
-            bool hasLogStoreEndpoint = Uri.TryCreate(logStoreSection["Endpoint"], UriKind.Absolute, out Uri? logStoreEndpoint);
-            string logStoreCreateRoutePath = string.IsNullOrWhiteSpace(logStoreSection["CreateRoutePath"])
-                ? "/api/v1/logs"
-                : logStoreSection["CreateRoutePath"]!;
 
             services.AddCommonSharedKernelLogging(builder =>
             {
@@ -83,19 +82,12 @@ internal static class ServiceRegistration
                     builder.UseElasticsearch(opts =>
                     {
                         opts.Endpoint = openSearchEndpoint;
-                        opts.ApiIndexPrefix = openSearchApiIndexPrefix;
-                        opts.InfraIndexPrefix = openSearchInfraIndexPrefix;
+                        opts.AppIndexPrefix = openSearchAppIndexPrefix;
                         opts.MessagingIndexPrefix = openSearchMessagingIndexPrefix;
+                        opts.AuditIndexPrefix = openSearchAuditIndexPrefix;
+                        opts.SecurityIndexPrefix = openSearchSecurityIndexPrefix;
+                        opts.PayloadIndexPrefix = openSearchPayloadIndexPrefix;
                         opts.UseDailyIndexes = useDailyIndexes;
-                    });
-                }
-
-                if (logStoreEnabled && hasLogStoreEndpoint && logStoreEndpoint is not null)
-                {
-                    builder.UseLogStore(opts =>
-                    {
-                        opts.Endpoint = logStoreEndpoint;
-                        opts.CreateRoutePath = logStoreCreateRoutePath;
                     });
                 }
             });

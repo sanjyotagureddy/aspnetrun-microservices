@@ -14,7 +14,7 @@ public sealed record LoggingOptions
 
     public int QueueCapacity { get; set; } = 4096;
 
-    public BoundedChannelFullMode QueueFullMode { get; set; } = BoundedChannelFullMode.Wait;
+    public BoundedChannelFullMode QueueFullMode { get; set; } = BoundedChannelFullMode.DropWrite;
 
     public bool CaptureActivityContext { get; set; } = true;
 
@@ -22,7 +22,7 @@ public sealed record LoggingOptions
     {
         "api",
         "trace",
-        "event"
+        "error"
     };
 
     public Action<Exception, string>? SinkFailureCallback { get; set; }

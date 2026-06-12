@@ -15,17 +15,21 @@ internal sealed class MessagingConfigurationValidationHostedService(
         IReadOnlyList<string> errors = Validate(options.Value);
         if (errors.Count == 0)
         {
-            await logger.LogInformationAsync(
-                "Messaging configuration validated successfully.",
-                "messaging.configuration.validate",
-                new Dictionary<string, object?>
+            await logger.LogTraceAsync(
+                new TraceLog
                 {
-                    ["destinations"] = options.Value.Destinations.Count,
-                    ["provider"] = provider.Name,
-                    ["supportsPartitioning"] = provider.Capabilities.SupportsPartitioning,
-                    ["supportsOrderingByKey"] = provider.Capabilities.SupportsOrderingByKey,
-                    ["supportsTransactions"] = provider.Capabilities.SupportsTransactions
+                    Message = "Messaging configuration validated successfully.",
+                    Category = "messaging.configuration.validate",
+                    Context = new Dictionary<string, object?>
+                    {
+                        ["destinations"] = options.Value.Destinations.Count,
+                        ["provider"] = provider.Name,
+                        ["supportsPartitioning"] = provider.Capabilities.SupportsPartitioning,
+                        ["supportsOrderingByKey"] = provider.Capabilities.SupportsOrderingByKey,
+                        ["supportsTransactions"] = provider.Capabilities.SupportsTransactions
+                    }
                 },
+                LogType.Event,
                 cancellationToken);
 
             try
@@ -36,29 +40,37 @@ internal sealed class MessagingConfigurationValidationHostedService(
             }
             catch (Exception ex) when (hostEnvironment.IsDevelopment())
             {
-                await logger.LogWarningAsync(
-                    "Messaging destination provisioning warning in development environment.",
-                    "messaging.configuration.provision",
-                    new Dictionary<string, object?>
+                await logger.LogTraceAsync(
+                    new TraceLog
                     {
-                        ["error"] = ex.Message,
-                        ["mode"] = options.Value.ProvisioningMode.ToString(),
-                        ["provider"] = provider.Name
+                        Message = "Messaging destination provisioning warning in development environment.",
+                        Category = "messaging.configuration.provision",
+                        Context = new Dictionary<string, object?>
+                        {
+                            ["error"] = ex.Message,
+                            ["mode"] = options.Value.ProvisioningMode.ToString(),
+                            ["provider"] = provider.Name
+                        }
                     },
+                    LogType.Event,
                     cancellationToken);
 
                 return;
             }
 
-            await logger.LogEventAsync(
-                "Messaging destination provisioning completed.",
-                "messaging.configuration.provision",
-                new Dictionary<string, object?>
+            await logger.LogTraceAsync(
+                new TraceLog
                 {
-                    ["destinations"] = options.Value.Destinations.Count,
-                    ["mode"] = options.Value.ProvisioningMode.ToString(),
-                    ["provider"] = provider.Name
+                    Message = "Messaging destination provisioning completed.",
+                    Category = "messaging.configuration.provision",
+                    Context = new Dictionary<string, object?>
+                    {
+                        ["destinations"] = options.Value.Destinations.Count,
+                        ["mode"] = options.Value.ProvisioningMode.ToString(),
+                        ["provider"] = provider.Name
+                    }
                 },
+                LogType.Event,
                 cancellationToken);
 
             return;
@@ -67,13 +79,17 @@ internal sealed class MessagingConfigurationValidationHostedService(
         string message = string.Join(Environment.NewLine, errors.Select((error, index) => $"{index + 1}. {error}"));
         if (hostEnvironment.IsDevelopment())
         {
-            await logger.LogWarningAsync(
-                "Messaging configuration validation warnings.",
-                "messaging.configuration.validate",
-                new Dictionary<string, object?>
+            await logger.LogTraceAsync(
+                new TraceLog
                 {
-                    ["errors"] = message
+                    Message = "Messaging configuration validation warnings.",
+                    Category = "messaging.configuration.validate",
+                    Context = new Dictionary<string, object?>
+                    {
+                        ["errors"] = message
+                    }
                 },
+                LogType.Event,
                 cancellationToken);
             return;
         }

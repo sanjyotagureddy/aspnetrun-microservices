@@ -18,8 +18,6 @@ public interface ILoggingBuilder
 
     ILoggingBuilder UseElasticsearch(Action<ElasticsearchSinkOptions>? configure = null);
 
-    ILoggingBuilder UseLogStore(Action<LogStoreSinkOptions>? configure = null);
-
     ILoggingBuilder AddEnricher(ILogEnricher enricher);
 
     ILoggingBuilder AddMasker(IMask masker);

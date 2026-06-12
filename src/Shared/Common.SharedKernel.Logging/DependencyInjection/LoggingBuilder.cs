@@ -77,15 +77,6 @@ internal sealed class LoggingBuilder(IServiceCollection services) : ILoggingBuil
         return this;
     }
 
-    public ILoggingBuilder UseLogStore(Action<LogStoreSinkOptions>? configure = null)
-    {
-        LogStoreSinkOptions options = new();
-        configure?.Invoke(options);
-        _configuration.LogStoreSinks.Add(options);
-        _configuration.Options.EnabledSinks |= LogSinkKind.LogStore;
-        return this;
-    }
-
     public ILoggingBuilder AddEnricher(ILogEnricher enricher)
     {
         _configuration.Enrichers.Add(Guard.Against.Null(enricher));
@@ -121,8 +112,7 @@ internal sealed class LoggingBuilder(IServiceCollection services) : ILoggingBuil
         if (_configuration.CustomSinks.Count is 0
             && _configuration.ConsoleSinks.Count is 0
             && _configuration.FileSinks.Count is 0
-            && _configuration.ElasticsearchSinks.Count is 0
-            && _configuration.LogStoreSinks.Count is 0)
+            && _configuration.ElasticsearchSinks.Count is 0)
         {
             UseConsole();
         }
@@ -189,12 +179,6 @@ internal sealed class LoggingBuilder(IServiceCollection services) : ILoggingBuil
         {
             LoggingConfiguration configuration = sp.GetRequiredService<LoggingConfiguration>();
 
-            LogStoreSinkOptions? logStoreOptions = configuration.LogStoreSinks.FirstOrDefault();
-            if (logStoreOptions is not null)
-            {
-                return new LogStorePayloadStore(logStoreOptions);
-            }
-
             ElasticsearchSinkOptions? elasticsearchOptions = configuration.ElasticsearchSinks.FirstOrDefault();
             if (elasticsearchOptions is not null)
             {
@@ -233,8 +217,6 @@ internal sealed class LoggingConfiguration
 
     public List<ElasticsearchSinkOptions> ElasticsearchSinks { get; } = [];
 
-    public List<LogStoreSinkOptions> LogStoreSinks { get; } = [];
-
     public List<ILogEnricher> Enrichers { get; } = [];
 
     public List<ILogFilter> Filters { get; } = [];
@@ -251,8 +233,6 @@ internal sealed class LoggingConfiguration
         sinks.AddRange(FileSinks.Select(options => (ILogSink)new FileLogSink(options)));
 
         sinks.AddRange(ElasticsearchSinks.Select(options => (ILogSink)new ElasticsearchLogSink(options)));
-
-        sinks.AddRange(LogStoreSinks.Select(options => (ILogSink)new LogStoreLogSink(options)));
 
         return sinks;
     }
@@ -300,24 +280,6 @@ internal sealed class LoggingConfiguration
             if (string.IsNullOrWhiteSpace(options.IndexName))
             {
                 throw new InvalidOperationException("Elasticsearch sink index name is required.");
-            }
-        }
-
-        foreach (LogStoreSinkOptions options in LogStoreSinks)
-        {
-            if (options.Endpoint is null || !options.Endpoint.IsAbsoluteUri)
-            {
-                throw new InvalidOperationException("LogStore sink endpoint must be an absolute URI.");
-            }
-
-            if (string.IsNullOrWhiteSpace(options.CreateRoutePath))
-            {
-                throw new InvalidOperationException("LogStore sink create route path is required.");
-            }
-
-            if (options.MaxPayloadDedupEntries <= 0)
-            {
-                throw new InvalidOperationException("LogStore sink MaxPayloadDedupEntries must be greater than zero.");
             }
         }
     }

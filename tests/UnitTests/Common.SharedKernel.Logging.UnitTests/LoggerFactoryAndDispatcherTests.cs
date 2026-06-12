@@ -40,24 +40,18 @@ public sealed class LoggerFactoryAndDispatcherTests
         Task loop = dispatcher.RunAsync(cts.Token);
         CancellationToken testToken = TestContext.Current.CancellationToken;
 
-        await logger.LogTraceAsync("trace", cancellationToken: testToken);
-        await logger.LogDebugAsync("debug", cancellationToken: testToken);
-        await logger.LogInformationAsync("info", category: null, properties: null, cancellationToken: testToken);
-        await logger.LogWarningAsync("warn", cancellationToken: testToken);
-        await logger.LogErrorAsync("err", exception: new InvalidOperationException("boom"), cancellationToken: testToken);
-        await logger.LogCriticalAsync("crit", exception: new Exception("fatal"), cancellationToken: testToken);
+        await logger.LogTraceAsync(new TraceLog { Message = "trace" }, cancellationToken: testToken);
+        await logger.LogApiAsync(new ApiLog { Message = "api", Method = "GET", Path = "/products", StatusCode = 200, DurationMs = 10 }, cancellationToken: testToken);
+        await logger.LogErrorAsync(new ErrorLog { Message = "err", Exception = new InvalidOperationException("boom") }, cancellationToken: testToken);
 
-        await sink.WaitForCountAsync(6, TimeSpan.FromSeconds(5));
+        await sink.WaitForCountAsync(3, TimeSpan.FromSeconds(5));
 
         cts.Cancel();
         await loop;
 
         sink.Entries.Should().Contain(e => e.Message == "trace");
-        sink.Entries.Should().Contain(e => e.Message == "debug");
-        sink.Entries.Should().Contain(e => e.Message == "info");
-        sink.Entries.Should().Contain(e => e.Message == "warn");
+        sink.Entries.Should().Contain(e => e.Message == "api");
         sink.Entries.Should().Contain(e => e.Message == "err");
-        sink.Entries.Should().Contain(e => e.Message == "crit");
     }
 
     [Fact]

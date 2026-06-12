@@ -1,4 +1,5 @@
 ﻿using Common.SharedKernel.Exceptions;
+using Common.SharedKernel.Logging;
 
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
@@ -18,7 +19,17 @@ internal sealed class GlobalExceptionHandler(Common.SharedKernel.Logging.ILogger
             _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred")
         };
 
-        await logger.LogCriticalAsync($"Unhandled exception while processing {httpContext.Request.Method} {httpContext.Request.Path}", exception: exception, cancellationToken: cancellationToken);
+        await logger.LogErrorAsync(
+            new ErrorLog
+            {
+                Message = $"Unhandled exception while processing {httpContext.Request.Method} {httpContext.Request.Path}",
+                Category = "http.unhandled.exception",
+                Exception = exception,
+                ExceptionType = exception.GetType().FullName,
+                ExceptionMessage = exception.Message
+            },
+            LogType.Application,
+            cancellationToken);
 
         httpContext.Response.StatusCode = statusCode;
         httpContext.Response.ContentType = "application/problem+json";

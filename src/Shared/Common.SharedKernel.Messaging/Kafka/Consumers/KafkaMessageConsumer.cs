@@ -147,25 +147,41 @@ internal sealed class KafkaMessageConsumer(
 
                 stopwatch.Stop();
                 instrumentation.ConsumeDurationMs.Record(stopwatch.Elapsed.TotalMilliseconds);
-                await logger.LogInformationAsync("Message consumed", "messaging.consume", new Dictionary<string, object?>
-                {
-                    ["messageId"] = envelope.MessageId,
-                    ["consumerGroup"] = _options.Kafka.ConsumerGroup,
-                    ["handler"] = handler.GetType().Name,
-                    ["topic"] = topic,
-                    ["durationMs"] = stopwatch.Elapsed.TotalMilliseconds
-                }, cancellationToken);
+                await logger.LogTraceAsync(
+                    new TraceLog
+                    {
+                        Message = "Message consumed",
+                        Category = "messaging.consume",
+                        DurationMs = stopwatch.Elapsed.TotalMilliseconds,
+                        Context = new Dictionary<string, object?>
+                        {
+                            ["messageId"] = envelope.MessageId,
+                            ["consumerGroup"] = _options.Kafka.ConsumerGroup,
+                            ["handler"] = handler.GetType().Name,
+                            ["topic"] = topic
+                        }
+                    },
+                    LogType.Event,
+                    cancellationToken);
                 return;
             }
             catch (Exception) when (attempt < attempts)
             {
                 instrumentation.RetryCount.Add(1);
-                await logger.LogWarningAsync("Message consume retry", "messaging.retry", new Dictionary<string, object?>
-                {
-                    ["messageId"] = envelope.MessageId,
-                    ["consumerGroup"] = _options.Kafka.ConsumerGroup,
-                    ["attempt"] = attempt
-                }, cancellationToken);
+                await logger.LogTraceAsync(
+                    new TraceLog
+                    {
+                        Message = "Message consume retry",
+                        Category = "messaging.retry",
+                        Context = new Dictionary<string, object?>
+                        {
+                            ["messageId"] = envelope.MessageId,
+                            ["consumerGroup"] = _options.Kafka.ConsumerGroup,
+                            ["attempt"] = attempt
+                        }
+                    },
+                    LogType.Event,
+                    cancellationToken);
             }
             catch (Exception ex)
             {
@@ -178,13 +194,24 @@ internal sealed class KafkaMessageConsumer(
     private async Task LogDeadLetterAsync(string messageId, string topic, string reason, Exception exception, CancellationToken cancellationToken)
     {
         instrumentation.DeadLetterCount.Add(1);
-        await logger.LogErrorAsync("Message moved to dead letter", "messaging.deadletter", exception, new Dictionary<string, object?>
-        {
-            ["messageId"] = messageId,
-            ["topic"] = topic,
-            ["reason"] = reason,
-            ["provider"] = "Kafka"
-        }, cancellationToken);
+        await logger.LogErrorAsync(
+            new ErrorLog
+            {
+                Message = "Message moved to dead letter",
+                Category = "messaging.deadletter",
+                Exception = exception,
+                ExceptionType = exception.GetType().FullName,
+                ExceptionMessage = exception.Message,
+                Context = new Dictionary<string, object?>
+                {
+                    ["messageId"] = messageId,
+                    ["topic"] = topic,
+                    ["reason"] = reason,
+                    ["provider"] = "Kafka"
+                }
+            },
+            LogType.Event,
+            cancellationToken);
     }
 
     private static Dictionary<string, string> ReadHeaders(Headers? headers)
