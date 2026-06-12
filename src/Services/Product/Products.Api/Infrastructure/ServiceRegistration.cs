@@ -8,7 +8,6 @@ using Common.SharedKernel.Messaging;
 using Npgsql;
 
 using Products.Api.Features.Products.Events;
-using Products.Api.Infrastructure.Persistence;
 using Products.Api.Observability;
 
 namespace Products.Api.Infrastructure;
@@ -124,6 +123,7 @@ internal static class ServiceRegistration
 
 
             services.AddSingleton<IProductCatalogStore, ProductCatalogStore>();
+            services.AddSingleton<IProductTransactionExecutor, ProductTransactionExecutor>();
             services.AddSingleton<IProductOutboxStore, ProductOutboxStore>();
             services.AddSingleton<IProductDomainEventDispatcher, ProductDomainEventDispatcher>();
             services.AddHostedService<ProductOutboxPublisher>();

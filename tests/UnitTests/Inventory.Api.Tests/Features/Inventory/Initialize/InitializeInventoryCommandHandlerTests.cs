@@ -6,6 +6,8 @@ using Inventory.Api.Domain.Events;
 using Inventory.Api.Features.Inventory.Initialize;
 using Inventory.Api.Infrastructure;
 using Inventory.Api.Infrastructure.Outbox;
+using Inventory.Api.Infrastructure.Persistence;
+using Npgsql;
 
 namespace Inventory.Api.Tests.Features.Inventory.Initialize;
 
@@ -16,8 +18,9 @@ public sealed class InitializeInventoryCommandHandlerTests
     {
         FakeInventoryStore store = new();
         FakeInventoryDomainEventDispatcher dispatcher = new();
+        FakeInventoryTransactionExecutor transactionExecutor = new();
         Mock<Common.SharedKernel.Logging.ILogger<InitializeInventoryCommandHandler>> logger = new();
-        InitializeInventoryCommandHandler handler = new(store, new FixedTimeProvider(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero)), logger.Object, dispatcher);
+        InitializeInventoryCommandHandler handler = new(store, new FixedTimeProvider(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero)), logger.Object, dispatcher, transactionExecutor);
         Guid productId = Guid.NewGuid();
 
         Result result = await handler.Handle(new InitializeInventoryCommand(productId, 6), CancellationToken.None);
@@ -50,16 +53,33 @@ public sealed class InitializeInventoryCommandHandlerTests
             LastInitialized = item;
             return Task.CompletedTask;
         }
+
+        public Task InitializeAsync(InventoryItem item, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken)
+            => InitializeAsync(item, cancellationToken);
     }
 
     private sealed class FakeInventoryDomainEventDispatcher : IInventoryDomainEventDispatcher
     {
         public List<IDomainEvent> Events { get; } = [];
 
-        public Task DispatchAsync(IEnumerable<IDomainEvent> domainEvents, Common.SharedKernel.Observability.Context.AppCallContextBase? appContext, CancellationToken cancellationToken)
+        public Task DispatchAsync(
+            IEnumerable<IDomainEvent> domainEvents,
+            Common.SharedKernel.Observability.Context.AppCallContextBase? appContext,
+            NpgsqlConnection? connection,
+            NpgsqlTransaction? transaction,
+            CancellationToken cancellationToken)
         {
             Events.AddRange(domainEvents);
             return Task.CompletedTask;
         }
+    }
+
+    private sealed class FakeInventoryTransactionExecutor : IInventoryTransactionExecutor
+    {
+        public Task ExecuteAsync(Func<NpgsqlConnection, NpgsqlTransaction, CancellationToken, Task> operation, CancellationToken cancellationToken)
+            => operation(null!, null!, cancellationToken);
+
+        public Task<T> ExecuteAsync<T>(Func<NpgsqlConnection, NpgsqlTransaction, CancellationToken, Task<T>> operation, CancellationToken cancellationToken)
+            => operation(null!, null!, cancellationToken);
     }
 }

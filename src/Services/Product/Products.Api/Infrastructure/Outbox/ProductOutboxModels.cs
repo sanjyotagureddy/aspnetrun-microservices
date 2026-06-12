@@ -1,5 +1,7 @@
 namespace Products.Api.Infrastructure.Outbox;
 
+using Npgsql;
+
 internal sealed class ProductOutboxMessage
 {
     public Guid Id { get; init; } = Guid.NewGuid();
@@ -46,7 +48,9 @@ internal interface IProductOutboxStore
 {
     Task EnqueueAsync(ProductOutboxMessage message, CancellationToken cancellationToken);
 
-    Task<IReadOnlyList<ProductOutboxMessage>> GetPendingAsync(int batchSize, CancellationToken cancellationToken);
+    Task EnqueueAsync(ProductOutboxMessage message, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<ProductOutboxMessage>> ClaimPendingAsync(int batchSize, TimeSpan claimDuration, CancellationToken cancellationToken);
 
     Task MarkPublishedAsync(Guid id, CancellationToken cancellationToken);
 
@@ -55,5 +59,10 @@ internal interface IProductOutboxStore
 
 internal interface IProductDomainEventDispatcher
 {
-    Task DispatchAsync(IEnumerable<Common.SharedKernel.Abstractions.Events.IDomainEvent> domainEvents, Common.SharedKernel.Observability.Context.AppCallContextBase? appContext, CancellationToken cancellationToken);
+    Task DispatchAsync(
+        IEnumerable<Common.SharedKernel.Abstractions.Events.IDomainEvent> domainEvents,
+        Common.SharedKernel.Observability.Context.AppCallContextBase? appContext,
+        NpgsqlConnection? connection,
+        NpgsqlTransaction? transaction,
+        CancellationToken cancellationToken);
 }

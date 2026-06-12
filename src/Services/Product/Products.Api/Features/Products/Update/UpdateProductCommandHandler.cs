@@ -10,7 +10,8 @@ internal sealed class UpdateProductCommandHandler(
     IInventoryStockAdapter inventoryStockAdapter,
     TimeProvider timeProvider,
     Common.SharedKernel.Logging.ILogger<UpdateProductCommandHandler> logger,
-    IProductDomainEventDispatcher domainEventDispatcher)
+    IProductDomainEventDispatcher domainEventDispatcher,
+    IProductTransactionExecutor transactionExecutor)
     : IRequestHandler<UpdateProductCommand, Result<ProductResponse>>
 {
     public async Task<Result<ProductResponse>> Handle(UpdateProductCommand request, CancellationToken cancellationToken)
@@ -23,14 +24,18 @@ internal sealed class UpdateProductCommandHandler(
 
         DateTime occurredOnUtc = timeProvider.GetUtcNow().UtcDateTime;
         Product normalizedProduct = request.ToDomain(product, occurredOnUtc);
-        await store.EnsureSkuIsUniqueAsync(normalizedProduct.Sku, normalizedProduct.Id, cancellationToken);
-        await store.UpdateAsync(normalizedProduct, cancellationToken);
-
         int stockQuantity = await inventoryStockAdapter.GetStockQuantityAsync(normalizedProduct.Id, cancellationToken) ?? 0;
-        AppCallContextBase? appContext = AppCallContextBase.Current;
-        normalizedProduct.RaiseUpdatedDomainEvent(stockQuantity, occurredOnUtc);
-        await domainEventDispatcher.DispatchAsync(normalizedProduct.DomainEvents, appContext, cancellationToken);
-        normalizedProduct.ClearDomainEvents();
+
+        await transactionExecutor.ExecuteAsync(async (connection, transaction, ct) =>
+        {
+            await store.EnsureSkuIsUniqueAsync(normalizedProduct.Sku, normalizedProduct.Id, connection, transaction, ct);
+            await store.UpdateAsync(normalizedProduct, connection, transaction, ct);
+
+            AppCallContextBase? appContext = AppCallContextBase.Current;
+            normalizedProduct.RaiseUpdatedDomainEvent(stockQuantity, occurredOnUtc);
+            await domainEventDispatcher.DispatchAsync(normalizedProduct.DomainEvents, appContext, connection, transaction, ct);
+            normalizedProduct.ClearDomainEvents();
+        }, cancellationToken);
 
         await logger.LogApplicationAsync(
             new TraceLog

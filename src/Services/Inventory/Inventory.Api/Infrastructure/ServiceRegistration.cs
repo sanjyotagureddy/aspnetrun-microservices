@@ -4,7 +4,6 @@ using Common.SharedKernel.Exceptions;
 using Common.SharedKernel.Logging;
 using Common.SharedKernel.Messaging;
 using Inventory.Api.Features.Inventory.Events;
-using Inventory.Api.Infrastructure.Persistence;
 using Inventory.Api.Observability;
 using Npgsql;
 
@@ -25,6 +24,7 @@ internal static class ServiceRegistration
             services.AddSingleton(TimeProvider.System);
             services.AddSingleton(NpgsqlDataSource.Create(connectionString));
             services.AddSingleton<IInventoryStore, InventoryStore>();
+            services.AddSingleton<IInventoryTransactionExecutor, InventoryTransactionExecutor>();
             services.AddSingleton<IInventoryOutboxStore, InventoryOutboxStore>();
             services.AddSingleton<IInventoryDomainEventDispatcher, InventoryDomainEventDispatcher>();
             services.AddHostedService<InventorySchemaInitializer>();

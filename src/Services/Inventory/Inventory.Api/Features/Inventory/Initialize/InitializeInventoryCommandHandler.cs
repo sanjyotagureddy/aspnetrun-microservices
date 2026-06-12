@@ -9,7 +9,8 @@ internal sealed class InitializeInventoryCommandHandler(
     IInventoryStore store,
     TimeProvider timeProvider,
     ILogger<InitializeInventoryCommandHandler> logger,
-    IInventoryDomainEventDispatcher domainEventDispatcher)
+    IInventoryDomainEventDispatcher domainEventDispatcher,
+    IInventoryTransactionExecutor transactionExecutor)
     : IRequestHandler<InitializeInventoryCommand, Result>
 {
     public async Task<Result> Handle(InitializeInventoryCommand request, CancellationToken cancellationToken)
@@ -17,12 +18,15 @@ internal sealed class InitializeInventoryCommandHandler(
         DateTime occurredOnUtc = timeProvider.GetUtcNow().UtcDateTime;
         InventoryItem item = new(request.ProductId, request.StockQuantity, occurredOnUtc);
 
-        await store.InitializeAsync(item, cancellationToken);
+        await transactionExecutor.ExecuteAsync(async (connection, transaction, ct) =>
+        {
+            await store.InitializeAsync(item, connection, transaction, ct);
 
-        AppCallContextBase? appContext = AppCallContextBase.Current;
-        item.RaiseInitializedDomainEvent(occurredOnUtc);
-        await domainEventDispatcher.DispatchAsync(item.DomainEvents, appContext, cancellationToken);
-        item.ClearDomainEvents();
+            AppCallContextBase? appContext = AppCallContextBase.Current;
+            item.RaiseInitializedDomainEvent(occurredOnUtc);
+            await domainEventDispatcher.DispatchAsync(item.DomainEvents, appContext, connection, transaction, ct);
+            item.ClearDomainEvents();
+        }, cancellationToken);
 
         await logger.LogApplicationAsync(
             new TraceLog

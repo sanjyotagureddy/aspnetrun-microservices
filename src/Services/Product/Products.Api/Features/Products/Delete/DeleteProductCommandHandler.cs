@@ -9,22 +9,26 @@ internal sealed class DeleteProductCommandHandler(
     IProductCatalogStore store,
     TimeProvider timeProvider,
     Common.SharedKernel.Logging.ILogger<DeleteProductCommandHandler> logger,
-    IProductDomainEventDispatcher domainEventDispatcher)
+    IProductDomainEventDispatcher domainEventDispatcher,
+    IProductTransactionExecutor transactionExecutor)
     : IRequestHandler<DeleteProductCommand, Result>
 {
     public async Task<Result> Handle(DeleteProductCommand request, CancellationToken cancellationToken)
     {
-        bool deleted = await store.DeleteAsync(request.Id, cancellationToken);
-        if (!deleted)
-        {
-            throw new Common.SharedKernel.Exceptions.NotFoundException(nameof(Product), request.Id.ToString());
-        }
-
         DateTime occurredOnUtc = timeProvider.GetUtcNow().UtcDateTime;
-        AppCallContextBase? appContext = AppCallContextBase.Current;
 
-        ProductDeletedDomainEvent deletedDomainEvent = new(occurredOnUtc, request.Id, occurredOnUtc);
-        await domainEventDispatcher.DispatchAsync([deletedDomainEvent], appContext, cancellationToken);
+        await transactionExecutor.ExecuteAsync(async (connection, transaction, ct) =>
+        {
+            bool deleted = await store.DeleteAsync(request.Id, connection, transaction, ct);
+            if (!deleted)
+            {
+                throw new Common.SharedKernel.Exceptions.NotFoundException(nameof(Product), request.Id.ToString());
+            }
+
+            AppCallContextBase? appContext = AppCallContextBase.Current;
+            ProductDeletedDomainEvent deletedDomainEvent = new(occurredOnUtc, request.Id, occurredOnUtc);
+            await domainEventDispatcher.DispatchAsync([deletedDomainEvent], appContext, connection, transaction, ct);
+        }, cancellationToken);
 
         await logger.LogApplicationAsync(
             new TraceLog

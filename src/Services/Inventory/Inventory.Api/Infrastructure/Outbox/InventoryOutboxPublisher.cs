@@ -10,12 +10,13 @@ internal sealed class InventoryOutboxPublisher(
     ILogger<InventoryOutboxPublisher> logger) : BackgroundService
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly TimeSpan ClaimDuration = TimeSpan.FromSeconds(30);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
         {
-            IReadOnlyList<InventoryOutboxMessage> messages = await outboxStore.GetPendingAsync(50, stoppingToken);
+            IReadOnlyList<InventoryOutboxMessage> messages = await outboxStore.ClaimPendingAsync(50, ClaimDuration, stoppingToken);
             if (messages.Count == 0)
             {
                 await Task.Delay(TimeSpan.FromSeconds(3), stoppingToken);

@@ -10,12 +10,13 @@ internal sealed class ProductOutboxPublisher(
     ILogger<ProductOutboxPublisher> logger) : BackgroundService
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly TimeSpan ClaimDuration = TimeSpan.FromSeconds(30);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
         {
-            IReadOnlyList<ProductOutboxMessage> messages = await outboxStore.GetPendingAsync(50, stoppingToken);
+            IReadOnlyList<ProductOutboxMessage> messages = await outboxStore.ClaimPendingAsync(50, ClaimDuration, stoppingToken);
             if (messages.Count == 0)
             {
                 await Task.Delay(TimeSpan.FromSeconds(3), stoppingToken);
@@ -89,7 +90,7 @@ internal sealed class ProductOutboxPublisher(
         destination.TenantId = source.TenantId;
         destination.RoutingKey = source.RoutingKey;
         destination.OrderingKey = source.OrderingKey;
-        destination.Contract = new Common.SharedKernel.Messaging.MessageContractDescriptor(
+        destination.Contract = new MessageContractDescriptor(
             source.Contract.MessageType,
             source.Contract.Version,
             source.Contract.ContentType,

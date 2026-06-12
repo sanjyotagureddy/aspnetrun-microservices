@@ -1,5 +1,7 @@
 namespace Inventory.Api.Infrastructure.Outbox;
 
+using Npgsql;
+
 internal sealed class InventoryOutboxMessage
 {
     public Guid Id { get; init; } = Guid.NewGuid();
@@ -46,7 +48,9 @@ internal interface IInventoryOutboxStore
 {
     Task EnqueueAsync(InventoryOutboxMessage message, CancellationToken cancellationToken);
 
-    Task<IReadOnlyList<InventoryOutboxMessage>> GetPendingAsync(int batchSize, CancellationToken cancellationToken);
+    Task EnqueueAsync(InventoryOutboxMessage message, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<InventoryOutboxMessage>> ClaimPendingAsync(int batchSize, TimeSpan claimDuration, CancellationToken cancellationToken);
 
     Task MarkPublishedAsync(Guid id, CancellationToken cancellationToken);
 
@@ -55,5 +59,10 @@ internal interface IInventoryOutboxStore
 
 internal interface IInventoryDomainEventDispatcher
 {
-    Task DispatchAsync(IEnumerable<Common.SharedKernel.Abstractions.Events.IDomainEvent> domainEvents, Common.SharedKernel.Observability.Context.AppCallContextBase? appContext, CancellationToken cancellationToken);
+    Task DispatchAsync(
+        IEnumerable<Common.SharedKernel.Abstractions.Events.IDomainEvent> domainEvents,
+        Common.SharedKernel.Observability.Context.AppCallContextBase? appContext,
+        NpgsqlConnection? connection,
+        NpgsqlTransaction? transaction,
+        CancellationToken cancellationToken);
 }

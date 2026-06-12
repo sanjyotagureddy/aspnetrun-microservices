@@ -11,70 +11,52 @@ internal sealed class CreateProductCommandHandler(
     IInventoryStockAdapter inventoryStockAdapter,
     TimeProvider timeProvider,
     Common.SharedKernel.Logging.ILogger<CreateProductCommandHandler> logger,
-    IProductDomainEventDispatcher domainEventDispatcher)
+    IProductDomainEventDispatcher domainEventDispatcher,
+    IProductTransactionExecutor transactionExecutor)
     : IRequestHandler<CreateProductCommand, Result<ProductResponse>>
 {
     public async Task<Result<ProductResponse>> Handle(CreateProductCommand request, CancellationToken cancellationToken)
     {
         DateTime occurredOnUtc = timeProvider.GetUtcNow().UtcDateTime;
         Product normalizedProduct = request.ToDomain(Guid.NewGuid(), occurredOnUtc);
-        int confirmedStockQuantity;
-
-        await store.EnsureSkuIsUniqueAsync(normalizedProduct.Sku, null, cancellationToken);
-        await store.AddAsync(normalizedProduct, cancellationToken);
+        int confirmedStockQuantity = request.StockQuantity;
 
         try
         {
-            await inventoryStockAdapter.InitializeAsync(normalizedProduct.Id, request.StockQuantity, cancellationToken);
-            confirmedStockQuantity = await inventoryStockAdapter.GetStockQuantityAsync(normalizedProduct.Id, cancellationToken) ?? request.StockQuantity;
+            await transactionExecutor.ExecuteAsync(async (connection, transaction, ct) =>
+            {
+                await store.EnsureSkuIsUniqueAsync(normalizedProduct.Sku, null, connection, transaction, ct);
+                await store.AddAsync(normalizedProduct, connection, transaction, ct);
+
+                await inventoryStockAdapter.InitializeAsync(normalizedProduct.Id, request.StockQuantity, ct);
+                confirmedStockQuantity = await inventoryStockAdapter.GetStockQuantityAsync(normalizedProduct.Id, ct) ?? request.StockQuantity;
+
+                AppCallContext? appContext = AppCallContextBase.CurrentAs<AppCallContext>();
+                normalizedProduct.RaiseCreatedDomainEvent(confirmedStockQuantity, occurredOnUtc);
+                await domainEventDispatcher.DispatchAsync(normalizedProduct.DomainEvents, appContext, connection, transaction, ct);
+                normalizedProduct.ClearDomainEvents();
+            }, cancellationToken);
         }
         catch (Exception ex)
         {
-            bool rollbackSucceeded;
-
-            try
-            {
-                rollbackSucceeded = await store.DeleteAsync(normalizedProduct.Id, cancellationToken);
-            }
-            catch (Exception rollbackException)
-            {
-                await logger.LogApplicationAsync(
-                    new ErrorLog
-                    {
-                        Message = "Product rollback failed after inventory initialization error",
-                        Exception = rollbackException,
-                        ExceptionType = rollbackException.GetType().FullName,
-                        ExceptionMessage = rollbackException.Message
-                    },
-                    cancellationToken);
-
-                throw new Common.SharedKernel.Exceptions.ConflictException("Product creation failed because inventory initialization could not be completed.");
-            }
-
             await logger.LogApplicationAsync(
                 new ErrorLog
                 {
-                    Message = "Inventory initialization failed for product; create operation was rolled back",
-                    Category = "inventory_initialize_failed_product_rolled_back",
+                    Message = "Product creation failed while writing product and outbox state",
+                    Category = "product_create_transaction_failed",
                     Exception = ex,
                     ExceptionType = ex.GetType().FullName,
                     ExceptionMessage = ex.Message,
                     Context = new Dictionary<string, object?>
                     {
                         ["productId"] = normalizedProduct.Id,
-                        ["stockQuantity"] = request.StockQuantity,
-                        ["rollbackSucceeded"] = rollbackSucceeded
+                        ["stockQuantity"] = request.StockQuantity
                     }
                 },
                 cancellationToken);
 
-            throw new Common.SharedKernel.Exceptions.ConflictException("Product creation failed because inventory initialization could not be completed.");
+            throw new Common.SharedKernel.Exceptions.ConflictException("Product creation failed and was rolled back.");
         }
-
-        AppCallContext? appContext = AppCallContextBase.CurrentAs<AppCallContext>();
-        normalizedProduct.RaiseCreatedDomainEvent(confirmedStockQuantity, occurredOnUtc);
-        await domainEventDispatcher.DispatchAsync(normalizedProduct.DomainEvents, appContext, cancellationToken);
-        normalizedProduct.ClearDomainEvents();
 
         await logger.LogApplicationAsync(
             new TraceLog

@@ -8,6 +8,14 @@ internal sealed class ProductOutboxStore(NpgsqlDataSource dataSource) : IProduct
     public async Task EnqueueAsync(ProductOutboxMessage message, CancellationToken cancellationToken)
     {
         await using NpgsqlConnection connection = await dataSource.OpenConnectionAsync(cancellationToken);
+        await EnqueueInternalAsync(message, connection, null, cancellationToken);
+    }
+
+    public Task EnqueueAsync(ProductOutboxMessage message, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken)
+        => EnqueueInternalAsync(message, connection, transaction, cancellationToken);
+
+    private static async Task EnqueueInternalAsync(ProductOutboxMessage message, NpgsqlConnection connection, NpgsqlTransaction? transaction, CancellationToken cancellationToken)
+    {
         await connection.ExecuteAsync(new CommandDefinition(
             """
             insert into product_outbox (id, occurred_on_utc, event_type, topic, payload_json, metadata_json, status, attempt_count)
@@ -22,28 +30,45 @@ internal sealed class ProductOutboxStore(NpgsqlDataSource dataSource) : IProduct
                 message.PayloadJson,
                 message.MetadataJson
             },
+            transaction,
             cancellationToken: cancellationToken));
     }
 
-    public async Task<IReadOnlyList<ProductOutboxMessage>> GetPendingAsync(int batchSize, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<ProductOutboxMessage>> ClaimPendingAsync(int batchSize, TimeSpan claimDuration, CancellationToken cancellationToken)
     {
         await using NpgsqlConnection connection = await dataSource.OpenConnectionAsync(cancellationToken);
+        int claimSeconds = Math.Max(10, (int)claimDuration.TotalSeconds);
+
         IEnumerable<ProductOutboxMessage> rows = await connection.QueryAsync<ProductOutboxMessage>(new CommandDefinition(
             """
-            select id,
-                   occurred_on_utc as OccurredOnUtc,
-                   event_type as EventType,
-                   topic as Topic,
-                   payload_json::text as PayloadJson,
-                   metadata_json::text as MetadataJson,
-                   attempt_count as AttemptCount
-            from product_outbox
-            where status = 'pending'
-              and (next_attempt_on_utc is null or next_attempt_on_utc <= now())
-            order by occurred_on_utc asc
-            limit @BatchSize
+            with candidates as
+            (
+                select id
+                from product_outbox
+                where status = 'pending'
+                  and (next_attempt_on_utc is null or next_attempt_on_utc <= now())
+                order by occurred_on_utc asc
+                for update skip locked
+                limit @BatchSize
+            )
+            update product_outbox as outbox
+            set status = 'processing',
+                next_attempt_on_utc = now() + make_interval(secs => @ClaimSeconds)
+            from candidates
+            where outbox.id = candidates.id
+            returning outbox.id,
+                      outbox.occurred_on_utc as OccurredOnUtc,
+                      outbox.event_type as EventType,
+                      outbox.topic as Topic,
+                      outbox.payload_json::text as PayloadJson,
+                      outbox.metadata_json::text as MetadataJson,
+                      outbox.attempt_count as AttemptCount
             """,
-            new { BatchSize = batchSize },
+            new
+            {
+                BatchSize = batchSize,
+                ClaimSeconds = claimSeconds
+            },
             cancellationToken: cancellationToken));
 
         return rows.ToList();
@@ -72,7 +97,8 @@ internal sealed class ProductOutboxStore(NpgsqlDataSource dataSource) : IProduct
         await connection.ExecuteAsync(new CommandDefinition(
             """
             update product_outbox
-            set attempt_count = @AttemptCount,
+            set status = 'pending',
+                attempt_count = @AttemptCount,
                 last_error = @Error,
                 next_attempt_on_utc = now() + make_interval(secs => @NextAttemptSeconds)
             where id = @Id

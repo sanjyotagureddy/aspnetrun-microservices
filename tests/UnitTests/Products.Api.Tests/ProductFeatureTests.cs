@@ -1,14 +1,14 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Common.SharedKernel.Logging;
 using Common.SharedKernel.Messaging;
 using Moq;
-
 using Products.Api.Domain;
 using Products.Api.Features.Products.Create;
 using Products.Api.Features.Products.Events;
 using Products.Api.Features.Products.Get;
 using Products.Api.Infrastructure;
 using Products.Api.Infrastructure.Outbox;
+using Products.Api.Infrastructure.Persistence;
 
 namespace Products.Api.Tests;
 
@@ -28,7 +28,8 @@ public sealed class ProductFeatureTests
             inventory,
             new FixedTimeProvider(new DateTimeOffset(2026, 5, 28, 12, 0, 0, TimeSpan.Zero)),
             new Mock<ILogger<CreateProductCommandHandler>>().Object,
-            dispatcher);
+            dispatcher,
+            new FakeProductTransactionExecutor(store, outboxStore));
 
         var command = new CreateProductCommand(
             "Laptop",
@@ -77,7 +78,7 @@ public sealed class ProductFeatureTests
             TenantId = metadata.TenantId,
             RoutingKey = metadata.RoutingKey,
             OrderingKey = metadata.OrderingKey,
-            Contract = new Common.SharedKernel.Messaging.MessageContractDescriptor(
+            Contract = new MessageContractDescriptor(
                 metadata.Contract.MessageType,
                 metadata.Contract.Version,
                 metadata.Contract.ContentType,
@@ -115,7 +116,8 @@ public sealed class ProductFeatureTests
             inventory,
             new FixedTimeProvider(new DateTimeOffset(2026, 5, 28, 12, 0, 0, TimeSpan.Zero)),
             new Mock<ILogger<CreateProductCommandHandler>>().Object,
-            dispatcher);
+            dispatcher,
+            new FakeProductTransactionExecutor(store, outboxStore));
 
         var command = new CreateProductCommand(
             "Laptop",
@@ -221,11 +223,17 @@ public sealed class ProductFeatureTests
             return Task.CompletedTask;
         }
 
+        Task IProductCatalogStore.AddAsync(Product product, Npgsql.NpgsqlConnection connection, Npgsql.NpgsqlTransaction transaction, CancellationToken cancellationToken)
+            => AddAsync(product, cancellationToken);
+
         public Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken)
         {
             int removed = Products.RemoveAll(product => product.Id == id);
             return Task.FromResult(removed > 0);
         }
+
+        Task<bool> IProductCatalogStore.DeleteAsync(Guid id, Npgsql.NpgsqlConnection connection, Npgsql.NpgsqlTransaction transaction, CancellationToken cancellationToken)
+            => DeleteAsync(id, cancellationToken);
 
         public Task EnsureSkuIsUniqueAsync(string sku, Guid? productId, CancellationToken cancellationToken)
         {
@@ -237,6 +245,9 @@ public sealed class ProductFeatureTests
 
             return Task.CompletedTask;
         }
+
+        Task IProductCatalogStore.EnsureSkuIsUniqueAsync(string sku, Guid? productId, Npgsql.NpgsqlConnection connection, Npgsql.NpgsqlTransaction transaction, CancellationToken cancellationToken)
+            => EnsureSkuIsUniqueAsync(sku, productId, cancellationToken);
 
         public Task<Product?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
         {
@@ -298,6 +309,9 @@ public sealed class ProductFeatureTests
 
             return Task.CompletedTask;
         }
+
+        Task IProductCatalogStore.UpdateAsync(Product product, Npgsql.NpgsqlConnection connection, Npgsql.NpgsqlTransaction transaction, CancellationToken cancellationToken)
+            => UpdateAsync(product, cancellationToken);
     }
 
     private sealed class FixedTimeProvider(DateTimeOffset value) : TimeProvider
@@ -315,7 +329,10 @@ public sealed class ProductFeatureTests
             return Task.CompletedTask;
         }
 
-        public Task<IReadOnlyList<ProductOutboxMessage>> GetPendingAsync(int batchSize, CancellationToken cancellationToken)
+        Task IProductOutboxStore.EnqueueAsync(ProductOutboxMessage message, Npgsql.NpgsqlConnection connection, Npgsql.NpgsqlTransaction transaction, CancellationToken cancellationToken)
+            => EnqueueAsync(message, cancellationToken);
+
+        Task<IReadOnlyList<ProductOutboxMessage>> IProductOutboxStore.ClaimPendingAsync(int batchSize, TimeSpan claimDuration, CancellationToken cancellationToken)
             => Task.FromResult((IReadOnlyList<ProductOutboxMessage>)Messages.Take(batchSize).ToList());
 
         public Task MarkPublishedAsync(Guid id, CancellationToken cancellationToken)
@@ -323,5 +340,30 @@ public sealed class ProductFeatureTests
 
         public Task MarkFailedAsync(Guid id, int attemptCount, string error, CancellationToken cancellationToken)
             => Task.CompletedTask;
+    }
+
+    private sealed class FakeProductTransactionExecutor(FakeProductCatalogStore store, FakeProductOutboxStore outboxStore) : IProductTransactionExecutor
+    {
+        public async Task ExecuteAsync(Func<Npgsql.NpgsqlConnection, Npgsql.NpgsqlTransaction, CancellationToken, Task> operation, CancellationToken cancellationToken)
+        {
+            List<Product> productSnapshot = [.. store.Products];
+            List<ProductOutboxMessage> outboxSnapshot = [.. outboxStore.Messages];
+
+            try
+            {
+                await operation(null!, null!, cancellationToken);
+            }
+            catch
+            {
+                store.Products.Clear();
+                store.Products.AddRange(productSnapshot);
+                outboxStore.Messages.Clear();
+                outboxStore.Messages.AddRange(outboxSnapshot);
+                throw;
+            }
+        }
+
+        public Task<T> ExecuteAsync<T>(Func<Npgsql.NpgsqlConnection, Npgsql.NpgsqlTransaction, CancellationToken, Task<T>> operation, CancellationToken cancellationToken)
+            => operation(null!, null!, cancellationToken);
     }
 }

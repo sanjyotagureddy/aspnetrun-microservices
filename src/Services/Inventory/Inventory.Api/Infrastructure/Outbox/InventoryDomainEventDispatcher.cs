@@ -2,6 +2,7 @@ using System.Text.Json;
 using Common.SharedKernel.Abstractions.Events;
 using Common.SharedKernel.Messaging;
 using Common.SharedKernel.Observability.Context;
+using Npgsql;
 using Inventory.Api.Domain.Events;
 using Inventory.Api.Features.Inventory.Events;
 
@@ -11,12 +12,24 @@ internal sealed class InventoryDomainEventDispatcher(IInventoryOutboxStore outbo
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    public async Task DispatchAsync(IEnumerable<IDomainEvent> domainEvents, AppCallContextBase? appContext, CancellationToken cancellationToken)
+    public async Task DispatchAsync(
+        IEnumerable<IDomainEvent> domainEvents,
+        AppCallContextBase? appContext,
+        NpgsqlConnection? connection,
+        NpgsqlTransaction? transaction,
+        CancellationToken cancellationToken)
     {
         foreach (IDomainEvent domainEvent in domainEvents)
         {
             InventoryOutboxMessage outboxMessage = MapToOutboxMessage(domainEvent, appContext);
-            await outboxStore.EnqueueAsync(outboxMessage, cancellationToken);
+            if (connection is not null && transaction is not null)
+            {
+                await outboxStore.EnqueueAsync(outboxMessage, connection, transaction, cancellationToken);
+            }
+            else
+            {
+                await outboxStore.EnqueueAsync(outboxMessage, cancellationToken);
+            }
         }
     }
 
