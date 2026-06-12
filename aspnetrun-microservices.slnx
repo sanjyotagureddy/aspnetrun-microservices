@@ -32,9 +32,11 @@
   <Folder Name="/src/3. services/product/">
     <Project Path="src/Services/Product/Products.Api/Products.Api.csproj" />
   </Folder>
+  <Folder Name="/src/Shared/" />
   <Folder Name="/tests/" />
   <Folder Name="/tests/IntegrationTests/">
     <Project Path="tests/IntegrationTests/Common.SharedKernel.Logging.IntegrationTests/Common.SharedKernel.Logging.IntegrationTests.csproj" />
+    <Project Path="tests/IntegrationTests/Common.SharedKernel.Messaging.IntegrationTests/Common.SharedKernel.Messaging.IntegrationTests.csproj" />
     <Project Path="tests/IntegrationTests/Inventory.Api.IntegrationTests/Inventory.Api.IntegrationTests.csproj" />
   </Folder>
   <Folder Name="/tests/UnitTests/">
