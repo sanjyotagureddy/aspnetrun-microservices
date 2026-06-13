@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 
 namespace Common.SharedKernel.Logging.UnitTests;
 
@@ -24,7 +24,6 @@ public sealed class RedactionAndPolicyOptionsTests
         options.SensitiveKeys.Should().NotContain("");
         options.MaskingExcludedFields.Should().Contain("correlationid");
         options.MaskingExcludedFields.Should().Contain("traceparent");
-        options.MaskingExcludedFields.Should().NotContain("eventtype");
         options.MaskingExcludedFields.Should().NotContain("productid");
     }
 

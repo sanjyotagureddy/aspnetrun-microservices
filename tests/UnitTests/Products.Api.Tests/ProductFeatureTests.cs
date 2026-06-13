@@ -1,6 +1,7 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Common.SharedKernel.Logging;
 using Common.SharedKernel.Messaging;
+using Common.SharedKernel.Messaging.Outbox;
 using Moq;
 using Products.Api.Domain;
 using Products.Api.Features.Products.Create;
@@ -344,6 +345,11 @@ public sealed class ProductFeatureTests
 
         public Task MarkFailedAsync(Guid id, int attemptCount, string error, CancellationToken cancellationToken)
             => Task.CompletedTask;
+
+        public Task<OutboxBacklogSnapshot> GetBacklogSnapshotAsync(CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     private sealed class FakeProductTransactionExecutor(FakeProductCatalogStore store, FakeProductOutboxStore outboxStore) : IProductTransactionExecutor

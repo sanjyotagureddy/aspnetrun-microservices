@@ -1,5 +1,6 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Common.SharedKernel.Abstractions.Events;
+using Common.SharedKernel.Messaging.Outbox;
 using Inventory.Api.Domain.Events;
 using Inventory.Api.Infrastructure.Outbox;
 
@@ -57,5 +58,10 @@ public sealed class InventoryDomainEventDispatcherTests
 
         public Task MarkFailedAsync(Guid id, int attemptCount, string error, CancellationToken cancellationToken)
             => Task.CompletedTask;
+
+        public Task<OutboxBacklogSnapshot> GetBacklogSnapshotAsync(CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
