@@ -74,5 +74,25 @@ Current implementation includes:
 - Structured dead-letter logging hooks
 - Message metadata propagation
 - Cancellation-aware producer and consumer paths
+- Outbox publishing with lease-based claiming (`next_attempt_on_utc`)
+- Reclaim of expired `processing` outbox rows after publisher crashes
+
+## Outbox Semantics
+
+Outbox stores use lease semantics to avoid duplicate work while allowing recovery from crashed publishers.
+
+- `pending` rows are claimable when `next_attempt_on_utc` is null or in the past.
+- `processing` rows are reclaimable when `next_attempt_on_utc <= now()` (expired lease).
+- Claiming sets `status = processing` and refreshes lease via `next_attempt_on_utc`.
+- Successful publish sets `status = published`, sets `processed_on_utc`, and clears `next_attempt_on_utc`.
+- Failed publish sets `status = pending`, increments `attempt_count`, sets backoff in `next_attempt_on_utc`, and clears `processed_on_utc`.
+
+## Domain Event To Integration Event Metadata
+
+For aggregate-scoped streams, dispatchers set both `OrderingKey` and `RoutingKey` to aggregate id (for example `productId.ToString("N")`).
+
+- Key values are serialized into outbox metadata JSON.
+- Outbox publishers restore keys through `OutboxPublisherHelpers.CopyMetadata(...)`.
+- Kafka producer enforces key presence for key-based partition strategies (`ByAggregateId`, `ByOrderingKey`, `ByRoutingKey`).
 
 Next production hardening step: implement concrete dead-letter publishing and Testcontainers-backed integration tests for Kafka.

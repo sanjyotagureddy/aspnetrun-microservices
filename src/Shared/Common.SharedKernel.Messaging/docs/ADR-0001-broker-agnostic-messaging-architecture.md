@@ -244,3 +244,4 @@ Use a staged rollout to avoid breaking all services at once.
 2. Production provisioning mode: `ValidateOnly` everywhere, or `CreateIfMissing` for selected environments?
 3. Destination naming policy: global convention ownership by platform team vs service team autonomy?
 4. Ordering policy enforcement: where to require `OrderingKey` for aggregate-scoped events?
+    - Resolved in current implementation: enforce in producer publish path for key-based partitioning strategies (`ByAggregateId`, `ByOrderingKey`, `ByRoutingKey`) and set keys in domain-event dispatchers before outbox enqueue.

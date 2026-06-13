@@ -22,6 +22,47 @@ public sealed class RedactionAndPolicyOptionsTests
         options.SensitiveKeys.Should().Contain("password");
         options.SensitiveKeys.Should().Contain("authorization");
         options.SensitiveKeys.Should().NotContain("");
+        options.MaskingExcludedFields.Should().Contain("correlationid");
+        options.MaskingExcludedFields.Should().Contain("traceparent");
+        options.MaskingExcludedFields.Should().NotContain("eventtype");
+        options.MaskingExcludedFields.Should().NotContain("productid");
+    }
+
+    [Fact]
+    public void DefaultLogRedactor_Redact_ShouldBypassMasking_ForConfiguredExcludedField()
+    {
+        LoggingPolicyOptions policy = new()
+        {
+            SensitiveKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "tenantId"
+            },
+            MaskingExcludedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "tenantId"
+            }
+        };
+        policy.EnsureDefaults();
+
+        DefaultLogRedactor redactor = new(Options.Create(policy));
+        LogEntry entry = LogEntry.Create(
+            LogLevel.Information,
+            "Catalog",
+            "Catalog.Api",
+            "request",
+            "message",
+            DateTimeOffset.UtcNow,
+            properties: new Dictionary<string, object?>
+            {
+                ["tenantId"] = "tenant-01",
+                ["authorization"] = "Bearer abc.def.ghi"
+            });
+
+        LogEntry redacted = redactor.Redact(entry);
+
+        redacted.Properties.Should().NotBeNull();
+        redacted.Properties!["tenantId"].Should().Be("tenant-01");
+        redacted.Properties["authorization"].Should().Be("***");
     }
 
     [Fact]
@@ -232,7 +273,16 @@ public sealed class RedactionAndPolicyOptionsTests
     [Fact]
     public void DefaultLogRedactor_Redact_ShouldPreserveCorrelationTraceAndTraceparent()
     {
-        LoggingPolicyOptions policy = new();
+        LoggingPolicyOptions policy = new()
+        {
+            MaskingExcludedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "topic",
+                "messageId",
+                "eventType",
+                "productId"
+            }
+        };
         policy.EnsureDefaults();
 
         DefaultLogRedactor redactor = new(Options.Create(policy));
@@ -250,7 +300,10 @@ public sealed class RedactionAndPolicyOptionsTests
                 ["rq.traceparent"] = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
                 ["rs.x-correlationid"] = "7f2aa1b3-8b7d-4d2b-9f80-28dd7c2d9a4f",
                 ["messaging.topic"] = "inventory.stock.updated",
-                ["messaging.messageId"] = "d8b3d4b8-a8aa-43ea-97b4-f3a8f5f1d06f"
+                ["messaging.messageId"] = "d8b3d4b8-a8aa-43ea-97b4-f3a8f5f1d06f",
+                ["eventType"] = "product.created.v1",
+                ["productId"] = "d8b3d4b8-a8aa-43ea-97b4-f3a8f5f1d06f",
+                ["authorization"] = "Bearer abc.def.ghi"
             });
 
         LogEntry redacted = redactor.Redact(entry);
@@ -262,5 +315,8 @@ public sealed class RedactionAndPolicyOptionsTests
         redacted.Properties["rs.x-correlationid"].Should().Be("7f2aa1b3-8b7d-4d2b-9f80-28dd7c2d9a4f");
         redacted.Properties["messaging.topic"].Should().Be("inventory.stock.updated");
         redacted.Properties["messaging.messageId"].Should().Be("d8b3d4b8-a8aa-43ea-97b4-f3a8f5f1d06f");
+        redacted.Properties["eventType"].Should().Be("product.created.v1");
+        redacted.Properties["productId"].Should().Be("d8b3d4b8-a8aa-43ea-97b4-f3a8f5f1d06f");
+        redacted.Properties["authorization"].Should().Be("***");
     }
 }

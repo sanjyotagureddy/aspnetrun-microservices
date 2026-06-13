@@ -25,7 +25,15 @@ internal sealed class GlobalExceptionHandler(Common.SharedKernel.Logging.ILogger
                 Category = "http.unhandled.exception",
                 Exception = exception,
                 ExceptionType = exception.GetType().FullName,
-                ExceptionMessage = exception.Message
+                ExceptionMessage = exception.Message,
+                Context = new Dictionary<string, object?>
+                {
+                    ["operation"] = "http.request.unhandled",
+                    ["method"] = httpContext.Request.Method,
+                    ["path"] = httpContext.Request.Path.Value,
+                    ["statusCode"] = statusCode,
+                    ["traceId"] = httpContext.TraceIdentifier
+                }
             },
             cancellationToken);
 

@@ -8,7 +8,7 @@ The repository is currently centered on the Product service. Cart, Order, Discou
 
 - **Aspire AppHost** orchestrates local resources and service projects.
 - **ServiceDefaults** configures OpenTelemetry, service discovery, HTTP resilience, and health endpoints.
-- **Products API** implements product CRUD/search features using Minimal API endpoint discovery, MediatR, FluentValidation, Dapper, PostgreSQL, Serilog, rate limiting, response compression, output caching, centralized exception handling, and publishes a `products.created` message through the shared messaging abstraction after a product is created.
+- **Products API** implements product CRUD/search features using Minimal API endpoint discovery, MediatR, FluentValidation, Dapper, PostgreSQL, Serilog, rate limiting, response compression, output caching, centralized exception handling, and writes product integration events to a transactional outbox. Inventory initialization is performed after DB commit and product events are still published asynchronously from the outbox.
 - **Cart API** is registered with Aspire and currently contains template API scaffolding.
 - **Order API** is registered with Aspire, uses shared observability context middleware, and currently contains template API scaffolding.
 - **Discount gRPC** is registered with Aspire and currently exposes the template greeter service.
@@ -16,6 +16,15 @@ The repository is currently centered on the Product service. Cart, Order, Discou
 - **Shared Kernel** contains common abstractions for entities, value objects, domain events, integration events, messaging, validation, results, exceptions, endpoint registration, and observability context.
 - **Shared Logging** contains a custom logging pipeline, formatters, enrichers, filters, and console/file/Elasticsearch sink support.
 - **Shared Messaging** contains broker-agnostic messaging contracts, metadata/envelope models, DI registration, observability primitives, and the first Kafka provider implementation.
+- **Shared Messaging** enforces aggregate ordering key policy for key-partitioned destinations and supports outbox lease reclaim for crashed publisher scenarios.
+
+## Eventing and Outbox Notes
+
+- Product and Inventory services use outbox leasing via `next_attempt_on_utc` to coordinate publisher claims.
+- Expired `processing` leases are reclaimed automatically so events are not stranded if a publisher crashes.
+- Domain event dispatchers map aggregate ids to both `OrderingKey` and `RoutingKey` in outbox metadata.
+- Kafka publish validation rejects key-partitioned destinations when no key metadata is present.
+- Product create flow keeps local DB transaction scoped to product row + outbox enqueue; cross-service inventory HTTP initialization runs post-commit.
 
 ## Repository Layout
 
@@ -100,6 +109,18 @@ Run focused test projects:
 ```powershell
 dotnet test tests\UnitTests\Common.SharedKernel.Tests\Common.SharedKernel.Tests.csproj
 dotnet test tests\UnitTests\Products.Api.Tests\Products.Api.Tests.csproj
+```
+
+Generate coverage for impacted projects when code changes:
+
+```powershell
+dotnet test <path-to-test-project.csproj> -- --coverage --coverage-output-format cobertura
+```
+
+If a test project includes a coverage settings file, include it:
+
+```powershell
+dotnet test <path-to-test-project.csproj> -- --coverage --coverage-output-format cobertura --coverage-settings <path-to-runsettings>
 ```
 
 If the Aspire AppHost SDK cannot be resolved, verify that NuGet configuration is accessible and restore packages:

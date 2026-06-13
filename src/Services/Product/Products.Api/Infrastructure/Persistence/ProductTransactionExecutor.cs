@@ -23,7 +23,7 @@ internal sealed class ProductTransactionExecutor(NpgsqlDataSource dataSource) : 
         }
         catch
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await transaction.RollbackAsync(CancellationToken.None);
             throw;
         }
     }
@@ -41,7 +41,7 @@ internal sealed class ProductTransactionExecutor(NpgsqlDataSource dataSource) : 
         }
         catch
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await transaction.RollbackAsync(CancellationToken.None);
             throw;
         }
     }

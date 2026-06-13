@@ -38,6 +38,18 @@ Track implementation progress for broker-agnostic messaging, versioning, partiti
 - [x] Add capability descriptors for provider features.
 - [x] Enforce partition policy for ordered event streams.
 - [x] Validate partition count and retention drift at startup.
+- [x] Enforce key presence for key-based partitioning strategies at producer publish time.
+
+## Phase 3.1: Outbox Reliability and Metadata Continuity
+
+- [x] Reclaim expired outbox leases for rows stuck in `processing`.
+- [x] Refresh lease when reclaiming `processing` rows.
+- [x] Clear lease marker when rows transition to `published`.
+- [x] Preserve `processed_on_utc` as publish completion timestamp only.
+- [x] Persist aggregate-scoped `OrderingKey`/`RoutingKey` from domain event dispatchers into outbox metadata.
+- [x] Restore metadata keys from outbox JSON before provider publish.
+- [x] Add tests for outbox lease reclaim and publish-state transitions.
+- [x] Add tests for aggregate key propagation in domain-to-integration event dispatch.
 
 ## Phase 4: Versioning and Migration Enforcement
 
@@ -53,6 +65,7 @@ Track implementation progress for broker-agnostic messaging, versioning, partiti
 - [ ] Add runbook for destination registration lifecycle.
 - [ ] Add runbook for contract version rollout and rollback.
 - [ ] Add load test scenarios for ordering guarantees by key.
+- [x] Enforce coverage reporting for messaging/outbox code changes in development workflow guidance.
 
 ## Phase 6: Multi-Broker Validation (Optional)
 
@@ -66,9 +79,9 @@ Track implementation progress for broker-agnostic messaging, versioning, partiti
 - [x] Register `products.events.v1` destination.
 - [x] Enforce partition key `productId` for product lifecycle events.
 - [x] Prohibit `eventId` as partition key for ordered product streams.
+- [x] Set `OrderingKey`/`RoutingKey` to `productId` when enqueuing product integration events.
 - [ ] Document retention, DLQ, and consumer group standards for product events.
 - [ ] Add integration test proving in-order processing per `productId`.
-
 
 ## Tracking
 

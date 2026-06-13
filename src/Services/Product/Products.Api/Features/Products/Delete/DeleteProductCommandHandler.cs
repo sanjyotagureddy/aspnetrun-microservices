@@ -34,11 +34,15 @@ internal sealed class DeleteProductCommandHandler(
             new TraceLog
             {
                 Message = "Product deleted",
+                Category = "product_deleted",
+                Operation = "product.delete",
                 Context = new Dictionary<string, object?>
                 {
+                    ["aggregateType"] = "product",
                     ["productId"] = request.Id,
                     ["eventType"] = ProductDeletedDomainEvent.EventTypeName,
-                    ["topic"] = ProductDeletedIntegrationEvent.Topic
+                    ["topic"] = ProductDeletedIntegrationEvent.Topic,
+                    ["occurredOnUtc"] = occurredOnUtc
                 }
             },
             cancellationToken);

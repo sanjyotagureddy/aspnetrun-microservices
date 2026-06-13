@@ -69,10 +69,11 @@ internal sealed class DefaultPayloadMaskingEngine(IReadOnlyList<IMask> maskers) 
         }
 
         IReadOnlyCollection<PayloadRule> rules = request.Rules ?? options.Rules;
+        IReadOnlySet<string> excludedKeys = options.MaskingExcludedFields;
 
         int maskedCount = 0;
         int redactedCount = 0;
-        Traverse(root, "$", 0, options, sensitiveKeys, rules, ref maskedCount, ref redactedCount);
+        Traverse(root, "$", 0, options, sensitiveKeys, excludedKeys, rules, ref maskedCount, ref redactedCount);
 
         return new PayloadProtectionResult(true, root.ToJsonString(), maskedCount, redactedCount);
     }
@@ -83,6 +84,7 @@ internal sealed class DefaultPayloadMaskingEngine(IReadOnlyList<IMask> maskers) 
         int depth,
         PayloadProtectionOptions options,
         IReadOnlySet<string> sensitiveKeys,
+        IReadOnlySet<string> excludedKeys,
         IReadOnlyCollection<PayloadRule> rules,
         ref int maskedCount,
         ref int redactedCount)
@@ -99,14 +101,21 @@ internal sealed class DefaultPayloadMaskingEngine(IReadOnlyList<IMask> maskers) 
                 string key = kvp.Key;
                 string childPath = $"{path}.{key}";
 
-                PayloadRuleAction? action = ResolveAction(key, childPath, sensitiveKeys, rules);
+                if (StrictMaskingFields.IsMaskingExcludedField(key, excludedKeys)
+                    || StrictMaskingFields.IsMaskingExcludedField(GetTerminalKey(key), excludedKeys))
+                {
+                    continue;
+                }
+
+                PayloadRuleAction? action = ResolveAction(key, childPath, sensitiveKeys, excludedKeys, rules);
                 if (action is not null)
                 {
                     ApplyAction(obj, key, kvp.Value, action.Value, options.MaskValue, ref maskedCount, ref redactedCount);
                     continue;
                 }
 
-                if (kvp.Value is JsonValue && TryMaskValueByPattern(obj, key, kvp.Value, options.MaskValue, _maskers, _maskingOptions))
+                if (kvp.Value is JsonValue
+                    && TryMaskValueByPattern(obj, key, kvp.Value, options.MaskValue, excludedKeys, _maskers, _maskingOptions))
                 {
                     maskedCount++;
                     continue;
@@ -114,7 +123,7 @@ internal sealed class DefaultPayloadMaskingEngine(IReadOnlyList<IMask> maskers) 
 
                 if (kvp.Value is not null)
                 {
-                    Traverse(kvp.Value, childPath, depth + 1, options, sensitiveKeys, rules, ref maskedCount, ref redactedCount);
+                    Traverse(kvp.Value, childPath, depth + 1, options, sensitiveKeys, excludedKeys, rules, ref maskedCount, ref redactedCount);
                 }
             }
             return;
@@ -130,7 +139,7 @@ internal sealed class DefaultPayloadMaskingEngine(IReadOnlyList<IMask> maskers) 
                     continue;
                 }
 
-                Traverse(child, $"{path}[{i}]", depth + 1, options, sensitiveKeys, rules, ref maskedCount, ref redactedCount);
+                Traverse(child, $"{path}[{i}]", depth + 1, options, sensitiveKeys, excludedKeys, rules, ref maskedCount, ref redactedCount);
             }
         }
     }
@@ -139,10 +148,11 @@ internal sealed class DefaultPayloadMaskingEngine(IReadOnlyList<IMask> maskers) 
         string key,
         string path,
         IReadOnlySet<string> sensitiveKeys,
+        IReadOnlySet<string> excludedKeys,
         IReadOnlyCollection<PayloadRule> rules)
     {
-        if (StrictMaskingFields.IsObservabilityIdentityField(key)
-            || StrictMaskingFields.IsObservabilityIdentityField(GetTerminalKey(key)))
+        if (StrictMaskingFields.IsMaskingExcludedField(key, excludedKeys)
+            || StrictMaskingFields.IsMaskingExcludedField(GetTerminalKey(key), excludedKeys))
         {
             return null;
         }
@@ -258,11 +268,12 @@ internal sealed class DefaultPayloadMaskingEngine(IReadOnlyList<IMask> maskers) 
         string key,
         JsonNode? value,
         string maskValue,
+        IReadOnlySet<string> excludedKeys,
         IReadOnlyList<IMask> maskers,
         MaskingOptions maskingOptions)
     {
-        if (StrictMaskingFields.IsObservabilityIdentityField(key)
-            || StrictMaskingFields.IsObservabilityIdentityField(GetTerminalKey(key)))
+        if (StrictMaskingFields.IsMaskingExcludedField(key, excludedKeys)
+            || StrictMaskingFields.IsMaskingExcludedField(GetTerminalKey(key), excludedKeys))
         {
             return false;
         }

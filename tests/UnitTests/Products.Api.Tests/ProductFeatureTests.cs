@@ -64,6 +64,8 @@ public sealed class ProductFeatureTests
         Assert.Equal("USD", integrationEvent.Currency);
         Assert.Equal(new DateTime(2026, 5, 28, 12, 0, 0, DateTimeKind.Utc), integrationEvent.OccurredOnUtc);
         Assert.Equal(integrationEvent.EventId.ToString("N"), metadata.MessageId);
+        Assert.Equal(result.Value.Id.ToString("N"), metadata.RoutingKey);
+        Assert.Equal(result.Value.Id.ToString("N"), metadata.OrderingKey);
         Assert.Equal("products-api", metadata.Headers["Source"]);
         Assert.Equal(ProductCreatedIntegrationEvent.EventTypeName, metadata.Headers["EventType"]);
 
@@ -105,7 +107,7 @@ public sealed class ProductFeatureTests
     }
 
     [Fact]
-    public async Task CreateProductHandler_ShouldRollbackAndFail_WhenInventoryInitializationFails()
+    public async Task CreateProductHandler_ShouldPersistProductAndOutbox_WhenInventoryInitializationFailsAfterCommit()
     {
         var store = new FakeProductCatalogStore();
         var outboxStore = new FakeProductOutboxStore();
@@ -130,11 +132,13 @@ public sealed class ProductFeatureTests
             10,
             true);
 
-        await Assert.ThrowsAsync<Common.SharedKernel.Exceptions.ConflictException>(() =>
-            handler.Handle(command, CancellationToken.None));
+        var result = await handler.Handle(command, CancellationToken.None);
 
-        Assert.Empty(store.Products);
-        Assert.Empty(outboxStore.Messages);
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Value);
+        Assert.Equal(10, result.Value!.StockQuantity);
+        Assert.Single(store.Products);
+        Assert.Single(outboxStore.Messages);
     }
 
     [Fact]

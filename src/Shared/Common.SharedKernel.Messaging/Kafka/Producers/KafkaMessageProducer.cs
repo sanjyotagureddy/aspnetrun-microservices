@@ -105,7 +105,12 @@ internal sealed class KafkaMessageProducer(
                             ["contractCompatibility"] = envelope.Contract.Compatibility.ToString(),
                             ["topic"] = resolvedTopic,
                             ["provider"] = "Kafka",
-                            ["durationMs"] = stopwatch.Elapsed.TotalMilliseconds
+                            ["durationMs"] = stopwatch.Elapsed.TotalMilliseconds,
+                            ["attempt"] = attempt,
+                            ["maxAttempts"] = attempts,
+                            ["retryInitialDelayMs"] = _options.RetryPolicy.InitialDelay.TotalMilliseconds,
+                            ["retryBackoffMultiplier"] = _options.RetryPolicy.BackoffMultiplier,
+                            ["partition"] = explicitPartition
                         }
                     },
                     cancellationToken);
@@ -192,7 +197,13 @@ internal sealed class KafkaMessageProducer(
             ? metadata.OrderingKey
             : metadata.RoutingKey;
 
-        if (registration.OrderingRequired && string.IsNullOrWhiteSpace(effectiveKey) && registration.PartitioningStrategy != PartitioningStrategy.ExplicitPartition)
+        bool partitionStrategyRequiresKey = registration.PartitioningStrategy is PartitioningStrategy.ByAggregateId
+            or PartitioningStrategy.ByOrderingKey
+            or PartitioningStrategy.ByRoutingKey;
+
+        if ((registration.OrderingRequired || partitionStrategyRequiresKey)
+            && string.IsNullOrWhiteSpace(effectiveKey)
+            && registration.PartitioningStrategy != PartitioningStrategy.ExplicitPartition)
         {
             throw new MessagingConfigurationException($"Destination '{topic}' requires an OrderingKey or RoutingKey.");
         }

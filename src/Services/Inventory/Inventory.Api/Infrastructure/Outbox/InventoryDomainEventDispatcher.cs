@@ -45,14 +45,17 @@ internal sealed class InventoryDomainEventDispatcher(IInventoryOutboxStore outbo
                     initialized.UpdatedAtUtc,
                     initialized.OccurredOnUtc),
                 InventoryInitializedIntegrationEvent.Topic,
+                initialized.ProductId,
                 appContext),
             _ => throw new InvalidOperationException($"Unsupported domain event type '{domainEvent.GetType().Name}'.")
         };
     }
 
-    private static InventoryOutboxMessage CreateOutboxMessage<T>(T integrationEvent, string topic, AppCallContextBase? appContext)
+    private static InventoryOutboxMessage CreateOutboxMessage<T>(T integrationEvent, string topic, Guid aggregateId, AppCallContextBase? appContext)
         where T : Common.SharedKernel.Abstractions.IntegrationEvents.IIntegrationEvent
     {
+        string aggregateKey = aggregateId.ToString("N");
+
         MessageMetadata metadata = new()
         {
             MessageId = integrationEvent.EventId.ToString("N"),
@@ -60,7 +63,9 @@ internal sealed class InventoryDomainEventDispatcher(IInventoryOutboxStore outbo
             CorrelationId = appContext?.CorrelationId,
             TraceId = appContext?.TraceId,
             SpanId = appContext?.SpanId,
-            TenantId = appContext?.Headers.TryGetValue("X-Tenant-Id", out string? tenantId) == true ? tenantId : null
+            TenantId = appContext?.Headers.TryGetValue("X-Tenant-Id", out string? tenantId) == true ? tenantId : null,
+            RoutingKey = aggregateKey,
+            OrderingKey = aggregateKey
         };
 
         metadata.Headers["Source"] = "inventory-api";

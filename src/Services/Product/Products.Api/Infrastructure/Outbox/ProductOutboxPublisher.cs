@@ -1,6 +1,6 @@
 using Common.SharedKernel.Messaging;
 using Common.SharedKernel.Messaging.Outbox;
-using Common.SharedKernel.Logging;
+using Microsoft.Extensions.Options;
 using Products.Api.Features.Products.Events;
 
 namespace Products.Api.Infrastructure.Outbox;
@@ -8,8 +8,13 @@ namespace Products.Api.Infrastructure.Outbox;
 internal sealed class ProductOutboxPublisher(
     IProductOutboxStore outboxStore,
     IMessageBus messageBus,
-    Common.SharedKernel.Logging.ILogger<ProductOutboxPublisher> logger)
-    : OutboxPublisherBase<ProductOutboxMessage>(outboxStore, logger)
+    Common.SharedKernel.Logging.ILogger<ProductOutboxPublisher> logger,
+    IOptions<MessagingOptions> messagingOptions)
+    : OutboxPublisherBase<ProductOutboxMessage>(
+        outboxStore,
+        logger,
+        backlogHeartbeatEnabled: messagingOptions.Value.OutboxHeartbeat.Enabled,
+        backlogHeartbeatInterval: messagingOptions.Value.OutboxHeartbeat.Interval)
 {
     protected override async Task PublishAsync(ProductOutboxMessage outboxMessage, CancellationToken cancellationToken)
     {

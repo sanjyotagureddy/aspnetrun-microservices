@@ -19,7 +19,6 @@ internal sealed class CreateProductCommandHandler(
     {
         DateTime occurredOnUtc = timeProvider.GetUtcNow().UtcDateTime;
         Product normalizedProduct = request.ToDomain(Guid.NewGuid(), occurredOnUtc);
-        int confirmedStockQuantity = request.StockQuantity;
 
         try
         {
@@ -28,11 +27,8 @@ internal sealed class CreateProductCommandHandler(
                 await store.EnsureSkuIsUniqueAsync(normalizedProduct.Sku, null, connection, transaction, ct);
                 await store.AddAsync(normalizedProduct, connection, transaction, ct);
 
-                await inventoryStockAdapter.InitializeAsync(normalizedProduct.Id, request.StockQuantity, ct);
-                confirmedStockQuantity = await inventoryStockAdapter.GetStockQuantityAsync(normalizedProduct.Id, ct) ?? request.StockQuantity;
-
                 AppCallContext? appContext = AppCallContextBase.CurrentAs<AppCallContext>();
-                normalizedProduct.RaiseCreatedDomainEvent(confirmedStockQuantity, occurredOnUtc);
+                normalizedProduct.RaiseCreatedDomainEvent(request.StockQuantity, occurredOnUtc);
                 await domainEventDispatcher.DispatchAsync(normalizedProduct.DomainEvents, appContext, connection, transaction, ct);
                 normalizedProduct.ClearDomainEvents();
             }, cancellationToken);
@@ -49,8 +45,13 @@ internal sealed class CreateProductCommandHandler(
                     ExceptionMessage = ex.Message,
                     Context = new Dictionary<string, object?>
                     {
+                        ["operation"] = "product.create",
+                        ["aggregateType"] = "product",
                         ["productId"] = normalizedProduct.Id,
-                        ["stockQuantity"] = request.StockQuantity
+                        ["stockQuantity"] = request.StockQuantity,
+                        ["eventType"] = ProductCreatedDomainEvent.EventTypeName,
+                        ["topic"] = ProductCreatedIntegrationEvent.Topic,
+                        ["occurredOnUtc"] = occurredOnUtc
                     }
                 },
                 cancellationToken);
@@ -58,18 +59,56 @@ internal sealed class CreateProductCommandHandler(
             throw new Common.SharedKernel.Exceptions.ConflictException("Product creation failed and was rolled back.");
         }
 
+        int confirmedStockQuantity = request.StockQuantity;
+
+        try
+        {
+            await inventoryStockAdapter.InitializeAsync(normalizedProduct.Id, request.StockQuantity, cancellationToken);
+            confirmedStockQuantity = await inventoryStockAdapter.GetStockQuantityAsync(normalizedProduct.Id, cancellationToken) ?? request.StockQuantity;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await logger.LogApplicationAsync(
+                new ErrorLog
+                {
+                    Message = "Product committed but inventory initialization failed",
+                    Category = "product_create_inventory_initialization_failed",
+                    Exception = ex,
+                    ExceptionType = ex.GetType().FullName,
+                    ExceptionMessage = ex.Message,
+                    Context = new Dictionary<string, object?>
+                    {
+                        ["operation"] = "product.create",
+                        ["aggregateType"] = "product",
+                        ["productId"] = normalizedProduct.Id,
+                        ["stockQuantity"] = request.StockQuantity,
+                        ["eventType"] = ProductCreatedDomainEvent.EventTypeName,
+                        ["topic"] = ProductCreatedIntegrationEvent.Topic,
+                        ["occurredOnUtc"] = occurredOnUtc
+                    }
+                },
+                cancellationToken);
+        }
+
         await logger.LogApplicationAsync(
             new TraceLog
             {
                 Message = "Product created",
                 Category = "product_created",
+                Operation = "product.create",
                 Context = new Dictionary<string, object?>
                 {
+                    ["aggregateType"] = "product",
                     ["productId"] = normalizedProduct.Id,
                     ["sku"] = normalizedProduct.Sku,
                     ["stockQuantity"] = confirmedStockQuantity,
                     ["eventType"] = ProductCreatedDomainEvent.EventTypeName,
-                    ["topic"] = ProductCreatedIntegrationEvent.Topic
+                    ["topic"] = ProductCreatedIntegrationEvent.Topic,
+                    ["occurredOnUtc"] = occurredOnUtc
                 }
             },
             cancellationToken);

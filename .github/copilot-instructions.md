@@ -479,6 +479,13 @@ Every critical feature should include:
 - Failure scenario testing
 - Edge case validation
 
+Coverage requirements:
+
+- New or changed production code must include or update automated tests.
+- Generate a coverage report for impacted test projects whenever code is added or modified.
+- Coverage for changed areas must not regress; if full coverage is not feasible, document rationale and residual risk.
+- Treat coverage review as a required quality gate before considering work complete.
+
 Preferred tools:
 
 - xUnit

@@ -5,6 +5,11 @@ internal sealed class InventoryStockAdapter(HttpClient httpClient, ILogger<Inven
     public async Task InitializeAsync(Guid productId, int stockQuantity, CancellationToken cancellationToken)
     {
         using HttpResponseMessage response = await httpClient.PutAsJsonAsync($"/api/v1/inventory/{productId}/initialize", new InitializeInventoryRequest(stockQuantity), cancellationToken);
+        if (response.IsSuccessStatusCode || response.StatusCode == System.Net.HttpStatusCode.Conflict)
+        {
+            return;
+        }
+
         response.EnsureSuccessStatusCode();
     }
 

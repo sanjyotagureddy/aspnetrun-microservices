@@ -7,7 +7,7 @@ internal sealed class ProductOutboxMessage : OutboxMessage;
 
 internal sealed class ProductOutboxMetadata : OutboxMetadata;
 
-internal interface IProductOutboxStore : IOutboxStore<ProductOutboxMessage>
+internal interface IProductOutboxStore : IOutboxStore<ProductOutboxMessage>, IOutboxBacklogReader
 {
 }
 

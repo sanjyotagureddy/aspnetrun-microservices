@@ -51,6 +51,7 @@ internal sealed class ProductDomainEventDispatcher(IProductOutboxStore outboxSto
                     created.CreatedAtUtc,
                     created.OccurredOnUtc),
                 ProductCreatedIntegrationEvent.Topic,
+                created.ProductId,
                 appContext),
 
             ProductUpdatedDomainEvent updated => CreateOutboxMessage(
@@ -68,6 +69,7 @@ internal sealed class ProductDomainEventDispatcher(IProductOutboxStore outboxSto
                     updated.UpdatedAtUtc,
                     updated.OccurredOnUtc),
                 ProductUpdatedIntegrationEvent.Topic,
+                updated.ProductId,
                 appContext),
 
             ProductDeletedDomainEvent deleted => CreateOutboxMessage(
@@ -76,15 +78,18 @@ internal sealed class ProductDomainEventDispatcher(IProductOutboxStore outboxSto
                     deleted.DeletedAtUtc,
                     deleted.OccurredOnUtc),
                 ProductDeletedIntegrationEvent.Topic,
+                deleted.ProductId,
                 appContext),
 
             _ => throw new InvalidOperationException($"Unsupported domain event type '{domainEvent.GetType().Name}'.")
         };
     }
 
-    private static ProductOutboxMessage CreateOutboxMessage<T>(T integrationEvent, string topic, AppCallContextBase? appContext)
+    private static ProductOutboxMessage CreateOutboxMessage<T>(T integrationEvent, string topic, Guid aggregateId, AppCallContextBase? appContext)
         where T : Common.SharedKernel.Abstractions.IntegrationEvents.IIntegrationEvent
     {
+        string aggregateKey = aggregateId.ToString("N");
+
         MessageMetadata metadata = new()
         {
             MessageId = integrationEvent.EventId.ToString("N"),
@@ -92,7 +97,9 @@ internal sealed class ProductDomainEventDispatcher(IProductOutboxStore outboxSto
             CorrelationId = appContext?.CorrelationId,
             TraceId = appContext?.TraceId,
             SpanId = appContext?.SpanId,
-            TenantId = appContext?.Headers.TryGetValue("X-Tenant-Id", out string? tenantId) == true ? tenantId : null
+            TenantId = appContext?.Headers.TryGetValue("X-Tenant-Id", out string? tenantId) == true ? tenantId : null,
+            RoutingKey = aggregateKey,
+            OrderingKey = aggregateKey
         };
 
         metadata.Headers["Source"] = "products-api";

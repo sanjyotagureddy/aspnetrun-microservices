@@ -1,15 +1,20 @@
 using Common.SharedKernel.Messaging;
 using Common.SharedKernel.Messaging.Outbox;
-using Common.SharedKernel.Logging;
 using Inventory.Api.Features.Inventory.Events;
+using Microsoft.Extensions.Options;
 
 namespace Inventory.Api.Infrastructure.Outbox;
 
 internal sealed class InventoryOutboxPublisher(
     IInventoryOutboxStore outboxStore,
     IMessageBus messageBus,
-    Common.SharedKernel.Logging.ILogger<InventoryOutboxPublisher> logger)
-    : OutboxPublisherBase<InventoryOutboxMessage>(outboxStore, logger)
+    Common.SharedKernel.Logging.ILogger<InventoryOutboxPublisher> logger,
+    IOptions<MessagingOptions> messagingOptions)
+    : OutboxPublisherBase<InventoryOutboxMessage>(
+        outboxStore,
+        logger,
+        backlogHeartbeatEnabled: messagingOptions.Value.OutboxHeartbeat.Enabled,
+        backlogHeartbeatInterval: messagingOptions.Value.OutboxHeartbeat.Interval)
 {
     protected override async Task PublishAsync(InventoryOutboxMessage outboxMessage, CancellationToken cancellationToken)
     {

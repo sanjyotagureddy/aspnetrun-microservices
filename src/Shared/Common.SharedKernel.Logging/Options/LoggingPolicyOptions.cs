@@ -18,6 +18,11 @@ public sealed record LoggingPolicyOptions
 
     public HashSet<string> SensitiveKeys { get; set; } = new(DefaultSensitiveKeys, StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// Field names that must bypass masking even when they match masking strategies.
+    /// </summary>
+    public HashSet<string> MaskingExcludedFields { get; set; } = StrictMaskingFields.CreateDefaultMaskingExcludedFields();
+
     public void EnsureDefaults()
     {
         HashSet<string> normalized = new(StringComparer.OrdinalIgnoreCase);
@@ -35,5 +40,21 @@ public sealed record LoggingPolicyOptions
         }
 
         SensitiveKeys = normalized;
+
+        HashSet<string> normalizedExcluded = new(StringComparer.OrdinalIgnoreCase);
+        foreach (string key in MaskingExcludedFields)
+        {
+            if (!string.IsNullOrWhiteSpace(key))
+            {
+                normalizedExcluded.Add(key.Trim());
+            }
+        }
+
+        foreach (string key in StrictMaskingFields.CreateDefaultMaskingExcludedFields())
+        {
+            normalizedExcluded.Add(key);
+        }
+
+        MaskingExcludedFields = normalizedExcluded;
     }
 }

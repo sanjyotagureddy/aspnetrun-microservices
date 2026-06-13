@@ -121,6 +121,9 @@ internal sealed class KafkaMessageConsumer(
                 headers.GetValueOrDefault(KafkaMessageHeaderNames.ContractCompatibility),
                 topic,
                 "DeserializationOrCompatibilityFailure",
+                result.Partition.Value,
+                result.Offset.Value,
+                headers.GetValueOrDefault(KafkaMessageHeaderNames.TraceId),
                 ex,
                 cancellationToken);
             return;
@@ -173,6 +176,9 @@ internal sealed class KafkaMessageConsumer(
                     envelope.Contract.Compatibility.ToString(),
                     topic,
                     "HandlerFailure",
+                    result.Partition.Value,
+                    result.Offset.Value,
+                    headers.GetValueOrDefault(KafkaMessageHeaderNames.TraceId),
                     ex,
                     cancellationToken);
             }
@@ -186,6 +192,9 @@ internal sealed class KafkaMessageConsumer(
         string? contractCompatibility,
         string topic,
         string reason,
+        int partition,
+        long offset,
+        string? traceId,
         Exception exception,
         CancellationToken cancellationToken)
     {
@@ -206,7 +215,11 @@ internal sealed class KafkaMessageConsumer(
                     ["contractCompatibility"] = contractCompatibility,
                     ["topic"] = topic,
                     ["reason"] = reason,
-                    ["provider"] = "Kafka"
+                    ["provider"] = "Kafka",
+                    ["partition"] = partition,
+                    ["offset"] = offset,
+                    ["consumerGroup"] = _options.Kafka.ConsumerGroup,
+                    ["traceId"] = traceId
                 }
                 },
                 cancellationToken);

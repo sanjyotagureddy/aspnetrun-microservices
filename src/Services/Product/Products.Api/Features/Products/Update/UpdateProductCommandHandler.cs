@@ -41,12 +41,17 @@ internal sealed class UpdateProductCommandHandler(
             new TraceLog
             {
                 Message = "Product updated",
+                Category = "product_updated",
+                Operation = "product.update",
                 Context = new Dictionary<string, object?>
                 {
+                    ["aggregateType"] = "product",
                     ["productId"] = normalizedProduct.Id,
                     ["sku"] = normalizedProduct.Sku,
+                    ["stockQuantity"] = stockQuantity,
                     ["eventType"] = ProductUpdatedDomainEvent.EventTypeName,
-                    ["topic"] = ProductUpdatedIntegrationEvent.Topic
+                    ["topic"] = ProductUpdatedIntegrationEvent.Topic,
+                    ["occurredOnUtc"] = occurredOnUtc
                 }
             },
             cancellationToken);
