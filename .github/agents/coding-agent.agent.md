@@ -9,6 +9,7 @@ description: |
   reliability, observability, security, and production readiness
   across the repository.
 
+
 when_to_use: |
   Use this agent when:
   - Designing new services or bounded contexts
@@ -74,11 +75,53 @@ repository_awareness: |
 
   Current reference architecture:
 
-  - API Gateway: YARP
-  - Product API: REST + GraphQL, PostgreSQL
-  - Cart API: REST, Redis
-  - Order API: REST, MongoDB
-  - Discount service: gRPC, SQLite
+  - API Gateway: YARP scaffolding (routes still evolving)
+  - Product API: Minimal API, PostgreSQL, transactional outbox publishing
+  - Inventory API: Minimal API, PostgreSQL, transactional outbox publishing
+  - Cart API: template service under construction
+  - Order API: template service under construction
+  - Discount service: template gRPC service under construction
+
+  Target short tech stack (planned state):
+
+  - Edge/API Gateway: YARP
+  - Service style: ASP.NET Core Minimal APIs with Vertical Slice + MediatR
+  - Data layer: PostgreSQL + Dapper (service-owned schemas)
+  - Messaging: Kafka via Common.SharedKernel.Messaging + Outbox/Inbox patterns
+  - Observability: OpenTelemetry + structured logging
+  - Validation and contracts: FluentValidation + typed request/response contracts
+  - Platform/runtime: .NET Aspire orchestration + Docker/Testcontainers for integration validation
+
+  Target service-level tech stacks:
+
+  - Gateway.Yarp:
+    - Transport: YARP reverse proxy (edge routing, auth passthrough, resiliency policies)
+    - Observability: OpenTelemetry + centralized request logging
+
+  - Products.Api:
+    - API style: ASP.NET Core Minimal APIs + Vertical Slice + MediatR
+    - Data: PostgreSQL + Dapper
+    - Messaging: Kafka integration events via transactional outbox
+
+  - Inventory.Api:
+    - API style: ASP.NET Core Minimal APIs + Vertical Slice + MediatR
+    - Data: PostgreSQL + Dapper
+    - Messaging: Kafka integration events via transactional outbox
+
+  - Cart.Api:
+    - API style: ASP.NET Core Minimal APIs + Vertical Slice + MediatR
+    - Data: Redis as primary NoSQL store (cart/session TTL workloads)
+    - Messaging: Kafka events for cart lifecycle and checkout orchestration signals
+
+  - Order.Api:
+    - API style: ASP.NET Core Minimal APIs + Vertical Slice + MediatR
+    - Data: MongoDB as primary NoSQL document store (order aggregates, workflow state, audit snapshots)
+    - Messaging: Kafka events for order state transitions, payment/shipping integration, saga coordination
+
+  - Discount.Grpc:
+    - API style: gRPC for low-latency internal RPC
+    - Data: PostgreSQL (or Redis for read-optimized coupon/rule lookups with persistence backing store)
+    - Messaging: Optional integration-event publishing for discount rule changes and usage analytics
 
   Respect existing architectural boundaries.
 
@@ -228,8 +271,8 @@ api_standards: |
   APIs must:
 
   - Follow RESTful principles for HTTP endpoints
-  - Support GraphQL where service capabilities require it (Product API)
-  - Use gRPC for internal high-efficiency RPC contracts (Discount service)
+  - Use Minimal API endpoint-per-feature style by default
+  - Use gRPC for internal high-efficiency RPC contracts where required
   - Be versioned
   - Use standardized responses
   - Use proper HTTP status codes
@@ -254,10 +297,8 @@ database_standards: |
 
   Preferred data stores:
 
-  - PostgreSQL for Product API
-  - Redis for Cart API
-  - MongoDB for Order API
-  - SQLite for Discount gRPC service
+  - PostgreSQL for Product and Inventory services
+  - Additional service-specific datastores only when justified by bounded-context needs
 
   Data ownership rules:
 
@@ -276,6 +317,25 @@ event_driven_rules: |
   - Idempotency handling
   - Retry handling
   - Dead-letter queue support
+
+  Outbox reliability rules:
+
+  - Treat outbox claims as lease-based processing using next-attempt timestamps.
+  - Reclaim expired processing leases (for example rows in processing with expired lease timestamp).
+  - On publish success, set completion timestamp and clear retry/lease marker.
+  - On publish failure, increment attempts, schedule backoff, and reset completion timestamp.
+
+  Key governance rules for ordered streams:
+
+  - For aggregate-partitioned destinations, set OrderingKey and RoutingKey from aggregate id.
+  - Persist metadata keys in outbox payload metadata and restore before publish.
+  - Do not use event/message id as partition key for ordered event streams.
+
+  Transaction boundary rules:
+
+  - Keep local DB transactions scoped to local state changes and outbox enqueue.
+  - Do not execute cross-service HTTP or broker side effects inside local DB transactions.
+  - Prefer outbox-driven eventual consistency; if post-commit sync calls are required, require explicit compensation/idempotency strategy.
 
 resilience_rules: |
   Implement resilience using:
@@ -334,6 +394,7 @@ testing_requirements: |
   - Architecture validation
   - Failure scenario testing
   - Edge case validation
+  - Coverage validation for impacted test projects when code changes
 
   Testing standards:
 
@@ -341,6 +402,10 @@ testing_requirements: |
   - Keep tests deterministic
   - Keep tests independent
   - Avoid flaky tests
+  - Generate and review coverage reports for changed code paths
+  - Do not accept regressed coverage in modified areas without explicit rationale and risk notes
+  - Execute coverage for impacted test projects using repo-approved test-host arguments
+  - Include coverage output summary in PR reviewer notes when code changes
 
 devops_requirements: |
   Design systems for:
@@ -395,6 +460,7 @@ output_expectations: |
   - Observability readiness
   - Maintainable abstractions
   - Tests where appropriate
+  - Coverage evidence for impacted test projects when implementation changes are made
 
   Include when beneficial:
 
@@ -509,16 +575,3 @@ related_customizations: |
 version: 2.0
 ---
 
-#  Architect Agent
-
-This agent governs enterprise engineering standards
-for the  platform.
-
-Its responsibility is not only code generation,
-but enforcing scalable architecture, maintainability,
-reliability, observability, security,
-and production-readiness across the system.
-
-The agent should behave like a Principal Architect
-reviewing and guiding enterprise engineering teams,
-not a generic autocomplete assistant.

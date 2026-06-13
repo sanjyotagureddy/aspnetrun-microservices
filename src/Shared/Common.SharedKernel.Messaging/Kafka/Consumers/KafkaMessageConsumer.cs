@@ -114,7 +114,18 @@ internal sealed class KafkaMessageConsumer(
         catch (Exception ex)
         {
             instrumentation.ConsumeFailures.Add(1);
-            await LogDeadLetterAsync(headers.GetValueOrDefault(KafkaMessageHeaderNames.MessageId) ?? string.Empty, topic, "DeserializationOrCompatibilityFailure", ex, cancellationToken);
+            await LogDeadLetterAsync(
+                headers.GetValueOrDefault(KafkaMessageHeaderNames.MessageId) ?? string.Empty,
+                headers.GetValueOrDefault(KafkaMessageHeaderNames.ContractType),
+                headers.GetValueOrDefault(KafkaMessageHeaderNames.ContractVersion),
+                headers.GetValueOrDefault(KafkaMessageHeaderNames.ContractCompatibility),
+                topic,
+                "DeserializationOrCompatibilityFailure",
+                result.Partition.Value,
+                result.Offset.Value,
+                headers.GetValueOrDefault(KafkaMessageHeaderNames.TraceId),
+                ex,
+                cancellationToken);
             return;
         }
 
@@ -128,6 +139,8 @@ internal sealed class KafkaMessageConsumer(
             result.Partition.Value,
             result.Offset.Value,
             headers);
+
+        string eventType = ResolveEventType(headers, envelope.Contract.MessageType);
 
         int attempts = Math.Max(1, _options.RetryPolicy.MaxAttempts);
         for (int attempt = 1; attempt <= attempts; attempt++)
@@ -147,54 +160,46 @@ internal sealed class KafkaMessageConsumer(
 
                 stopwatch.Stop();
                 instrumentation.ConsumeDurationMs.Record(stopwatch.Elapsed.TotalMilliseconds);
-                await logger.LogTraceAsync(
-                    new TraceLog
-                    {
-                        Message = "Message consumed",
-                        Category = "messaging.consume",
-                        DurationMs = stopwatch.Elapsed.TotalMilliseconds,
-                        Context = new Dictionary<string, object?>
-                        {
-                            ["messageId"] = envelope.MessageId,
-                            ["consumerGroup"] = _options.Kafka.ConsumerGroup,
-                            ["handler"] = handler.GetType().Name,
-                            ["topic"] = topic
-                        }
-                    },
-                    LogType.Event,
-                    cancellationToken);
                 return;
             }
             catch (Exception) when (attempt < attempts)
             {
                 instrumentation.RetryCount.Add(1);
-                await logger.LogTraceAsync(
-                    new TraceLog
-                    {
-                        Message = "Message consume retry",
-                        Category = "messaging.retry",
-                        Context = new Dictionary<string, object?>
-                        {
-                            ["messageId"] = envelope.MessageId,
-                            ["consumerGroup"] = _options.Kafka.ConsumerGroup,
-                            ["attempt"] = attempt
-                        }
-                    },
-                    LogType.Event,
-                    cancellationToken);
             }
             catch (Exception ex)
             {
                 instrumentation.ConsumeFailures.Add(1);
-                await LogDeadLetterAsync(envelope.MessageId, topic, "HandlerFailure", ex, cancellationToken);
+                await LogDeadLetterAsync(
+                    envelope.MessageId,
+                    eventType,
+                    envelope.Contract.Version,
+                    envelope.Contract.Compatibility.ToString(),
+                    topic,
+                    "HandlerFailure",
+                    result.Partition.Value,
+                    result.Offset.Value,
+                    headers.GetValueOrDefault(KafkaMessageHeaderNames.TraceId),
+                    ex,
+                    cancellationToken);
             }
         }
     }
 
-    private async Task LogDeadLetterAsync(string messageId, string topic, string reason, Exception exception, CancellationToken cancellationToken)
+    private async Task LogDeadLetterAsync(
+        string messageId,
+        string? eventType,
+        string? contractVersion,
+        string? contractCompatibility,
+        string topic,
+        string reason,
+        int partition,
+        long offset,
+        string? traceId,
+        Exception exception,
+        CancellationToken cancellationToken)
     {
         instrumentation.DeadLetterCount.Add(1);
-        await logger.LogErrorAsync(
+        await logger.LogEventAsync(
             new ErrorLog
             {
                 Message = "Message moved to dead letter",
@@ -205,13 +210,19 @@ internal sealed class KafkaMessageConsumer(
                 Context = new Dictionary<string, object?>
                 {
                     ["messageId"] = messageId,
+                    ["eventType"] = eventType,
+                    ["contractVersion"] = contractVersion,
+                    ["contractCompatibility"] = contractCompatibility,
                     ["topic"] = topic,
                     ["reason"] = reason,
-                    ["provider"] = "Kafka"
+                    ["provider"] = "Kafka",
+                    ["partition"] = partition,
+                    ["offset"] = offset,
+                    ["consumerGroup"] = _options.Kafka.ConsumerGroup,
+                    ["traceId"] = traceId
                 }
-            },
-            LogType.Event,
-            cancellationToken);
+                },
+                cancellationToken);
     }
 
     private static Dictionary<string, string> ReadHeaders(Headers? headers)
@@ -228,6 +239,17 @@ internal sealed class KafkaMessageConsumer(
         }
 
         return values;
+    }
+
+    private static string ResolveEventType(IReadOnlyDictionary<string, string> headers, string contractType)
+    {
+        if (headers.TryGetValue("EventType", out string? eventType)
+            && !string.IsNullOrWhiteSpace(eventType))
+        {
+            return eventType;
+        }
+
+        return contractType;
     }
 
     private string ResolveTopic(string topic)

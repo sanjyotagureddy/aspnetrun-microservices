@@ -364,6 +364,25 @@ Use:
 - Retry handling
 - Dead-letter queue support
 
+Outbox reliability rules:
+
+- Treat outbox claims as lease-based processing using next-attempt timestamps.
+- Reclaim expired processing leases (for example rows in processing with expired lease timestamp).
+- On publish success, set completion timestamp and clear retry/lease marker.
+- On publish failure, increment attempts, schedule backoff, and reset completion timestamp.
+
+Key governance rules for ordered streams:
+
+- For aggregate-partitioned destinations, set OrderingKey and RoutingKey from aggregate id.
+- Persist metadata keys in outbox payload metadata and restore before publish.
+- Do not use event/message id as partition key for ordered event streams.
+
+Transaction boundary rules:
+
+- Keep local DB transactions scoped to local state changes and outbox enqueue.
+- Do not execute cross-service HTTP or broker side effects inside local DB transactions.
+- Prefer outbox-driven eventual consistency; if post-commit sync calls are required, require explicit compensation/idempotency strategy.
+
 Design for eventual consistency.
 
 ---
@@ -459,6 +478,7 @@ Every critical feature should include:
 - Architecture validation
 - Failure scenario testing
 - Edge case validation
+- Coverage validation for impacted test projects
 
 Preferred tools:
 
@@ -473,6 +493,10 @@ Testing rules:
 - Keep tests deterministic
 - Keep tests independent
 - Avoid flaky tests
+- Generate coverage reports whenever code is added or modified
+- Prevent coverage regressions in changed code paths unless documented with rationale and risk
+- Execute coverage for impacted test projects using repo-approved test-host arguments
+- Include coverage output summary in PR reviewer notes when code changes
 
 ---
 

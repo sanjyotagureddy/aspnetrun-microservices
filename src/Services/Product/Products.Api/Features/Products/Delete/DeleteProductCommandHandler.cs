@@ -1,6 +1,6 @@
-﻿using Common.SharedKernel.Messaging;
-using Common.SharedKernel.Logging;
+﻿using Common.SharedKernel.Logging;
 using Common.SharedKernel.Observability.Context;
+using Products.Api.Domain.Events;
 using Products.Api.Features.Products.Events;
 
 namespace Products.Api.Features.Products.Delete;
@@ -9,51 +9,42 @@ internal sealed class DeleteProductCommandHandler(
     IProductCatalogStore store,
     TimeProvider timeProvider,
     Common.SharedKernel.Logging.ILogger<DeleteProductCommandHandler> logger,
-    IMessageBus messageBus)
+    IProductDomainEventDispatcher domainEventDispatcher,
+    IProductTransactionExecutor transactionExecutor)
     : IRequestHandler<DeleteProductCommand, Result>
 {
     public async Task<Result> Handle(DeleteProductCommand request, CancellationToken cancellationToken)
     {
-        bool deleted = await store.DeleteAsync(request.Id, cancellationToken);
-        if (!deleted)
-        {
-            throw new Common.SharedKernel.Exceptions.NotFoundException(nameof(Product), request.Id.ToString());
-        }
-
         DateTime occurredOnUtc = timeProvider.GetUtcNow().UtcDateTime;
-        ProductDeletedIntegrationEvent productDeleted = new(request.Id, occurredOnUtc, occurredOnUtc);
-        AppCallContextBase? appContext = AppCallContextBase.Current;
 
-        await messageBus.PublishAsync(
-            ProductDeletedIntegrationEvent.Topic,
-            productDeleted,
-            metadata =>
+        await transactionExecutor.ExecuteAsync(async (connection, transaction, ct) =>
+        {
+            bool deleted = await store.DeleteAsync(request.Id, connection, transaction, ct);
+            if (!deleted)
             {
-                metadata.MessageId = productDeleted.EventId.ToString("N");
-                metadata.OrderingKey = request.Id.ToString("N");
-                metadata.Contract = new MessageContractDescriptor(nameof(ProductDeletedIntegrationEvent), "1.0", "application/json");
-                metadata.CorrelationId = appContext?.CorrelationId;
-                metadata.TraceId = appContext?.TraceId;
-                metadata.SpanId = appContext?.SpanId;
-                metadata.TenantId = appContext?.Headers.TryGetValue("X-Tenant-Id", out string? tenantId) == true ? tenantId : null;
-                metadata.Headers["Source"] = "products-api";
-                metadata.Headers["Entity"] = nameof(Product);
-                metadata.Headers["EventType"] = nameof(ProductDeletedIntegrationEvent);
-            },
-            cancellationToken);
+                throw new Common.SharedKernel.Exceptions.NotFoundException(nameof(Product), request.Id.ToString());
+            }
 
-        await logger.LogTraceAsync(
+            AppCallContextBase? appContext = AppCallContextBase.Current;
+            ProductDeletedDomainEvent deletedDomainEvent = new(occurredOnUtc, request.Id, occurredOnUtc);
+            await domainEventDispatcher.DispatchAsync([deletedDomainEvent], appContext, connection, transaction, ct);
+        }, cancellationToken);
+
+        await logger.LogApplicationAsync(
             new TraceLog
             {
                 Message = "Product deleted",
+                Category = "product_deleted",
+                Operation = "product.delete",
                 Context = new Dictionary<string, object?>
                 {
+                    ["aggregateType"] = "product",
                     ["productId"] = request.Id,
-                    ["eventId"] = productDeleted.EventId,
-                    ["topic"] = ProductDeletedIntegrationEvent.Topic
+                    ["eventType"] = ProductDeletedDomainEvent.EventTypeName,
+                    ["topic"] = ProductDeletedIntegrationEvent.Topic,
+                    ["occurredOnUtc"] = occurredOnUtc
                 }
             },
-            LogType.Application,
             cancellationToken);
 
         return Result.Success();

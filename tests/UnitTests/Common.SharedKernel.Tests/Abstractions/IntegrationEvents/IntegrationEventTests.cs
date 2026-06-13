@@ -17,5 +17,8 @@ public sealed class IntegrationEventTests
         Assert.InRange(integrationEvent.OccurredOnUtc, before, after);
     }
 
-    private sealed record TestIntegrationEvent : IntegrationEventBase;
+    private sealed record TestIntegrationEvent : IntegrationEventBase
+    {
+        public override string EventType => "test.integration";
+    }
 }

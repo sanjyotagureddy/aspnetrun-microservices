@@ -21,9 +21,9 @@ public sealed class AdvancedCoverageTests
         await logger.LogApiAsync(
             new ApiLog { Message = "api-msg", Method = "GET", Path = "/products", StatusCode = 200, DurationMs = 5 },
             cancellationToken: token);
-        await logger.LogTraceAsync(new TraceLog { Message = "evt", Category = "event" }, LogType.Event, token);
-        await logger.LogTraceAsync(new TraceLog { Message = "aud", Category = "audit" }, LogType.Audit, token);
-        await logger.LogTraceAsync(new TraceLog { Message = "sec", Category = "security" }, LogType.Security, token);
+        await logger.LogEventAsync(new TraceLog { Message = "evt", Category = "event" }, token);
+        await logger.LogAuditAsync(new TraceLog { Message = "aud", Category = "audit" }, token);
+        await logger.LogSecurityAsync(new TraceLog { Message = "sec", Category = "security" }, token);
 
         await sink.WaitForCountAsync(6, TimeSpan.FromSeconds(5));
 

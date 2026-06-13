@@ -252,7 +252,16 @@ public sealed class PayloadProtectionPipelineTests
     public void DefaultPayloadMaskingEngine_ShouldPreserveCorrelationTraceAndTraceparentFields()
     {
         DefaultPayloadMaskingEngine engine = new();
-        PayloadProtectionOptions options = new();
+        PayloadProtectionOptions options = new()
+        {
+            MaskingExcludedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "topic",
+                "messageId",
+                "eventType",
+                "productId"
+            }
+        };
         options.EnsureDefaults();
 
         var payload = new
@@ -263,6 +272,8 @@ public sealed class PayloadProtectionPipelineTests
             traceparent = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
             topic = "inventory.stock.updated",
             messageId = "d8b3d4b8-a8aa-43ea-97b4-f3a8f5f1d06f",
+            eventType = "product.created.v1",
+            productId = "d8b3d4b8-a8aa-43ea-97b4-f3a8f5f1d06f",
             authorization = "Bearer abc.def.ghi"
         };
 
@@ -278,6 +289,42 @@ public sealed class PayloadProtectionPipelineTests
         root["traceparent"]!.GetValue<string>().Should().Be("00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01");
         root["topic"]!.GetValue<string>().Should().Be("inventory.stock.updated");
         root["messageId"]!.GetValue<string>().Should().Be("d8b3d4b8-a8aa-43ea-97b4-f3a8f5f1d06f");
+        root["eventType"]!.GetValue<string>().Should().Be("product.created.v1");
+        root["productId"]!.GetValue<string>().Should().Be("d8b3d4b8-a8aa-43ea-97b4-f3a8f5f1d06f");
+        root["authorization"]!.GetValue<string>().Should().Be(options.MaskValue);
+    }
+
+    [Fact]
+    public void DefaultPayloadMaskingEngine_ShouldBypassMasking_ForConfiguredExcludedField()
+    {
+        DefaultPayloadMaskingEngine engine = new();
+        PayloadProtectionOptions options = new()
+        {
+            GlobalSensitiveFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "tenantId",
+                "authorization"
+            },
+            MaskingExcludedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "tenantId"
+            }
+        };
+        options.EnsureDefaults();
+
+        var payload = new
+        {
+            tenantId = "tenant-01",
+            authorization = "Bearer abc.def.ghi"
+        };
+
+        PayloadProtectionResult result = engine.Apply(new PayloadProtectionRequest(payload, "unit-test"), options);
+
+        result.Success.Should().BeTrue();
+
+        string protectedPayload = result.ProtectedPayload.Should().BeOfType<string>().Subject;
+        JsonNode? root = JsonNode.Parse(protectedPayload);
+        root!["tenantId"]!.GetValue<string>().Should().Be("tenant-01");
         root["authorization"]!.GetValue<string>().Should().Be(options.MaskValue);
     }
 

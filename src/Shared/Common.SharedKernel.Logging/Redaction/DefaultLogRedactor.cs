@@ -47,8 +47,8 @@ internal sealed class DefaultLogRedactor(IOptions<LoggingPolicyOptions> policyOp
         foreach (KeyValuePair<string, object?> property in entry.Properties)
         {
             string terminalKey = GetTerminalKey(property.Key);
-            if (StrictMaskingFields.IsObservabilityIdentityField(property.Key)
-                || StrictMaskingFields.IsObservabilityIdentityField(terminalKey))
+            if (StrictMaskingFields.IsMaskingExcludedField(property.Key, policy.MaskingExcludedFields)
+                || StrictMaskingFields.IsMaskingExcludedField(terminalKey, policy.MaskingExcludedFields))
             {
                 redactedProperties[property.Key] = property.Value;
                 continue;

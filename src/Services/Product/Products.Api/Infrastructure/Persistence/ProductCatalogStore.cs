@@ -3,7 +3,7 @@ using Npgsql;
 
 namespace Products.Api.Infrastructure.Persistence;
 
-internal sealed class ProductCatalogStore(NpgsqlDataSource dataSource) : Products.Api.Infrastructure.IProductCatalogStore
+internal sealed class ProductCatalogStore(NpgsqlDataSource dataSource) : IProductCatalogStore
 {
     public async Task<Product?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
     {
@@ -49,6 +49,14 @@ internal sealed class ProductCatalogStore(NpgsqlDataSource dataSource) : Product
     public async Task AddAsync(Product product, CancellationToken cancellationToken)
     {
         await using NpgsqlConnection connection = await dataSource.OpenConnectionAsync(cancellationToken);
+        await AddInternalAsync(product, connection, null, cancellationToken);
+    }
+
+    public Task AddAsync(Product product, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken)
+        => AddInternalAsync(product, connection, transaction, cancellationToken);
+
+    private static async Task AddInternalAsync(Product product, NpgsqlConnection connection, NpgsqlTransaction? transaction, CancellationToken cancellationToken)
+    {
         try
         {
             await connection.ExecuteAsync(new CommandDefinition(
@@ -57,6 +65,7 @@ internal sealed class ProductCatalogStore(NpgsqlDataSource dataSource) : Product
                 values (@Id, @Name, @Description, @Sku, @Price, @Currency, @category, @Brand, @StockQuantity, @IsActive, @CreatedAt, @UpdatedAt)
                 """,
                 product.ToRecord(),
+                transaction,
                 cancellationToken: cancellationToken));
         }
         catch (PostgresException exception) when (exception.SqlState == PostgresErrorCodes.UniqueViolation)
@@ -68,6 +77,14 @@ internal sealed class ProductCatalogStore(NpgsqlDataSource dataSource) : Product
     public async Task UpdateAsync(Product product, CancellationToken cancellationToken)
     {
         await using NpgsqlConnection connection = await dataSource.OpenConnectionAsync(cancellationToken);
+        await UpdateInternalAsync(product, connection, null, cancellationToken);
+    }
+
+    public Task UpdateAsync(Product product, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken)
+        => UpdateInternalAsync(product, connection, transaction, cancellationToken);
+
+    private static async Task UpdateInternalAsync(Product product, NpgsqlConnection connection, NpgsqlTransaction? transaction, CancellationToken cancellationToken)
+    {
         try
         {
             var affectedRows = await connection.ExecuteAsync(new CommandDefinition(
@@ -85,6 +102,7 @@ internal sealed class ProductCatalogStore(NpgsqlDataSource dataSource) : Product
                 where id = @Id
                 """,
                 product.ToRecord(),
+                transaction,
                 cancellationToken: cancellationToken));
 
             if (affectedRows == 0)
@@ -101,9 +119,18 @@ internal sealed class ProductCatalogStore(NpgsqlDataSource dataSource) : Product
     public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken)
     {
         await using NpgsqlConnection connection = await dataSource.OpenConnectionAsync(cancellationToken);
+        return await DeleteInternalAsync(id, connection, null, cancellationToken);
+    }
+
+    public Task<bool> DeleteAsync(Guid id, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken)
+        => DeleteInternalAsync(id, connection, transaction, cancellationToken);
+
+    private static async Task<bool> DeleteInternalAsync(Guid id, NpgsqlConnection connection, NpgsqlTransaction? transaction, CancellationToken cancellationToken)
+    {
         var affectedRows = await connection.ExecuteAsync(new CommandDefinition(
             "delete from products where id = @Id",
             new { Id = id },
+            transaction,
             cancellationToken: cancellationToken));
 
         return affectedRows > 0;
@@ -112,6 +139,14 @@ internal sealed class ProductCatalogStore(NpgsqlDataSource dataSource) : Product
     public async Task EnsureSkuIsUniqueAsync(string sku, Guid? productId, CancellationToken cancellationToken)
     {
         await using NpgsqlConnection connection = await dataSource.OpenConnectionAsync(cancellationToken);
+        await EnsureSkuIsUniqueInternalAsync(sku, productId, connection, null, cancellationToken);
+    }
+
+    public Task EnsureSkuIsUniqueAsync(string sku, Guid? productId, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken)
+        => EnsureSkuIsUniqueInternalAsync(sku, productId, connection, transaction, cancellationToken);
+
+    private static async Task EnsureSkuIsUniqueInternalAsync(string sku, Guid? productId, NpgsqlConnection connection, NpgsqlTransaction? transaction, CancellationToken cancellationToken)
+    {
         var exists = await connection.ExecuteScalarAsync<bool>(new CommandDefinition(
             """
             select exists(
@@ -121,6 +156,7 @@ internal sealed class ProductCatalogStore(NpgsqlDataSource dataSource) : Product
             )
             """,
             new { Sku = sku, ProductId = productId },
+            transaction,
             cancellationToken: cancellationToken));
 
         if (exists)

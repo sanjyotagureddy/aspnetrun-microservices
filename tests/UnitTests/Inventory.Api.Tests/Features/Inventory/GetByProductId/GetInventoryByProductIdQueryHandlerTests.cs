@@ -3,6 +3,7 @@ using Inventory.Api.Contracts;
 using Inventory.Api.Domain;
 using Inventory.Api.Features.Inventory.GetByProductId;
 using Inventory.Api.Infrastructure;
+using Npgsql;
 
 namespace Inventory.Api.Tests.Features.Inventory.GetByProductId;
 
@@ -52,6 +53,9 @@ public sealed class GetInventoryByProductIdQueryHandlerTests
             => Task.FromResult((IReadOnlyDictionary<Guid, int>)new Dictionary<Guid, int>());
 
         public Task InitializeAsync(InventoryItem item, CancellationToken cancellationToken)
+            => Task.CompletedTask;
+
+        public Task InitializeAsync(InventoryItem item, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken)
             => Task.CompletedTask;
     }
 }

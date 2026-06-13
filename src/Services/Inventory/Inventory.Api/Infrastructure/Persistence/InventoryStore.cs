@@ -53,6 +53,14 @@ internal sealed class InventoryStore(NpgsqlDataSource dataSource) : IInventorySt
     public async Task InitializeAsync(InventoryItem item, CancellationToken cancellationToken)
     {
         await using NpgsqlConnection connection = await dataSource.OpenConnectionAsync(cancellationToken);
+        await InitializeInternalAsync(item, connection, null, cancellationToken);
+    }
+
+    public Task InitializeAsync(InventoryItem item, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken)
+        => InitializeInternalAsync(item, connection, transaction, cancellationToken);
+
+    private static async Task InitializeInternalAsync(InventoryItem item, NpgsqlConnection connection, NpgsqlTransaction? transaction, CancellationToken cancellationToken)
+    {
         await connection.ExecuteAsync(new CommandDefinition(
             """
             insert into inventory_items (product_id, stock_quantity, created_at, updated_at)
@@ -63,6 +71,7 @@ internal sealed class InventoryStore(NpgsqlDataSource dataSource) : IInventorySt
                 updated_at = excluded.updated_at;
             """,
             item.ToRecord(),
+            transaction,
             cancellationToken: cancellationToken));
     }
 

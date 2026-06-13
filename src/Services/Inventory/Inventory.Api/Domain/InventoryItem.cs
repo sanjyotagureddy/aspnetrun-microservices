@@ -1,4 +1,5 @@
 using Common.SharedKernel.Abstractions.Auditing;
+using Inventory.Api.Domain.Events;
 using CommonValidationException = Common.SharedKernel.Exceptions.ValidationException;
 
 namespace Inventory.Api.Domain;
@@ -24,6 +25,16 @@ internal sealed class InventoryItem : AuditableEntity<Guid>
     {
         SetStockQuantity(stockQuantity);
         SetUpdatedAudit(updatedAtUtc);
+    }
+
+    public void RaiseInitializedDomainEvent(DateTime occurredOnUtc)
+    {
+        AddDomainEvent(new InventoryInitializedDomainEvent(
+            occurredOnUtc,
+            ProductId,
+            StockQuantity,
+            CreatedAtUtc,
+            UpdatedAtUtc));
     }
 
     private static Guid EnsureProductId(Guid productId)

@@ -3,6 +3,7 @@ using Common.SharedKernel.Results;
 using Inventory.Api.Domain;
 using Inventory.Api.Features.Inventory.GetBatch;
 using Inventory.Api.Infrastructure;
+using Npgsql;
 
 namespace Inventory.Api.Tests.Features.Inventory.GetBatch;
 
@@ -43,6 +44,9 @@ public sealed class GetInventoryBatchQueryHandlerTests
             => Task.FromResult(Stocks);
 
         public Task InitializeAsync(InventoryItem item, CancellationToken cancellationToken)
+            => Task.CompletedTask;
+
+        public Task InitializeAsync(InventoryItem item, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken)
             => Task.CompletedTask;
     }
 }

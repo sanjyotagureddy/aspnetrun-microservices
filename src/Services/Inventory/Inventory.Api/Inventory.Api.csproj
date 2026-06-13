@@ -25,6 +25,7 @@
     <ProjectReference Include="..\..\..\aspire\aspnetrun-microservices.ServiceDefaults\aspnetrun-microservices.ServiceDefaults.csproj" />
     <ProjectReference Include="..\..\..\Shared\Common.SharedKernel\Common.SharedKernel.csproj" />
     <ProjectReference Include="..\..\..\Shared\Common.SharedKernel.Logging\Common.SharedKernel.Logging.csproj" />
+    <ProjectReference Include="..\..\..\Shared\Common.SharedKernel.Messaging\Common.SharedKernel.Messaging.csproj" />
   </ItemGroup>
 
 </Project>

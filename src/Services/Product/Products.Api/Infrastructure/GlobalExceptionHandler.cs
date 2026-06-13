@@ -19,16 +19,23 @@ internal sealed class GlobalExceptionHandler(Common.SharedKernel.Logging.ILogger
             _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred")
         };
 
-        await logger.LogErrorAsync(
+        await logger.LogApplicationAsync(
             new ErrorLog
             {
                 Message = $"Unhandled exception while processing {httpContext.Request.Method} {httpContext.Request.Path}",
                 Category = "http.unhandled.exception",
                 Exception = exception,
                 ExceptionType = exception.GetType().FullName,
-                ExceptionMessage = exception.Message
+                ExceptionMessage = exception.Message,
+                Context = new Dictionary<string, object?>
+                {
+                    ["operation"] = "http.request.unhandled",
+                    ["method"] = httpContext.Request.Method,
+                    ["path"] = httpContext.Request.Path.Value,
+                    ["statusCode"] = statusCode,
+                    ["traceId"] = httpContext.TraceIdentifier
+                }
             },
-            LogType.Application,
             cancellationToken);
 
         httpContext.Response.StatusCode = statusCode;

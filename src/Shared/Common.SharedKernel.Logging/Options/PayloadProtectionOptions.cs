@@ -32,6 +32,11 @@ public sealed record PayloadProtectionOptions
         "secret"
     };
 
+    /// <summary>
+    /// Field names that must bypass payload masking/redaction rules.
+    /// </summary>
+    public HashSet<string> MaskingExcludedFields { get; set; } = StrictMaskingFields.CreateDefaultMaskingExcludedFields();
+
     public List<PayloadRule> Rules { get; set; } = [];
 
     public void EnsureDefaults()
@@ -56,6 +61,21 @@ public sealed record PayloadProtectionOptions
         }
 
         GlobalSensitiveFields = normalized;
+        HashSet<string> normalizedExcluded = new(StringComparer.OrdinalIgnoreCase);
+        foreach (string key in MaskingExcludedFields)
+        {
+            if (!string.IsNullOrWhiteSpace(key))
+            {
+                normalizedExcluded.Add(key.Trim());
+            }
+        }
+
+        foreach (string key in StrictMaskingFields.CreateDefaultMaskingExcludedFields())
+        {
+            normalizedExcluded.Add(key);
+        }
+
+        MaskingExcludedFields = normalizedExcluded;
         Rules = Rules.Where(rule => !string.IsNullOrWhiteSpace(rule.Pattern)).ToList();
     }
 }

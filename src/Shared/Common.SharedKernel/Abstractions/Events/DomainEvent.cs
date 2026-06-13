@@ -2,5 +2,17 @@
 
 public abstract record DomainEvent : IDomainEvent
 {
-    public DateTime OccurredOnUtc { get; } = DateTime.UtcNow;
+    protected DomainEvent()
+        : this(DateTime.UtcNow)
+    {
+    }
+
+    protected DomainEvent(DateTime occurredOnUtc)
+    {
+        OccurredOnUtc = occurredOnUtc;
+    }
+
+    public DateTime OccurredOnUtc { get; }
+
+    public virtual string EventType => GetType().Name;
 }

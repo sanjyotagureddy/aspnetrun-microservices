@@ -25,6 +25,7 @@ public static class MessagingServiceCollectionExtensions
             configured.Serialization = options.Serialization;
             configured.RetryPolicy = options.RetryPolicy;
             configured.DeadLetter = options.DeadLetter;
+            configured.OutboxHeartbeat = options.OutboxHeartbeat;
             configured.Destinations = options.Destinations.Select(destination => destination.Clone()).ToList();
             configured.Kafka = options.Kafka;
         });

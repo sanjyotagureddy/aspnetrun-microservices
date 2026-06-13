@@ -1,6 +1,6 @@
-﻿using Common.SharedKernel.Messaging;
-using Common.SharedKernel.Logging;
+﻿using Common.SharedKernel.Logging;
 using Common.SharedKernel.Observability.Context;
+using Products.Api.Domain.Events;
 using Products.Api.Features.Products.Events;
 using Products.Api.Observability;
 
@@ -11,104 +11,106 @@ internal sealed class CreateProductCommandHandler(
     IInventoryStockAdapter inventoryStockAdapter,
     TimeProvider timeProvider,
     Common.SharedKernel.Logging.ILogger<CreateProductCommandHandler> logger,
-    IMessageBus messageBus)
+    IProductDomainEventDispatcher domainEventDispatcher,
+    IProductTransactionExecutor transactionExecutor)
     : IRequestHandler<CreateProductCommand, Result<ProductResponse>>
 {
     public async Task<Result<ProductResponse>> Handle(CreateProductCommand request, CancellationToken cancellationToken)
     {
         DateTime occurredOnUtc = timeProvider.GetUtcNow().UtcDateTime;
         Product normalizedProduct = request.ToDomain(Guid.NewGuid(), occurredOnUtc);
-        int confirmedStockQuantity;
 
-        await store.EnsureSkuIsUniqueAsync(normalizedProduct.Sku, null, cancellationToken);
-        await store.AddAsync(normalizedProduct, cancellationToken);
+        try
+        {
+            await transactionExecutor.ExecuteAsync(async (connection, transaction, ct) =>
+            {
+                await store.EnsureSkuIsUniqueAsync(normalizedProduct.Sku, null, connection, transaction, ct);
+                await store.AddAsync(normalizedProduct, connection, transaction, ct);
+
+                AppCallContext? appContext = AppCallContextBase.CurrentAs<AppCallContext>();
+                normalizedProduct.RaiseCreatedDomainEvent(request.StockQuantity, occurredOnUtc);
+                await domainEventDispatcher.DispatchAsync(normalizedProduct.DomainEvents, appContext, connection, transaction, ct);
+                normalizedProduct.ClearDomainEvents();
+            }, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            await logger.LogApplicationAsync(
+                new ErrorLog
+                {
+                    Message = "Product creation failed while writing product and outbox state",
+                    Category = "product_create_transaction_failed",
+                    Exception = ex,
+                    ExceptionType = ex.GetType().FullName,
+                    ExceptionMessage = ex.Message,
+                    Context = new Dictionary<string, object?>
+                    {
+                        ["operation"] = "product.create",
+                        ["aggregateType"] = "product",
+                        ["productId"] = normalizedProduct.Id,
+                        ["stockQuantity"] = request.StockQuantity,
+                        ["eventType"] = ProductCreatedDomainEvent.EventTypeName,
+                        ["topic"] = ProductCreatedIntegrationEvent.Topic,
+                        ["occurredOnUtc"] = occurredOnUtc
+                    }
+                },
+                cancellationToken);
+
+            throw new Common.SharedKernel.Exceptions.ConflictException("Product creation failed and was rolled back.");
+        }
+
+        int confirmedStockQuantity = request.StockQuantity;
 
         try
         {
             await inventoryStockAdapter.InitializeAsync(normalizedProduct.Id, request.StockQuantity, cancellationToken);
             confirmedStockQuantity = await inventoryStockAdapter.GetStockQuantityAsync(normalizedProduct.Id, cancellationToken) ?? request.StockQuantity;
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
-            bool rollbackSucceeded;
-
-            try
-            {
-                rollbackSucceeded = await store.DeleteAsync(normalizedProduct.Id, cancellationToken);
-            }
-            catch (Exception rollbackException)
-            {
-                await logger.LogErrorAsync(
-                    new ErrorLog
-                    {
-                        Message = "Product rollback failed after inventory initialization error",
-                        Exception = rollbackException,
-                        ExceptionType = rollbackException.GetType().FullName,
-                        ExceptionMessage = rollbackException.Message
-                    },
-                    LogType.Application,
-                    cancellationToken);
-
-                throw new Common.SharedKernel.Exceptions.ConflictException("Product creation failed because inventory initialization could not be completed.");
-            }
-
-            await logger.LogErrorAsync(
+            await logger.LogApplicationAsync(
                 new ErrorLog
                 {
-                    Message = "Inventory initialization failed for product; create operation was rolled back",
-                    Category = "inventory_initialize_failed_product_rolled_back",
+                    Message = "Product committed but inventory initialization failed",
+                    Category = "product_create_inventory_initialization_failed",
                     Exception = ex,
                     ExceptionType = ex.GetType().FullName,
                     ExceptionMessage = ex.Message,
                     Context = new Dictionary<string, object?>
                     {
+                        ["operation"] = "product.create",
+                        ["aggregateType"] = "product",
                         ["productId"] = normalizedProduct.Id,
                         ["stockQuantity"] = request.StockQuantity,
-                        ["rollbackSucceeded"] = rollbackSucceeded
+                        ["eventType"] = ProductCreatedDomainEvent.EventTypeName,
+                        ["topic"] = ProductCreatedIntegrationEvent.Topic,
+                        ["occurredOnUtc"] = occurredOnUtc
                     }
                 },
-                LogType.Application,
                 cancellationToken);
-
-            throw new Common.SharedKernel.Exceptions.ConflictException("Product creation failed because inventory initialization could not be completed.");
         }
 
-        ProductCreatedIntegrationEvent productCreated = normalizedProduct.ToCreatedIntegrationEvent(occurredOnUtc, confirmedStockQuantity);
-        AppCallContext? appContext = AppCallContextBase.CurrentAs<AppCallContext>();
-
-        await messageBus.PublishAsync(
-            ProductCreatedIntegrationEvent.Topic,
-            productCreated,
-            metadata =>
-            {
-                metadata.MessageId = productCreated.EventId.ToString("N");
-                metadata.OrderingKey = normalizedProduct.Id.ToString("N");
-                metadata.Contract = new MessageContractDescriptor(nameof(ProductCreatedIntegrationEvent), "1.0", "application/json");
-                metadata.CorrelationId = appContext?.CorrelationId;
-                metadata.TraceId = appContext?.TraceId;
-                metadata.SpanId = appContext?.SpanId;
-                metadata.TenantId = appContext?.TenantId;
-                metadata.Headers["Source"] = "products-api";
-                metadata.Headers["Entity"] = nameof(Product);
-                metadata.Headers["EventType"] = nameof(ProductCreatedIntegrationEvent);
-            },
-            cancellationToken);
-
-        await logger.LogTraceAsync(
+        await logger.LogApplicationAsync(
             new TraceLog
             {
                 Message = "Product created",
                 Category = "product_created",
+                Operation = "product.create",
                 Context = new Dictionary<string, object?>
                 {
+                    ["aggregateType"] = "product",
                     ["productId"] = normalizedProduct.Id,
                     ["sku"] = normalizedProduct.Sku,
                     ["stockQuantity"] = confirmedStockQuantity,
-                    ["eventId"] = productCreated.EventId,
-                    ["topic"] = ProductCreatedIntegrationEvent.Topic
+                    ["eventType"] = ProductCreatedDomainEvent.EventTypeName,
+                    ["topic"] = ProductCreatedIntegrationEvent.Topic,
+                    ["occurredOnUtc"] = occurredOnUtc
                 }
             },
-            LogType.Application,
             cancellationToken);
 
         return Result<ProductResponse>.Success(normalizedProduct.ToResponse(confirmedStockQuantity));

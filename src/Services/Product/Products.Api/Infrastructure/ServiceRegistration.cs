@@ -4,11 +4,8 @@ using Common.SharedKernel;
 using Common.SharedKernel.Exceptions;
 using Common.SharedKernel.Logging;
 using Common.SharedKernel.Messaging;
-
 using Npgsql;
-
 using Products.Api.Features.Products.Events;
-using Products.Api.Infrastructure.Persistence;
 using Products.Api.Observability;
 
 namespace Products.Api.Infrastructure;
@@ -25,105 +22,62 @@ internal static class ServiceRegistration
                                    ?? throw new ConfigurationException("Connection string 'productsdb' or 'products'");
 
             services.AddValidationBehaviour();
+            services.AddProductsCoreInfrastructure(connectionString);
+            services.AddProductsObservabilityAndMessaging(configuration);
+            services.AddProductsApplicationLayer();
+            services.AddProductsInfrastructureAdapters();
+            services.AddProductsExceptionHandling();
+
+            return services;
+        }
+
+        private void AddProductsCoreInfrastructure(string connectionString)
+        {
             services.AddSingleton(TimeProvider.System);
             services.AddSingleton(NpgsqlDataSource.Create(connectionString));
             services.AddHostedService<ProductCatalogSchemaInitializer>();
+        }
 
-            IConfigurationSection loggingSection = configuration.GetSection("Logging:CommonSharedKernel");
-            string loggingServiceName = loggingSection["ServiceName"] ?? "products-api";
-            bool hasMinimumLevel = Enum.TryParse(
-                loggingSection["MinimumLevel"],
-                true,
-                out Common.SharedKernel.Logging.LogLevel configuredMinimumLevel);
-            Common.SharedKernel.Logging.LogLevel minimumLevel = hasMinimumLevel
-                ? configuredMinimumLevel
-                : Common.SharedKernel.Logging.LogLevel.Trace;
-            string[] enabledLogTypes = loggingSection.GetSection("EnabledLogTypes").Get<string[]>()
-                ?? ["api", "trace", "error"];
-
-            bool hasConsoleFormatter = Enum.TryParse(
-                loggingSection["Console:FormatterKind"],
-                true,
-                out LogFormatterKind configuredConsoleFormatter);
-            LogFormatterKind consoleFormatter = hasConsoleFormatter
-                ? configuredConsoleFormatter
-                : LogFormatterKind.Json;
-
-            IConfigurationSection openSearchSection = loggingSection.GetSection("OpenSearch");
-            bool openSearchEnabled = bool.TryParse(openSearchSection["Enabled"], out bool enabled) && enabled;
-            bool hasOpenSearchEndpoint = Uri.TryCreate(openSearchSection["Endpoint"], UriKind.Absolute, out Uri? openSearchEndpoint);
-            string openSearchAppIndexPrefix = string.IsNullOrWhiteSpace(openSearchSection["AppIndexPrefix"])
-                ? "app-log"
-                : openSearchSection["AppIndexPrefix"]!;
-            string openSearchMessagingIndexPrefix = string.IsNullOrWhiteSpace(openSearchSection["MessagingIndexPrefix"])
-                ? "messaging-log"
-                : openSearchSection["MessagingIndexPrefix"]!;
-            string openSearchAuditIndexPrefix = string.IsNullOrWhiteSpace(openSearchSection["AuditIndexPrefix"])
-                ? "audit-log"
-                : openSearchSection["AuditIndexPrefix"]!;
-            string openSearchSecurityIndexPrefix = string.IsNullOrWhiteSpace(openSearchSection["SecurityIndexPrefix"])
-                ? "security-log"
-                : openSearchSection["SecurityIndexPrefix"]!;
-            string openSearchPayloadIndexPrefix = string.IsNullOrWhiteSpace(openSearchSection["PayloadIndexPrefix"])
-                ? "payload-log"
-                : openSearchSection["PayloadIndexPrefix"]!;
-            bool useDailyIndexes = !bool.TryParse(openSearchSection["UseDailyIndexes"], out bool configuredUseDailyIndexes)
-                || configuredUseDailyIndexes;
-
-            services.AddCommonSharedKernelLogging(builder =>
-            {
-                builder.SetServiceName(loggingServiceName);
-                builder.SetMinimumLevel(minimumLevel);
-                builder.SetEnabledLogTypes(enabledLogTypes);
-                builder.UseConsole(opts => opts.FormatterKind = consoleFormatter);
-
-                if (openSearchEnabled && hasOpenSearchEndpoint && openSearchEndpoint is not null)
-                {
-                    builder.UseElasticsearch(opts =>
-                    {
-                        opts.Endpoint = openSearchEndpoint;
-                        opts.AppIndexPrefix = openSearchAppIndexPrefix;
-                        opts.MessagingIndexPrefix = openSearchMessagingIndexPrefix;
-                        opts.AuditIndexPrefix = openSearchAuditIndexPrefix;
-                        opts.SecurityIndexPrefix = openSearchSecurityIndexPrefix;
-                        opts.PayloadIndexPrefix = openSearchPayloadIndexPrefix;
-                        opts.UseDailyIndexes = useDailyIndexes;
-                    });
-                }
-            });
-
+        private void AddProductsObservabilityAndMessaging(IConfiguration configuration)
+        {
+            services.AddConfiguredCommonSharedKernelLogging(configuration, "products-api");
             services.UseRequestLoggingMiddleware<ProductsRequestLoggingMiddleware>();
 
             services.AddMessaging(builder =>
             {
-                builder.Options.TopicPrefix = configuration["Messaging:TopicPrefix"] ?? string.Empty;
-                builder.Options.ProvisioningMode = ProvisioningMode.ValidateOnly;
-
-                builder.RegisterDestination(destination =>
-                {
-                    destination.DestinationName = ProductCreatedIntegrationEvent.Topic;
-                    destination.OwnerService = "products-api";
-                    destination.Contract = new MessageContractDescriptor("ProductLifecycleEvent", "1.0", "application/json");
-                    destination.PartitioningStrategy = PartitioningStrategy.ByAggregateId;
-                    destination.PartitionKeySelector = "payload.productId";
-                });
-
-                builder.UseKafka(options =>
-                {
-                    options.BootstrapServers = configuration.GetConnectionString("message-broker")
-                                               ?? configuration["Messaging:Kafka:BootstrapServers"]
-                                               ?? "localhost:9092";
-                    options.ConsumerGroup = configuration["Messaging:Kafka:ConsumerGroup"] ?? "products-api";
-                });
+                builder.ApplyConfiguration(configuration, "products-api");
+                ConfigureProductDestinations(builder);
             });
+        }
 
+        private static void ConfigureProductDestinations(IMessagingBuilder builder)
+        {
+            builder.RegisterDestination(destination =>
+            {
+                destination.DestinationName = ProductCreatedIntegrationEvent.Topic;
+                destination.OwnerService = "products-api";
+                destination.Contract = new MessageContractDescriptor("ProductLifecycleEvent", "1.0", "application/json");
+                destination.PartitioningStrategy = PartitioningStrategy.ByAggregateId;
+                destination.PartitionKeySelector = "payload.productId";
+                destination.OrderingRequired = true;
+            });
+        }
+
+        private void AddProductsApplicationLayer()
+        {
             services.AddMediatR(cfg =>
             {
                 cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());
             });
+        }
 
-
+        private void AddProductsInfrastructureAdapters()
+        {
             services.AddSingleton<IProductCatalogStore, ProductCatalogStore>();
+            services.AddSingleton<IProductTransactionExecutor, ProductTransactionExecutor>();
+            services.AddSingleton<IProductOutboxStore, ProductOutboxStore>();
+            services.AddSingleton<IProductDomainEventDispatcher, ProductDomainEventDispatcher>();
+            services.AddHostedService<ProductOutboxPublisher>();
             services.AddHttpClient<IInventoryStockAdapter, InventoryStockAdapter>((provider, client) =>
                 {
                     IConfiguration config = provider.GetRequiredService<IConfiguration>();
@@ -138,11 +92,12 @@ internal static class ServiceRegistration
                 })
                 .AddServiceDiscovery()
                 .AddStandardResilienceHandler();
+        }
 
+        private void AddProductsExceptionHandling()
+        {
             services.AddExceptionHandler<GlobalExceptionHandler>();
             services.AddProblemDetails();
-
-            return services;
         }
 
         private void AddValidationBehaviour()

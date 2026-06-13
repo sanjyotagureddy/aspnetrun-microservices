@@ -45,6 +45,7 @@ internal sealed class KafkaMessageProducer(
         ValidatePartitionPolicy(metadata, registration, resolvedTopic, explicitPartition);
 
         MessageEnvelope<T> envelope = MessageEnvelope<T>.Create(resolvedTopic, message, metadata);
+        string eventType = ResolveEventType(metadata, envelope);
         string messageKey = ResolveMessageKey(envelope, metadata);
         byte[] payload = serializer.Serialize(envelope);
         Message<string, byte[]> kafkaMessage = new()
@@ -66,57 +67,29 @@ internal sealed class KafkaMessageProducer(
         {
             try
             {
-                DeliveryResult<string, byte[]> report = explicitPartition.HasValue
-                    ? await _producer.ProduceAsync(new TopicPartition(resolvedTopic, new Partition(explicitPartition.Value)), kafkaMessage, cancellationToken)
-                    : await _producer.ProduceAsync(resolvedTopic, kafkaMessage, cancellationToken);
+                if (explicitPartition.HasValue)
+                {
+                    await _producer.ProduceAsync(new TopicPartition(resolvedTopic, new Partition(explicitPartition.Value)), kafkaMessage, cancellationToken);
+                }
+                else
+                {
+                    await _producer.ProduceAsync(resolvedTopic, kafkaMessage, cancellationToken);
+                }
 
                 stopwatch.Stop();
                 instrumentation.PublishDurationMs.Record(stopwatch.Elapsed.TotalMilliseconds);
-                await logger.LogTraceAsync(
-                    new TraceLog
-                    {
-                        Message = "Message published",
-                        Category = "messaging.publish",
-                        DurationMs = stopwatch.Elapsed.TotalMilliseconds,
-                        Context = new Dictionary<string, object?>
-                        {
-                            ["messageId"] = envelope.MessageId,
-                            ["topic"] = resolvedTopic,
-                            ["provider"] = "Kafka",
-                            ["partition"] = report.Partition.Value,
-                            ["offset"] = report.Offset.Value
-                        }
-                    },
-                    LogType.Event,
-                    cancellationToken);
                 return;
             }
             catch (Exception) when (attempt < attempts)
             {
                 instrumentation.RetryCount.Add(1);
-                await logger.LogTraceAsync(
-                    new TraceLog
-                    {
-                        Message = "Message publish retry",
-                        Category = "messaging.retry",
-                        Context = new Dictionary<string, object?>
-                        {
-                            ["messageId"] = envelope.MessageId,
-                            ["topic"] = resolvedTopic,
-                            ["provider"] = "Kafka",
-                            ["attempt"] = attempt
-                        }
-                    },
-                    LogType.Event,
-                    cancellationToken);
-
                 await Task.Delay(GetDelay(attempt), cancellationToken);
             }
             catch (Exception ex)
             {
                 stopwatch.Stop();
                 instrumentation.PublishFailures.Add(1);
-                await logger.LogErrorAsync(
+                await logger.LogEventAsync(
                     new ErrorLog
                     {
                         Message = "Message publish failed",
@@ -127,12 +100,19 @@ internal sealed class KafkaMessageProducer(
                         Context = new Dictionary<string, object?>
                         {
                             ["messageId"] = envelope.MessageId,
+                            ["eventType"] = eventType,
+                            ["contractVersion"] = envelope.Contract.Version,
+                            ["contractCompatibility"] = envelope.Contract.Compatibility.ToString(),
                             ["topic"] = resolvedTopic,
                             ["provider"] = "Kafka",
-                            ["durationMs"] = stopwatch.Elapsed.TotalMilliseconds
+                            ["durationMs"] = stopwatch.Elapsed.TotalMilliseconds,
+                            ["attempt"] = attempt,
+                            ["maxAttempts"] = attempts,
+                            ["retryInitialDelayMs"] = _options.RetryPolicy.InitialDelay.TotalMilliseconds,
+                            ["retryBackoffMultiplier"] = _options.RetryPolicy.BackoffMultiplier,
+                            ["partition"] = explicitPartition
                         }
                     },
-                    LogType.Event,
                     cancellationToken);
                 throw new MessagingException($"Failed to publish message to topic '{resolvedTopic}'.", ex);
             }
@@ -190,6 +170,17 @@ internal sealed class KafkaMessageProducer(
         return envelope.MessageId;
     }
 
+    private static string ResolveEventType<T>(MessageMetadata metadata, IMessageEnvelope<T> envelope)
+    {
+        if (metadata.Headers.TryGetValue("EventType", out string? eventTypeFromHeader)
+            && !string.IsNullOrWhiteSpace(eventTypeFromHeader))
+        {
+            return eventTypeFromHeader;
+        }
+
+        return envelope.Contract.MessageType;
+    }
+
     private DestinationRegistration? ResolveRegistration(string topic, string resolvedTopic)
         => _options.Destinations.FirstOrDefault(destination =>
             string.Equals(destination.DestinationName, topic, StringComparison.OrdinalIgnoreCase)
@@ -206,7 +197,13 @@ internal sealed class KafkaMessageProducer(
             ? metadata.OrderingKey
             : metadata.RoutingKey;
 
-        if (registration.OrderingRequired && string.IsNullOrWhiteSpace(effectiveKey) && registration.PartitioningStrategy != PartitioningStrategy.ExplicitPartition)
+        bool partitionStrategyRequiresKey = registration.PartitioningStrategy is PartitioningStrategy.ByAggregateId
+            or PartitioningStrategy.ByOrderingKey
+            or PartitioningStrategy.ByRoutingKey;
+
+        if ((registration.OrderingRequired || partitionStrategyRequiresKey)
+            && string.IsNullOrWhiteSpace(effectiveKey)
+            && registration.PartitioningStrategy != PartitioningStrategy.ExplicitPartition)
         {
             throw new MessagingConfigurationException($"Destination '{topic}' requires an OrderingKey or RoutingKey.");
         }

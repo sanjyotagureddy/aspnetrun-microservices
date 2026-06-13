@@ -31,6 +31,23 @@ internal sealed class ProductCatalogSchemaInitializer(NpgsqlDataSource dataSourc
             create index if not exists ix_products_category on products (category);
             create index if not exists ix_products_brand on products (brand);
             create index if not exists ix_products_is_active on products (is_active);
+
+            create table if not exists product_outbox
+            (
+                id uuid primary key,
+                occurred_on_utc timestamptz not null,
+                event_type text not null,
+                topic text not null,
+                payload_json jsonb not null,
+                metadata_json jsonb not null,
+                status text not null,
+                attempt_count integer not null default 0,
+                next_attempt_on_utc timestamptz null,
+                processed_on_utc timestamptz null,
+                last_error text null
+            );
+
+            create index if not exists ix_product_outbox_status_next_attempt on product_outbox (status, next_attempt_on_utc, occurred_on_utc);
             """,
             cancellationToken: cancellationToken));
 

@@ -12,6 +12,9 @@ internal sealed record ProductDeletedIntegrationEvent(
     : IntegrationEventBase(EventId, OccurredOnUtc)
 {
     public const string Topic = "products.events.v1";
+    public const string EventTypeName = "product.deleted";
+
+    public override string EventType => EventTypeName;
 
     public ProductDeletedIntegrationEvent(
         Guid productId,

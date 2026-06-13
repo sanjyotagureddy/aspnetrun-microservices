@@ -15,7 +15,7 @@ internal sealed class MessagingConfigurationValidationHostedService(
         IReadOnlyList<string> errors = Validate(options.Value);
         if (errors.Count == 0)
         {
-            await logger.LogTraceAsync(
+            await logger.LogEventAsync(
                 new TraceLog
                 {
                     Message = "Messaging configuration validated successfully.",
@@ -29,7 +29,6 @@ internal sealed class MessagingConfigurationValidationHostedService(
                         ["supportsTransactions"] = provider.Capabilities.SupportsTransactions
                     }
                 },
-                LogType.Event,
                 cancellationToken);
 
             try
@@ -40,7 +39,7 @@ internal sealed class MessagingConfigurationValidationHostedService(
             }
             catch (Exception ex) when (hostEnvironment.IsDevelopment())
             {
-                await logger.LogTraceAsync(
+                await logger.LogEventAsync(
                     new TraceLog
                     {
                         Message = "Messaging destination provisioning warning in development environment.",
@@ -52,13 +51,12 @@ internal sealed class MessagingConfigurationValidationHostedService(
                             ["provider"] = provider.Name
                         }
                     },
-                    LogType.Event,
                     cancellationToken);
 
                 return;
             }
 
-            await logger.LogTraceAsync(
+            await logger.LogEventAsync(
                 new TraceLog
                 {
                     Message = "Messaging destination provisioning completed.",
@@ -70,7 +68,6 @@ internal sealed class MessagingConfigurationValidationHostedService(
                         ["provider"] = provider.Name
                     }
                 },
-                LogType.Event,
                 cancellationToken);
 
             return;
@@ -79,7 +76,7 @@ internal sealed class MessagingConfigurationValidationHostedService(
         string message = string.Join(Environment.NewLine, errors.Select((error, index) => $"{index + 1}. {error}"));
         if (hostEnvironment.IsDevelopment())
         {
-            await logger.LogTraceAsync(
+            await logger.LogEventAsync(
                 new TraceLog
                 {
                     Message = "Messaging configuration validation warnings.",
@@ -89,7 +86,6 @@ internal sealed class MessagingConfigurationValidationHostedService(
                         ["errors"] = message
                     }
                 },
-                LogType.Event,
                 cancellationToken);
             return;
         }
@@ -160,10 +156,7 @@ internal sealed class MessagingConfigurationValidationHostedService(
             .Select(group => group.Key)
             .ToArray();
 
-        foreach (string duplicate in duplicates)
-        {
-            errors.Add($"Duplicate destination registration detected for '{duplicate}'.");
-        }
+        errors.AddRange(duplicates.Select(duplicate => $"Duplicate destination registration detected for '{duplicate}'."));
 
         return errors;
     }
@@ -181,7 +174,7 @@ internal sealed class MessagingConfigurationValidationHostedService(
 
     private static bool IsVersionFormatSupported(string version)
     {
-        string[] parts = version.Split('.', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        var parts = version.Split('.', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length is < 1 or > 2)
         {
             return false;

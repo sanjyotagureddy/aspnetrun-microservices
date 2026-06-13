@@ -5,3 +5,5 @@ global using MediatR;
 global using Products.Api.Contracts;
 global using Products.Api.Domain;
 global using Products.Api.Infrastructure;
+global using Products.Api.Infrastructure.Persistence;
+global using Products.Api.Infrastructure.Outbox;

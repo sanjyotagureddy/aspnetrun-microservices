@@ -2,9 +2,14 @@ namespace Common.SharedKernel.Logging;
 
 internal static class StrictMaskingFields
 {
-    private static readonly HashSet<string> ObservabilityIdentityFields =
-    [
+    /// <summary>
+    /// Critical field names that are excluded from masking by default because they are
+    /// required for distributed tracing and correlation diagnostics.
+    /// </summary>
+    private static readonly HashSet<string> MaskingExcludedFields = new(StringComparer.OrdinalIgnoreCase)
+    {
         "id",
+        "eventtype",
         "correlationid",
         "xcorrelationid",
         "traceid",
@@ -17,10 +22,13 @@ internal static class StrictMaskingFields
         "requesturl",
         "endpoint",
         "path"
-    ];
+    };
 
-    private static readonly HashSet<string> CreditCardFields =
-    [
+    public static HashSet<string> CreateDefaultMaskingExcludedFields()
+        => new(MaskingExcludedFields, StringComparer.OrdinalIgnoreCase);
+
+    private static readonly HashSet<string> CreditCardFields = new(StringComparer.OrdinalIgnoreCase)
+    {
         "cardnumber",
         "cardno",
         "creditcard",
@@ -32,10 +40,10 @@ internal static class StrictMaskingFields
         "expdate",
         "expiration",
         "expirationdate"
-    ];
+    };
 
-    private static readonly HashSet<string> CredentialFields =
-    [
+    private static readonly HashSet<string> CredentialFields = new(StringComparer.OrdinalIgnoreCase)
+    {
         "authorization",
         "token",
         "accesstoken",
@@ -53,19 +61,19 @@ internal static class StrictMaskingFields
         "authtoken",
         "jwttoken",
         "bearertoken"
-    ];
+    };
 
-    private static readonly HashSet<string> EmailFields =
-    [
+    private static readonly HashSet<string> EmailFields = new(StringComparer.OrdinalIgnoreCase)
+    {
         "email",
         "emailaddress",
         "primaryemail",
         "contactemail",
         "useremail"
-    ];
+    };
 
-    private static readonly HashSet<string> PhoneFields =
-    [
+    private static readonly HashSet<string> PhoneFields = new(StringComparer.OrdinalIgnoreCase)
+    {
         "phone",
         "phonenumber",
         "mobile",
@@ -73,7 +81,7 @@ internal static class StrictMaskingFields
         "contactnumber",
         "telephone",
         "tel"
-    ];
+    };
 
     public static bool IsCreditCardField(string key) => IsStrictField(key, CreditCardFields);
 
@@ -83,7 +91,16 @@ internal static class StrictMaskingFields
 
     public static bool IsPhoneField(string key) => IsStrictField(key, PhoneFields);
 
-    public static bool IsObservabilityIdentityField(string key) => IsStrictField(key, ObservabilityIdentityFields);
+    /// <summary>
+    /// Returns <c>true</c> when the field should bypass masking.
+    /// </summary>
+    public static bool IsMaskingExcludedField(string key) => IsStrictField(key, MaskingExcludedFields);
+
+    /// <summary>
+    /// Returns <c>true</c> when the field should bypass masking using a configured exclusion set.
+    /// </summary>
+    public static bool IsMaskingExcludedField(string key, IReadOnlySet<string> excludedFields)
+        => IsStrictField(key, excludedFields);
 
     private static bool IsStrictField(string key, IReadOnlySet<string> strictFields)
     {

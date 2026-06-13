@@ -14,6 +14,8 @@ public sealed class MessagingOptions
 
     public DeadLetterOptions DeadLetter { get; set; } = new();
 
+    public OutboxHeartbeatOptions OutboxHeartbeat { get; set; } = new();
+
     public IList<DestinationRegistration> Destinations { get; set; } = [];
 
     public KafkaMessagingOptions Kafka { get; set; } = new();
