@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Gateway\Gateway.Yarp\Gateway.Yarp.csproj" />
+    <ProjectReference Include="..\..\Services\Identity\Auth.Api\Auth.Api.csproj" />
     <ProjectReference Include="..\..\Services\Cart\Cart.Api\Cart.Api.csproj" />
     <ProjectReference Include="..\..\Services\Discount\Discount.Grpc\Discount.Grpc.csproj" />
     <ProjectReference Include="..\..\Services\Inventory\Inventory.Api\Inventory.Api.csproj" />

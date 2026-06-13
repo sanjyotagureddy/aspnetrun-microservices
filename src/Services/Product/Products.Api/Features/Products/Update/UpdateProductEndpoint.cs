@@ -1,3 +1,5 @@
+using ProductPolicyNamesAlias = Products.Api.Infrastructure.Security.ProductPolicyNames;
+
 namespace Products.Api.Features.Products.Update;
 
 internal sealed class UpdateProductEndpoint : IEndpoint
@@ -7,7 +9,8 @@ internal sealed class UpdateProductEndpoint : IEndpoint
         RouteGroupBuilder group = app.MapProductsV1();
 
         group.MapPut("/{id:guid}", HandleAsync)
-            .WithName(ProductRouteNames.Update);
+            .WithName(ProductRouteNames.Update)
+            .RequireAuthorization(ProductPolicyNamesAlias.CatalogWritePolicy);
     }
 
     private static async Task<IResult> HandleAsync(

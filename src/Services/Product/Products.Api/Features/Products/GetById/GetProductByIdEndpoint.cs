@@ -1,3 +1,5 @@
+using ProductPolicyNamesAlias = global::Products.Api.Infrastructure.Security.ProductPolicyNames;
+
 namespace Products.Api.Features.Products.GetById;
 
 internal sealed class GetProductByIdEndpoint : IEndpoint
@@ -7,7 +9,8 @@ internal sealed class GetProductByIdEndpoint : IEndpoint
         RouteGroupBuilder group = app.MapProductsV1();
 
         group.MapGet("/{id:guid}", HandleAsync)
-            .WithName(ProductRouteNames.GetById);
+            .WithName(ProductRouteNames.GetById)
+            .RequireAuthorization(ProductPolicyNamesAlias.TenantReadPolicy);
     }
 
     private static async Task<IResult> HandleAsync(IMediator mediator, Guid id, CancellationToken cancellationToken)

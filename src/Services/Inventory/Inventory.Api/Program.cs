@@ -26,7 +26,7 @@ public class Program
 
         WebApplication app = builder.Build();
 
-        app.MapDefaultEndpoints();
+        app.MapStandardHealthEndpoints();
         app.UseSwaggerSupport("Inventory API");
         app.UseForwardedHeaders();
         app.UseAppCallContextMiddleware<AppCallContextMiddleware>();

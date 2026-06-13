@@ -14,7 +14,7 @@ public class Program
 
         var app = builder.Build();
 
-        app.MapDefaultEndpoints();
+        app.MapStandardHealthEndpoints();
 
         // Configure the HTTP request pipeline.
         app.MapGrpcService<GreeterService>();

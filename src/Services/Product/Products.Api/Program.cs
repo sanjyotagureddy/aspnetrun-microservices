@@ -1,6 +1,7 @@
 ﻿using System.Threading.RateLimiting;
 using Common.SharedKernel.Observability.Context;
 
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 
 using Products.Api.Observability;
@@ -24,6 +25,8 @@ public class Program
                 .WriteTo.Console(),
             writeToProviders: true);
 
+        builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer();
         builder.Services.AddAuthorization();
         builder.Services.AddSwaggerSupport(builder.Configuration, "Products API");
         // Register services
@@ -53,6 +56,8 @@ public class Program
 
         WebApplication app = builder.Build();
 
+        app.MapStandardHealthEndpoints();
+
         app.UseSwaggerSupport("Products API");
         app.UseForwardedHeaders();
         app.UseAppCallContextMiddleware<AppCallContextMiddleware>();
@@ -62,6 +67,8 @@ public class Program
         app.UseResponseCompression();
         app.UseCors("Default");
         app.UseRateLimiter();
+        app.UseAuthentication();
+        app.UseAuthFailureExceptionMiddleware();
         app.UseAuthorization();
         app.MapDiscoveredEndpoints();
         app.UseOutputCache(); // if using endpoint-level caching, otherwise configure policies

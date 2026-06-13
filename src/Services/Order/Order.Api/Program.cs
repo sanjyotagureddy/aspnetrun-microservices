@@ -19,7 +19,7 @@ public class Program
 
         WebApplication app = builder.Build();
 
-        app.MapDefaultEndpoints();
+        app.MapStandardHealthEndpoints();
 
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())

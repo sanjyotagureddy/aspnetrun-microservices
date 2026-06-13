@@ -13,6 +13,8 @@ internal sealed class GlobalExceptionHandler(Common.SharedKernel.Logging.ILogger
     {
         var (statusCode, title) = exception switch
         {
+            AuthenticationFailedException => (StatusCodes.Status401Unauthorized, "Authentication required"),
+            AuthorizationDeniedException => (StatusCodes.Status403Forbidden, "Access denied"),
             ValidationException => (StatusCodes.Status400BadRequest, "Validation failed"),
             NotFoundException => (StatusCodes.Status404NotFound, "Resource not found"),
             ConflictException => (StatusCodes.Status409Conflict, "Conflict"),
