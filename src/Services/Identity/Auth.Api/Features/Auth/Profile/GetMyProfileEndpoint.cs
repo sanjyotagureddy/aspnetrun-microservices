@@ -1,6 +1,5 @@
-using Dapper;
+﻿using Dapper;
 using Auth.Api.Infrastructure.Security;
-using System.Security.Claims;
 
 namespace Auth.Api.Features.Auth.Profile;
 
@@ -15,13 +14,16 @@ internal sealed class GetMyProfileEndpoint : IEndpoint
             .RequireAuthorization(AuthPolicyNames.UserOnly);
     }
 
-    private static async Task<IResult> HandleAsync(HttpContext httpContext, IMediator mediator, CancellationToken cancellationToken)
+    private static async Task<Microsoft.AspNetCore.Http.HttpResults.Results<Microsoft.AspNetCore.Http.HttpResults.Ok<UserProfileResponse>, Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>> HandleAsync(HttpContext httpContext, IMediator mediator, CancellationToken cancellationToken)
     {
         Result<UserProfileResponse> result = await mediator.Send(new GetMyProfileQuery(httpContext.User), cancellationToken);
 
         if (result.IsFailure)
         {
-            return TypedResults.Unauthorized();
+            return TypedResults.Problem(
+                detail: result.Error,
+                statusCode: StatusCodes.Status401Unauthorized,
+                title: "Authentication required");
         }
 
         return TypedResults.Ok(result.Value);

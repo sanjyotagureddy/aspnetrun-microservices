@@ -28,6 +28,11 @@ namespace Auth.Api.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("client_id");
+
                     b.Property<string>("AuthorizationCode")
                         .HasColumnType("text")
                         .HasColumnName("authorization_code");
@@ -171,7 +176,9 @@ namespace Auth.Api.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("IdempotencyKey");
+                    b.HasIndex("OperationType", "IdempotencyKey")
+                        .IsUnique()
+                        .HasFilter("\"idempotency_key\" IS NOT NULL");
 
                     b.ToTable("auth_token_operations", (string)null);
                 });

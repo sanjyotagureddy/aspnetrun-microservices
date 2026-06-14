@@ -3,6 +3,7 @@ namespace Auth.Api.Infrastructure.Persistence;
 internal sealed class LoginTransaction
 {
     public Guid Id { get; set; }
+    public string ClientId { get; set; } = string.Empty;
     public string State { get; set; } = string.Empty;
     public string Nonce { get; set; } = string.Empty;
     public string RedirectUri { get; set; } = string.Empty;

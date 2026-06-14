@@ -3,6 +3,7 @@ using Auth.Api.Contracts;
 using Auth.Api.Infrastructure.Persistence;
 using Auth.Api.Infrastructure.Security;
 using Common.SharedKernel.Results;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 namespace Auth.Api.Tests.Features.Auth.Tokens;
@@ -13,7 +14,8 @@ public sealed class RefreshTokenCommandHandlerTests
     public async Task Handle_Should_Rotate_Token_When_Current_Token_Is_Active()
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
-        await using AuthDbContext dbContext = CreateDbContext();
+        await using TestDbContextScope scope = await CreateDbContextAsync(cancellationToken);
+        AuthDbContext dbContext = scope.DbContext;
         DateTime utcNow = new(2026, 6, 13, 12, 0, 0, DateTimeKind.Utc);
         TestTimeProvider timeProvider = new(utcNow);
 
@@ -43,6 +45,7 @@ public sealed class RefreshTokenCommandHandlerTests
         result.Value.RefreshToken.Should().NotBeNullOrWhiteSpace();
 
         List<RefreshTokenGrant> family = await dbContext.RefreshTokenGrants
+            .AsNoTracking()
             .Where(x => x.FamilyId == grant.FamilyId)
             .ToListAsync(cancellationToken);
 
@@ -55,7 +58,8 @@ public sealed class RefreshTokenCommandHandlerTests
     public async Task Handle_Should_Revoke_Family_When_Reused_Token_Is_Submitted()
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
-        await using AuthDbContext dbContext = CreateDbContext();
+        await using TestDbContextScope scope = await CreateDbContextAsync(cancellationToken);
+        AuthDbContext dbContext = scope.DbContext;
         DateTime utcNow = new(2026, 6, 13, 13, 0, 0, DateTimeKind.Utc);
         TestTimeProvider timeProvider = new(utcNow);
 
@@ -95,6 +99,7 @@ public sealed class RefreshTokenCommandHandlerTests
         result.Error.Should().Contain("reuse detected");
 
         List<RefreshTokenGrant> family = await dbContext.RefreshTokenGrants
+            .AsNoTracking()
             .Where(x => x.FamilyId == familyId)
             .ToListAsync(cancellationToken);
 
@@ -105,7 +110,8 @@ public sealed class RefreshTokenCommandHandlerTests
     public async Task Handle_Should_Return_Failure_For_Unknown_Token()
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
-        await using AuthDbContext dbContext = CreateDbContext();
+        await using TestDbContextScope scope = await CreateDbContextAsync(cancellationToken);
+        AuthDbContext dbContext = scope.DbContext;
         TestTimeProvider timeProvider = new(new DateTime(2026, 6, 13, 14, 0, 0, DateTimeKind.Utc));
 
         RefreshTokenCommandHandler handler = new(dbContext, timeProvider);
@@ -118,17 +124,66 @@ public sealed class RefreshTokenCommandHandlerTests
         result.Error.Should().Be("Invalid refresh token.");
     }
 
-    private static AuthDbContext CreateDbContext()
+    [Fact]
+    public async Task Handle_Should_Return_Accepted_When_IdempotencyKey_Already_Exists()
     {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        await using TestDbContextScope scope = await CreateDbContextAsync(cancellationToken);
+        AuthDbContext dbContext = scope.DbContext;
+        TestTimeProvider timeProvider = new(new DateTime(2026, 6, 13, 15, 0, 0, DateTimeKind.Utc));
+
+        Guid operationId = Guid.NewGuid();
+        dbContext.TokenOperations.Add(new TokenOperation
+        {
+            Id = operationId,
+            OperationType = "refresh",
+            IdempotencyKey = "idem-001",
+            RefreshTokenHash = "hash",
+            CreatedUtc = timeProvider.GetUtcNow().UtcDateTime
+        });
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        RefreshTokenCommandHandler handler = new(dbContext, timeProvider);
+
+        Result<RefreshTokenResponse> result = await handler.Handle(
+            new RefreshTokenCommand(new RefreshTokenRequest("unknown-token", "idem-001")),
+            cancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeNull();
+        result.Value!.Status.Should().Be("accepted");
+        result.Value.OperationId.Should().Be(operationId);
+    }
+
+    private static async Task<TestDbContextScope> CreateDbContextAsync(CancellationToken cancellationToken)
+    {
+        SqliteConnection connection = new("Data Source=:memory:");
+        await connection.OpenAsync(cancellationToken);
+
         DbContextOptions<AuthDbContext> options = new DbContextOptionsBuilder<AuthDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .UseSqlite(connection)
             .Options;
 
-        return new AuthDbContext(options);
+        AuthDbContext dbContext = new(options);
+        await dbContext.Database.EnsureCreatedAsync(cancellationToken);
+
+        return new TestDbContextScope(dbContext, connection);
     }
 
     private sealed class TestTimeProvider(DateTime utcNow) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => new(utcNow);
+    }
+
+    private sealed class TestDbContextScope(AuthDbContext dbContext, SqliteConnection connection) : IAsyncDisposable
+    {
+        public AuthDbContext DbContext { get; } = dbContext;
+
+        public async ValueTask DisposeAsync()
+        {
+            await DbContext.DisposeAsync();
+            await connection.DisposeAsync();
+        }
     }
 }

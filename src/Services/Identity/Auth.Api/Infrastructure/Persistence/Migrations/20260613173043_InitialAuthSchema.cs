@@ -16,6 +16,7 @@ namespace Auth.Api.Infrastructure.Persistence.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    client_id = table.Column<string>(type: "text", nullable: false),
                     state = table.Column<string>(type: "text", nullable: false),
                     nonce = table.Column<string>(type: "text", nullable: false),
                     redirect_uri = table.Column<string>(type: "text", nullable: false),
@@ -102,9 +103,11 @@ namespace Auth.Api.Infrastructure.Persistence.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_auth_token_operations_idempotency_key",
+                name: "IX_auth_token_operations_operation_type_idempotency_key",
                 table: "auth_token_operations",
-                column: "idempotency_key");
+                columns: new[] { "operation_type", "idempotency_key" },
+                unique: true,
+                filter: "idempotency_key IS NOT NULL");
         }
 
         /// <inheritdoc />

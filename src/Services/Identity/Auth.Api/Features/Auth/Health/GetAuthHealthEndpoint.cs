@@ -10,9 +10,15 @@ internal sealed class GetAuthHealthEndpoint : IEndpoint
             .WithName(AuthRouteNames.GetHealth);
     }
 
-    private static async Task<IResult> HandleAsync(IMediator mediator, CancellationToken cancellationToken)
+    private static async Task<Microsoft.AspNetCore.Http.HttpResults.Results<Microsoft.AspNetCore.Http.HttpResults.Ok<AuthHealthResponse>, Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>> HandleAsync(IMediator mediator, CancellationToken cancellationToken)
     {
         Result<AuthHealthResponse> result = await mediator.Send(new GetAuthHealthQuery(), cancellationToken);
-        return TypedResults.Ok(result.Value);
+
+        return result.IsSuccess
+            ? TypedResults.Ok(result.Value)
+            : TypedResults.Problem(
+                detail: result.Error,
+                statusCode: StatusCodes.Status503ServiceUnavailable,
+                title: "Auth service dependencies unavailable");
     }
 }

@@ -13,7 +13,7 @@ public sealed record StartLoginRequest(
 
 public sealed record StartLoginResponse(string AuthorizationUrl, string State, string Nonce, DateTime ExpiresUtc);
 
-public sealed record ExchangeCallbackRequest(string State, string Code, string CodeVerifier, string RedirectUri);
+public sealed record ExchangeCallbackRequest(string State, string Code, string CodeVerifier, string RedirectUri, string ClientId);
 
 public sealed record ExchangeCallbackResponse(
 	Guid TransactionId,

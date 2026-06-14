@@ -16,6 +16,7 @@ internal sealed class AuthDbContext(DbContextOptions<AuthDbContext> options) : D
             builder.ToTable("auth_login_transactions");
             builder.HasKey(x => x.Id);
 
+            builder.Property(x => x.ClientId).HasColumnName("client_id").IsRequired();
             builder.Property(x => x.State).HasColumnName("state").IsRequired();
             builder.Property(x => x.Nonce).HasColumnName("nonce").IsRequired();
             builder.Property(x => x.RedirectUri).HasColumnName("redirect_uri").IsRequired();
@@ -43,7 +44,9 @@ internal sealed class AuthDbContext(DbContextOptions<AuthDbContext> options) : D
             builder.Property(x => x.SessionId).HasColumnName("session_id");
             builder.Property(x => x.CreatedUtc).HasColumnName("created_utc").IsRequired();
 
-            builder.HasIndex(x => x.IdempotencyKey);
+            builder.HasIndex(x => new { x.OperationType, x.IdempotencyKey })
+                .IsUnique()
+                .HasFilter("\"idempotency_key\" IS NOT NULL");
         });
 
         modelBuilder.Entity<RefreshTokenGrant>(builder =>

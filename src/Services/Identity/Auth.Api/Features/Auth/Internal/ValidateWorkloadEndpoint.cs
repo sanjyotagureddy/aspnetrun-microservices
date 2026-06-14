@@ -1,6 +1,6 @@
 using Auth.Api.Infrastructure.Configuration;
 using Auth.Api.Infrastructure.Security;
-using System.Security.Claims;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace Auth.Api.Features.Auth.Internal;
 
@@ -14,8 +14,13 @@ internal sealed class ValidateWorkloadEndpoint : IEndpoint
             .RequireAuthorization(AuthPolicyNames.WorkloadOnly);
     }
 
-    private static IResult HandleAsync(HttpContext context, IOptions<WorkloadAuthOptions> workloadOptions)
+    private static Results<Ok<WorkloadValidationResponse>, ProblemHttpResult> HandleAsync(
+        HttpContext context,
+        IOptions<WorkloadAuthOptions> workloadOptions,
+        CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         ClaimsPrincipal user = context.User;
 
         string clientId = user.FindFirstValue("azp")
@@ -24,7 +29,10 @@ internal sealed class ValidateWorkloadEndpoint : IEndpoint
 
         if (string.IsNullOrWhiteSpace(clientId))
         {
-            return TypedResults.BadRequest(new { error = "Missing azp/client_id claim." });
+            return TypedResults.Problem(
+                detail: "Missing azp/client_id claim.",
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Invalid workload token");
         }
 
         WorkloadClientOptions? configuredClient = workloadOptions.Value.Clients
@@ -32,7 +40,10 @@ internal sealed class ValidateWorkloadEndpoint : IEndpoint
 
         if (configuredClient is null)
         {
-            return TypedResults.Forbid();
+            return TypedResults.Problem(
+                detail: "Client is not allowed for workload validation.",
+                statusCode: StatusCodes.Status403Forbidden,
+                title: "Access denied");
         }
 
         string[] tokenScopes = ExtractScopes(user);
@@ -40,7 +51,10 @@ internal sealed class ValidateWorkloadEndpoint : IEndpoint
         bool hasAllowedScope = tokenScopes.Any(scope => configuredClient.AllowedScopes.Contains(scope, StringComparer.Ordinal));
         if (!hasAllowedScope)
         {
-            return TypedResults.Forbid();
+            return TypedResults.Problem(
+                detail: "Token does not contain an allowed scope.",
+                statusCode: StatusCodes.Status403Forbidden,
+                title: "Access denied");
         }
 
         string[] audiences = user.FindAll("aud")

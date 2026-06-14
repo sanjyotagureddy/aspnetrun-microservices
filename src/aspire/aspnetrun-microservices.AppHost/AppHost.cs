@@ -33,6 +33,7 @@ IResourceBuilder<ContainerResource> keycloak = builder.AddContainer("keycloak", 
     .WithEnvironment("KEYCLOAK_ADMIN", "admin")
     .WithEnvironment("KEYCLOAK_ADMIN_PASSWORD", keycloakAdminPassword)
     .WithHttpEndpoint(port: 8080, targetPort: 8080, name: "http")
+    //.WithVolume("keycloak-data", "/opt/keycloak/data")
     .WithArgs("start-dev");
 
 IResourceBuilder<ContainerResource> openSearch = builder.AddContainer("opensearch", "opensearchproject/opensearch")
@@ -56,7 +57,7 @@ IResourceBuilder<ContainerResource> openSearchDashboards = builder.AddContainer(
 
 
 builder.AddProject<Auth_Api>("auth-api")
-    .WithHttpEndpoint(port: 5000, targetPort: 5000, name: "http")
+    .WithHttpEndpoint(port: 5000, name: "http")
     .WithReference(authIdentityDb)
     .WithReference(authCache)
     .WithEnvironment("ConnectionStrings__authdb", authIdentityDb.Resource.ConnectionStringExpression)

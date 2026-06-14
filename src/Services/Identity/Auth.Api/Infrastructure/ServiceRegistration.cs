@@ -9,7 +9,6 @@ using Auth.Api.Infrastructure.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using System.Security.Claims;
 
 namespace Auth.Api.Infrastructure;
 
@@ -22,7 +21,7 @@ internal static class ServiceRegistration
         {
             services.AddAuthCoreInfrastructure();
             services.AddAuthPersistence(configuration);
-            services.AddAuthAuthentication(configuration);
+            services.AddAuthAuthentication();
             services.AddAuthAuthorization();
             services.AddAuthHealthChecks();
             services.AddValidationBehaviour();
@@ -72,13 +71,14 @@ internal static class ServiceRegistration
             });
         }
 
-        private void AddAuthAuthentication(IConfiguration configuration)
+        private void AddAuthAuthentication()
         {
             services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
-                .Configure(options =>
+                .Configure<IOptions<AuthOptions>>((options, authOptionsAccessor) =>
                 {
-                    options.Authority = configuration["Auth:Authority"];
-                    options.Audience = configuration["Auth:Audience"] ?? "auth-api";
+                    AuthOptions authOptions = authOptionsAccessor.Value;
+                    options.Authority = authOptions.Authority;
+                    options.Audience = authOptions.Audience;
                     options.RequireHttpsMetadata = false;
                 });
         }
@@ -89,27 +89,37 @@ internal static class ServiceRegistration
                 .AddPolicy(AuthPolicyNames.WorkloadOnly, policy =>
                 {
                     policy.RequireAuthenticatedUser();
-                    policy.RequireAssertion(context =>
-                    {
-                        ClaimsPrincipal user = context.User;
-                        bool hasClientId = user.HasClaim(claim => claim is { Type: "azp" or "client_id" } && !string.IsNullOrWhiteSpace(claim.Value));
-                        bool hasSubject = user.HasClaim(claim => claim.Type == "sub" && !string.IsNullOrWhiteSpace(claim.Value));
-
-                        return hasClientId && !hasSubject;
-                    });
+                    policy.RequireAssertion(context => IsWorkloadPrincipal(context.User));
                 })
                 .AddPolicy(AuthPolicyNames.UserOnly, policy =>
                 {
                     policy.RequireAuthenticatedUser();
-                    policy.RequireAssertion(context =>
-                    {
-                        ClaimsPrincipal user = context.User;
-                        bool hasSubject = user.HasClaim(claim => claim.Type == "sub" && !string.IsNullOrWhiteSpace(claim.Value));
-                        bool hasClientId = user.HasClaim(claim => claim is { Type: "azp" or "client_id" } && !string.IsNullOrWhiteSpace(claim.Value));
-
-                        return hasSubject && !hasClientId;
-                    });
+                    policy.RequireAssertion(context => IsUserPrincipal(context.User));
                 });
+        }
+
+        private static bool IsWorkloadPrincipal(ClaimsPrincipal user)
+        {
+            string? subject = user.FindFirstValue("sub");
+            string? clientId = user.FindFirstValue("azp") ?? user.FindFirstValue("client_id");
+
+            bool hasClientId = !string.IsNullOrWhiteSpace(clientId);
+            bool isServiceAccount = !string.IsNullOrWhiteSpace(subject)
+                && subject.StartsWith("service-account-", StringComparison.OrdinalIgnoreCase);
+
+            return hasClientId && (isServiceAccount || string.IsNullOrWhiteSpace(subject));
+        }
+
+        private static bool IsUserPrincipal(ClaimsPrincipal user)
+        {
+            string? subject = user.FindFirstValue("sub");
+
+            if (string.IsNullOrWhiteSpace(subject))
+            {
+                return false;
+            }
+
+            return !subject.StartsWith("service-account-", StringComparison.OrdinalIgnoreCase);
         }
 
         private void AddAuthHealthChecks()

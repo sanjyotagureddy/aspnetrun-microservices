@@ -1,6 +1,5 @@
 using Auth.Api.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 
 namespace Auth.Api.Infrastructure.Security;
 

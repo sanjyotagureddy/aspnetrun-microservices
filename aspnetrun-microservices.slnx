@@ -23,6 +23,9 @@
   <Folder Name="/src/3. services/discount/">
     <Project Path="src/Services/Discount/Discount.Grpc/Discount.Grpc.csproj" />
   </Folder>
+  <Folder Name="/src/3. services/Identity/">
+    <Project Path="src/Services/Identity/Auth.Api/Auth.Api.csproj" />
+  </Folder>
   <Folder Name="/src/3. services/inventory/">
     <Project Path="src/Services/Inventory/Inventory.Api/Inventory.Api.csproj" />
   </Folder>
@@ -32,12 +35,6 @@
   <Folder Name="/src/3. services/product/">
     <Project Path="src/Services/Product/Products.Api/Products.Api.csproj" />
   </Folder>
-  <Folder Name="/src/aspire/" />
-  <Folder Name="/src/Services/" />
-  <Folder Name="/src/Services/Identity/">
-    <Project Path="src/Services/Identity/Auth.Api/Auth.Api.csproj" />
-  </Folder>
-  <Folder Name="/src/Shared/" />
   <Folder Name="/tests/" />
   <Folder Name="/tests/IntegrationTests/">
     <Project Path="tests/IntegrationTests/Common.SharedKernel.Logging.IntegrationTests/Common.SharedKernel.Logging.IntegrationTests.csproj" />

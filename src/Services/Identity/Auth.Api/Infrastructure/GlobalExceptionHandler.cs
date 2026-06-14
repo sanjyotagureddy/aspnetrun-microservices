@@ -23,7 +23,7 @@ internal sealed class GlobalExceptionHandler(Common.SharedKernel.Logging.ILogger
         await logger.LogApplicationAsync(
             new ErrorLog
             {
-                Message = $"Unhandled exception while processing {httpContext.Request.Method} {httpContext.Request.Path}",
+                Message = "Unhandled exception while processing HTTP request.",
                 Category = "http.unhandled.exception",
                 Exception = exception,
                 ExceptionType = exception.GetType().FullName,

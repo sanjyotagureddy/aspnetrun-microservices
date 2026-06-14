@@ -1,7 +1,6 @@
 using Auth.Api.Infrastructure.Persistence;
 using Auth.Api.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 
 namespace Auth.Api.Features.Auth.Tokens;
 
@@ -16,13 +15,16 @@ internal sealed class LogoutEndpoint : IEndpoint
             .RequireAuthorization(AuthPolicyNames.UserOnly);
     }
 
-    private static async Task<IResult> HandleAsync(LogoutRequest request, HttpContext httpContext, IMediator mediator, CancellationToken cancellationToken)
+    private static async Task<Microsoft.AspNetCore.Http.HttpResults.Results<Microsoft.AspNetCore.Http.HttpResults.Ok<LogoutResponse>, Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>> HandleAsync(LogoutRequest request, HttpContext httpContext, IMediator mediator, CancellationToken cancellationToken)
     {
         Result<LogoutResponse> result = await mediator.Send(new LogoutCommand(request, httpContext.User), cancellationToken);
 
         return result.IsSuccess
             ? TypedResults.Ok(result.Value)
-            : TypedResults.BadRequest(new { error = result.Error });
+            : TypedResults.Problem(
+                detail: result.Error,
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Invalid logout request");
     }
 }
 

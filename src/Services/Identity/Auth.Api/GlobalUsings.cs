@@ -1,3 +1,4 @@
+global using System.Security.Claims;
 global using Common.SharedKernel.Results;
 global using Common.SharedKernel.Web;
 global using FluentValidation;

@@ -1,5 +1,6 @@
 using Auth.Api.Infrastructure.Persistence;
 using Auth.Api.Infrastructure.Security;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 
 namespace Auth.Api.Features.Auth.Internal;
@@ -14,7 +15,7 @@ internal sealed class AssignTenantRoleEndpoint : IEndpoint
             .RequireAuthorization(AuthPolicyNames.UserOnly);
     }
 
-    private static async Task<IResult> HandleAsync(
+    private static async Task<Results<Created<AssignTenantRoleResponse>, Ok<AssignTenantRoleResponse>, ProblemHttpResult>> HandleAsync(
         string tenantId,
         AssignTenantRoleRequest request,
         HttpContext httpContext,
@@ -28,7 +29,10 @@ internal sealed class AssignTenantRoleEndpoint : IEndpoint
 
         if (!isKnownRole)
         {
-            return TypedResults.BadRequest(new { error = $"Unsupported role: {request.Role}" });
+            return TypedResults.Problem(
+                detail: $"Unsupported role: {request.Role}",
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Invalid tenant role assignment request");
         }
 
         PolicyDecision adminDecision = await authorizationService.EvaluatePlatformAdminAsync(
@@ -39,7 +43,10 @@ internal sealed class AssignTenantRoleEndpoint : IEndpoint
 
         if (!adminDecision.Allowed)
         {
-            return TypedResults.Forbid();
+            return TypedResults.Problem(
+                detail: adminDecision.Reason,
+                statusCode: StatusCodes.Status403Forbidden,
+                title: "Access denied");
         }
 
         UserTenantMembership? existing = await dbContext.UserTenantMemberships

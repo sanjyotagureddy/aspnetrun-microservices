@@ -2,7 +2,6 @@ using Auth.Api.Infrastructure.Configuration;
 using Auth.Api.Infrastructure.Persistence;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 namespace Auth.Api.Features.Auth.Login;
 
@@ -16,12 +15,15 @@ internal sealed class StartLoginEndpoint : IEndpoint
             .WithName(AuthRouteNames.StartLogin);
     }
 
-    private static async Task<IResult> HandleAsync(StartLoginRequest request, IMediator mediator, CancellationToken cancellationToken)
+    private static async Task<Microsoft.AspNetCore.Http.HttpResults.Results<Microsoft.AspNetCore.Http.HttpResults.Ok<StartLoginResponse>, Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>> HandleAsync(StartLoginRequest request, IMediator mediator, CancellationToken cancellationToken)
     {
         Result<StartLoginResponse> result = await mediator.Send(new StartLoginCommand(request), cancellationToken);
         return result.IsSuccess
             ? TypedResults.Ok(result.Value)
-            : TypedResults.BadRequest(new { error = result.Error });
+            : TypedResults.Problem(
+                detail: result.Error,
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Invalid login request");
     }
 }
 
@@ -103,6 +105,7 @@ internal sealed class StartLoginCommandHandler(
         LoginTransaction transaction = new()
         {
             Id = Guid.NewGuid(),
+            ClientId = clientId,
             State = state,
             Nonce = nonce,
             RedirectUri = command.Request.RedirectUri,
