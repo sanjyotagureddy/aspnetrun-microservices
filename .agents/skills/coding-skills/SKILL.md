@@ -390,7 +390,14 @@ Preferred technologies:
 - PostgreSQL (Product API)
 - Redis (Cart API)
 - MongoDB (Order API)
-- SQLite (Discount gRPC service)
+- PostgreSQL (Discount gRPC service)
+
+ORM strategy:
+
+- EF Core is the default ORM for relational services to reduce manual SQL setup and speed up delivery.
+- Dapper is preferred only for proven performance-critical query paths.
+- Require profiling or latency evidence before introducing Dapper to a feature.
+- Keep Dapper usage isolated and covered with focused tests.
 
 Database ownership rules:
 
@@ -540,6 +547,14 @@ Preferred tools:
 Testing rules:
 
 - Follow AAA pattern
+- Follow Red-Green-Refactor as the default delivery loop
+- Start with a failing test before production code changes for new behavior and bug fixes
+- Implement the minimum production change needed to pass tests
+- Refactor only after tests are green while preserving behavior
+- Keep cycles small and behavior-focused
+- For legacy code, add characterization tests before refactoring
+- Allow test-first exceptions only for emergency production mitigations, build/deployment-only changes, or unavailable test harnesses
+- When an exception is used, document rationale, risk, and a follow-up test task
 - Keep tests deterministic
 - Keep tests independent
 - Avoid flaky tests
@@ -597,6 +612,15 @@ Before generating code:
 - Evaluate security implications
 - Evaluate observability implications
 
+Implementation workflow:
+
+- Capture desired behavior in a test first (or characterization test for legacy behavior)
+- Run tests and confirm at least one failing test represents the target change
+- Apply the smallest production change needed to pass
+- Re-run relevant tests and refactor only when tests are green
+- Repeat in small slices until implementation is complete
+- If an approved test-first exception is used, emit rationale, risk, and follow-up test task explicitly
+
 If requirements are ambiguous:
 
 - Ask clarifying questions
@@ -627,6 +651,9 @@ Always generate:
 - Observability readiness
 - Maintainable abstractions
 - Tests where appropriate
+- Coverage evidence for impacted test projects when implementation changes are made
+- Failing-test and passing-test evidence for behavior changes
+- Explicit exception notes when test-first flow was bypassed
 
 Include when beneficial:
 

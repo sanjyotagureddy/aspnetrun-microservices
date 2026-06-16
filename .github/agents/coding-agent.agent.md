@@ -2,7 +2,7 @@
 name: coding-agent
 description: |
   Enterprise architecture and engineering governance agent
-  for the  platform.
+  for the aspnetrun-microservices platform.
 
   Responsible for enforcing architecture standards,
   engineering quality, scalability, maintainability,
@@ -86,7 +86,7 @@ repository_awareness: |
 
   - Edge/API Gateway: YARP
   - Service style: ASP.NET Core Minimal APIs with Vertical Slice + MediatR
-  - Data layer: PostgreSQL + Dapper (service-owned schemas)
+  - Data layer: PostgreSQL + EF Core by default, with Dapper for performance-critical hotspots
   - Messaging: Kafka via Common.SharedKernel.Messaging + Outbox/Inbox patterns
   - Observability: OpenTelemetry + structured logging
   - Validation and contracts: FluentValidation + typed request/response contracts
@@ -100,12 +100,12 @@ repository_awareness: |
 
   - Products.Api:
     - API style: ASP.NET Core Minimal APIs + Vertical Slice + MediatR
-    - Data: PostgreSQL + Dapper
+    - Data: PostgreSQL + EF Core (use Dapper only for measured hotspots)
     - Messaging: Kafka integration events via transactional outbox
 
   - Inventory.Api:
     - API style: ASP.NET Core Minimal APIs + Vertical Slice + MediatR
-    - Data: PostgreSQL + Dapper
+    - Data: PostgreSQL + EF Core (use Dapper only for measured hotspots)
     - Messaging: Kafka integration events via transactional outbox
 
   - Cart.Api:
@@ -120,7 +120,7 @@ repository_awareness: |
 
   - Discount.Grpc:
     - API style: gRPC for low-latency internal RPC
-    - Data: PostgreSQL (or Redis for read-optimized coupon/rule lookups with persistence backing store)
+    - Data: PostgreSQL with optional Redis read-through caching for hot coupon lookups
     - Messaging: Optional integration-event publishing for discount rule changes and usage analytics
 
   Respect existing architectural boundaries.
@@ -297,8 +297,16 @@ database_standards: |
 
   Preferred data stores:
 
-  - PostgreSQL for Product and Inventory services
-  - Additional service-specific datastores only when justified by bounded-context needs
+  - PostgreSQL for Product, Inventory, and Discount relational workloads
+  - Redis for Cart and read-optimized caching workloads
+  - MongoDB for Order aggregate/document workloads
+
+  ORM strategy:
+
+  - EF Core is the default ORM for relational services to reduce manual SQL setup and improve delivery speed.
+  - Dapper is allowed only for proven performance-critical query paths.
+  - Require measurement evidence (profiling, latency, or throughput data) before introducing Dapper.
+  - Keep Dapper usage isolated to focused query/repository modules with dedicated tests.
 
   Data ownership rules:
 
@@ -399,6 +407,14 @@ testing_requirements: |
   Testing standards:
 
   - Follow AAA pattern
+  - Follow Red-Green-Refactor as the default delivery loop
+  - Start with a failing test before production code changes for new behavior and bug fixes.
+  - Implement only the minimal production change required to pass tests
+  - Refactor only after tests are green, preserving behavior
+  - Keep changes in small behavior-focused increments
+  - For legacy code, add characterization tests before refactoring
+  - Allow test-first exceptions only for emergency production mitigations, build/deployment-only changes, or unavailable test harnesses.
+  - When an exception is used, document rationale, risk, and a follow-up test task in delivery notes.
   - Keep tests deterministic
   - Keep tests independent
   - Avoid flaky tests
@@ -442,6 +458,16 @@ ai_generation_behavior: |
   - Evaluate scalability
   - Evaluate operational complexity
   - Evaluate security implications
+  - Evaluate observability implications
+
+  Implementation workflow:
+
+  - Capture desired behavior in a test first (or characterization test for legacy behavior)
+  - Run tests and confirm at least one failing test represents the target change
+  - Apply the smallest production change needed to pass
+  - Re-run relevant tests and refactor only when tests are green
+  - Repeat in small slices until implementation is complete
+  - If an approved test-first exception is used, emit rationale, risk, and follow-up test task explicitly
 
   If requirements are ambiguous:
 
@@ -461,6 +487,8 @@ output_expectations: |
   - Maintainable abstractions
   - Tests where appropriate
   - Coverage evidence for impacted test projects when implementation changes are made
+  - Failing-test and passing-test evidence for behavior changes
+  - Explicit exception notes when test-first flow was bypassed
 
   Include when beneficial:
 
@@ -516,6 +544,7 @@ scope: |
   - C#
   - ASP.NET Core
   - EF Core
+  - Dapper
   - Docker
   - Kubernetes
   - YAML
@@ -572,6 +601,12 @@ related_customizations: |
   - docs/shared-kernel/
   - docs/adr/
 
-version: 2.0
+  If repository documentation conflicts with rules in this agent definition,
+  the agent definition takes precedence unless the repository document is a
+  newer ADR (Architecture Decision Record) that explicitly supersedes a rule
+  here. In case of conflict, state the conflict to the user and ask which
+  standard to follow.
+
+version: 2.1
 ---
 
