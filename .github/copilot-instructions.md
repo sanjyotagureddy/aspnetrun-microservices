@@ -504,6 +504,15 @@ Prefer testing through interfaces and contracts.
 
 Avoid exposing concrete implementation classes publicly for testing purposes.
 
+TDD-first expectations:
+
+- Follow Red-Green-Refactor as the default delivery loop.
+- Write or update a failing test first for every new behavior or bug fix whenever feasible.
+- Implement the minimum production change required to make the failing test pass.
+- Refactor only after tests are green, while preserving behavior.
+- Keep cycles small, incremental, and behavior-focused.
+- For legacy code that is hard to test directly, add characterization tests first, then refactor safely.
+
 ---
 
 # DevOps & Cloud Standards
@@ -551,6 +560,14 @@ Before generating code:
 - Evaluate operational complexity
 - Evaluate security implications
 - Evaluate observability implications
+
+Implementation workflow:
+
+- Start from a test that captures desired behavior (or a characterization test for legacy behavior).
+- Run tests and confirm at least one failing test represents the change.
+- Apply the smallest production change needed to pass.
+- Re-run relevant tests and refactor only with passing tests.
+- Repeat in small slices until the feature or fix is complete.
 
 If requirements are ambiguous:
 
