@@ -129,6 +129,34 @@ If the Aspire AppHost SDK cannot be resolved, verify that NuGet configuration is
 dotnet restore aspnetrun-microservices.slnx
 ```
 
+## Auth API EF Migrations
+
+Auth API schema is managed by EF Core migrations (not manual SQL bootstrap scripts).
+
+Restore local tools (includes `dotnet-ef` from `dotnet-tools.json`):
+
+```powershell
+dotnet tool restore
+```
+
+Add a new migration:
+
+```powershell
+dotnet dotnet-ef migrations add <MigrationName> --project src\Services\Identity\Auth.Api\Auth.Api.csproj --startup-project src\Services\Identity\Auth.Api\Auth.Api.csproj --output-dir Infrastructure\Persistence\Migrations
+```
+
+Apply migrations to the configured Auth DB:
+
+```powershell
+dotnet dotnet-ef database update --project src\Services\Identity\Auth.Api\Auth.Api.csproj --startup-project src\Services\Identity\Auth.Api\Auth.Api.csproj
+```
+
+Remove the last migration (if not applied yet):
+
+```powershell
+dotnet dotnet-ef migrations remove --project src\Services\Identity\Auth.Api\Auth.Api.csproj --startup-project src\Services\Identity\Auth.Api\Auth.Api.csproj
+```
+
 ## Current Gaps
 
 - Gateway.Yarp does not yet configure `AddReverseProxy` or `MapReverseProxy`.
@@ -136,3 +164,14 @@ dotnet restore aspnetrun-microservices.slnx
 - Discount gRPC still uses the template greeter service.
 - Messaging abstractions exist, but concrete publisher/consumer flows are not implemented.
 - README instructions now describe the current repository state; older Docker Compose, Ocelot, Basket, Web UI, and MassTransit flows are not present in this codebase.
+
+## Auth Bootstrap Collection
+
+For local auth bootstrap and token generation flows (Admin/User/Tenant Vendor), use the Postman assets in [Auth/README.md](Auth/README.md).
+
+Quick start:
+
+1. Start AppHost.
+2. Import [Auth/aspnetrun-auth.postman_collection.json](Auth/aspnetrun-auth.postman_collection.json) and [Auth/aspnetrun-auth.postman_environment.json](Auth/aspnetrun-auth.postman_environment.json) into Postman.
+3. Fill required environment values from [Auth/README.md](Auth/README.md).
+4. Execute requests in documented order (Admin -> Tenant -> User).

@@ -23,6 +23,9 @@
   <Folder Name="/src/3. services/discount/">
     <Project Path="src/Services/Discount/Discount.Grpc/Discount.Grpc.csproj" />
   </Folder>
+  <Folder Name="/src/3. services/Identity/">
+    <Project Path="src/Services/Identity/Auth.Api/Auth.Api.csproj" />
+  </Folder>
   <Folder Name="/src/3. services/inventory/">
     <Project Path="src/Services/Inventory/Inventory.Api/Inventory.Api.csproj" />
   </Folder>
@@ -32,7 +35,6 @@
   <Folder Name="/src/3. services/product/">
     <Project Path="src/Services/Product/Products.Api/Products.Api.csproj" />
   </Folder>
-  <Folder Name="/src/Shared/" />
   <Folder Name="/tests/" />
   <Folder Name="/tests/IntegrationTests/">
     <Project Path="tests/IntegrationTests/Common.SharedKernel.Logging.IntegrationTests/Common.SharedKernel.Logging.IntegrationTests.csproj" />
@@ -40,6 +42,7 @@
     <Project Path="tests/IntegrationTests/Inventory.Api.IntegrationTests/Inventory.Api.IntegrationTests.csproj" />
   </Folder>
   <Folder Name="/tests/UnitTests/">
+    <Project Path="tests/UnitTests/Auth.Api.Tests/Auth.Api.Tests.csproj" />
     <Project Path="tests/UnitTests/Cart.Api.Tests/Cart.Api.Tests.csproj" Id="5a09a466-05c7-47d0-9a11-8d814122f047" />
     <Project Path="tests/UnitTests/Common.SharedKernel.Logging.UnitTests/Common.SharedKernel.Logging.UnitTests.csproj" Id="d0f6e32f-5b36-4d9d-8fa2-4e9c2c99a3df" />
     <Project Path="tests/UnitTests/Common.SharedKernel.Messaging.UnitTests/Common.SharedKernel.Messaging.UnitTests.csproj" />

@@ -1,3 +1,5 @@
+using ProductPolicyNamesAlias = global::Products.Api.Infrastructure.Security.ProductPolicyNames;
+
 namespace Products.Api.Features.Products.Get;
 
 internal sealed class GetProductsEndpoint : IEndpoint
@@ -7,7 +9,8 @@ internal sealed class GetProductsEndpoint : IEndpoint
         RouteGroupBuilder group = app.MapProductsV1();
 
         group.MapGet("/", HandleAsync)
-            .WithName(ProductRouteNames.GetAll);
+            .WithName(ProductRouteNames.GetAll)
+            .RequireAuthorization(ProductPolicyNamesAlias.TenantReadPolicy);
     }
 
     private static async Task<IResult> HandleAsync(

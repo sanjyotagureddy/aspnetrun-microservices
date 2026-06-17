@@ -1,3 +1,5 @@
+using ProductPolicyNamesAlias = global::Products.Api.Infrastructure.Security.ProductPolicyNames;
+
 namespace Products.Api.Features.Products.Create;
 
 internal sealed class CreateProductEndpoint : IEndpoint
@@ -7,7 +9,8 @@ internal sealed class CreateProductEndpoint : IEndpoint
         RouteGroupBuilder group = app.MapProductsV1();
 
         group.MapPost("/", HandleAsync)
-            .WithName(ProductRouteNames.Create);
+            .WithName(ProductRouteNames.Create)
+            .RequireAuthorization(ProductPolicyNamesAlias.CatalogWritePolicy);
     }
 
     private static async Task<IResult> HandleAsync(

@@ -1,0 +1,1979 @@
+{
+  "info": {
+    "_postman_id": "fcb5f7cf-04fa-4f37-8946-571598f89142",
+    "name": "aspnetrun Auth Bootstrap and Token Flow",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Bootstraps first admin user and tenant membership, then generates vendor and user tokens for local development.\n\nExecution path:\n1) Admin 1-5\n2) Tenant (Vendor) 6-7\n3) User 8\n4) Optional checks 9-11\n\nFolders:\n- Admin\n- Tenant (Vendor)\n- User"
+  },
+  "item": [
+    {
+      "name": "Automation Flows",
+      "description": "Run one folder at a time in Postman Runner for one-click flow automation.",
+      "item": [
+        {
+          "name": "Flow 1 - Vendor Setup and Token (One-Time Setup)",
+          "item": [
+            {
+              "name": "1. Get Keycloak Admin Token",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/x-www-form-urlencoded"
+                  }
+                ],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "grant_type",
+                      "value": "password",
+                      "type": "text"
+                    },
+                    {
+                      "key": "client_id",
+                      "value": "admin-cli",
+                      "type": "text"
+                    },
+                    {
+                      "key": "username",
+                      "value": "{{keycloak_admin_username}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{keycloak_admin_password}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{keycloak_base_url}}/realms/master/protocol/openid-connect/token",
+                  "host": [
+                    "{{keycloak_base_url}}"
+                  ],
+                  "path": [
+                    "realms",
+                    "master",
+                    "protocol",
+                    "openid-connect",
+                    "token"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                      "var json = pm.response.json();",
+                      "pm.environment.set('admin_access_token', json.access_token);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "2. Ensure Commerce Realm Exists",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_access_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"realm\": \"{{commerce_realm}}\",\n  \"enabled\": true\n}"
+                },
+                "url": {
+                  "raw": "{{keycloak_base_url}}/admin/realms",
+                  "host": [
+                    "{{keycloak_base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "realms"
+                  ]
+                },
+                "description": "Creates the realm if missing. Keycloak returns 201 when created, and 409 if it already exists."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 201 or 409', function () { pm.expect([201,409]).to.include(pm.response.code); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "2a. Ensure Vendor Token Client Exists",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_access_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"clientId\": \"{{vendor_token_client_id}}\",\n  \"enabled\": true,\n  \"protocol\": \"openid-connect\",\n  \"publicClient\": true,\n  \"directAccessGrantsEnabled\": true,\n  \"standardFlowEnabled\": false,\n  \"serviceAccountsEnabled\": false\n}"
+                },
+                "url": {
+                  "raw": "{{keycloak_base_url}}/admin/realms/{{commerce_realm}}/clients",
+                  "host": [
+                    "{{keycloak_base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "realms",
+                    "{{commerce_realm}}",
+                    "clients"
+                  ]
+                },
+                "description": "Creates vendor token client if missing. Returns 201 when created, 409 when already exists."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 201 or 409', function () { pm.expect([201,409]).to.include(pm.response.code); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "3. Register Vendor User (Keycloak Admin API)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_access_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"username\": \"{{vendor_username}}\",\n  \"email\": \"{{vendor_email}}\",\n  \"enabled\": true,\n  \"emailVerified\": true,\n  \"firstName\": \"{{vendor_first_name}}\",\n  \"lastName\": \"{{vendor_last_name}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{keycloak_base_url}}/admin/realms/{{commerce_realm}}/users",
+                  "host": [
+                    "{{keycloak_base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "realms",
+                    "{{commerce_realm}}",
+                    "users"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 201 or 409', function () { pm.expect([201,409]).to.include(pm.response.code); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "4. Resolve Vendor User Id by Username",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{keycloak_base_url}}/admin/realms/{{commerce_realm}}/users?username={{vendor_username}}&exact=true",
+                  "host": [
+                    "{{keycloak_base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "realms",
+                    "{{commerce_realm}}",
+                    "users"
+                  ],
+                  "query": [
+                    {
+                      "key": "username",
+                      "value": "{{vendor_username}}"
+                    },
+                    {
+                      "key": "exact",
+                      "value": "true"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                      "var arr = pm.response.json();",
+                      "pm.test('User exists', function () { pm.expect(arr.length).to.be.greaterThan(0); });",
+                      "pm.environment.set('keycloak_vendor_user_id', arr[0].id);",
+                      "pm.environment.set('keycloak_vendor_user_sub', arr[0].id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "5. Set Vendor User Password",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_access_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"type\": \"password\",\n  \"value\": \"{{vendor_password}}\",\n  \"temporary\": false\n}"
+                },
+                "url": {
+                  "raw": "{{keycloak_base_url}}/admin/realms/{{commerce_realm}}/users/{{keycloak_vendor_user_id}}/reset-password",
+                  "host": [
+                    "{{keycloak_base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "realms",
+                    "{{commerce_realm}}",
+                    "users",
+                    "{{keycloak_vendor_user_id}}",
+                    "reset-password"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 204', function () { pm.response.to.have.status(204); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "6. Bootstrap First Platform Admin Membership (Development Only)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"subject\": \"{{keycloak_vendor_user_sub}}\",\n  \"tenantId\": \"{{vendor_tenant_id}}\",\n  \"role\": \"platform_admin\",\n  \"secret\": \"{{dev_bootstrap_secret}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{auth_api_base_url}}/api/v1/auth/internal/bootstrap/memberships",
+                  "host": [
+                    "{{auth_api_base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "internal",
+                    "bootstrap",
+                    "memberships"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 201 or 200', function () { pm.expect([201,200]).to.include(pm.response.code); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "7. Generate Vendor Token (Token Endpoint)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/x-www-form-urlencoded"
+                  }
+                ],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "grant_type",
+                      "value": "password",
+                      "type": "text"
+                    },
+                    {
+                      "key": "client_id",
+                      "value": "{{vendor_token_client_id}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "client_secret",
+                      "value": "{{vendor_token_client_secret}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "username",
+                      "value": "{{vendor_username}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{vendor_password}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "scope",
+                      "value": "{{token_scope_default}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{keycloak_base_url}}/realms/{{commerce_realm}}/protocol/openid-connect/token",
+                  "host": [
+                    "{{keycloak_base_url}}"
+                  ],
+                  "path": [
+                    "realms",
+                    "{{commerce_realm}}",
+                    "protocol",
+                    "openid-connect",
+                    "token"
+                  ]
+                },
+                "description": "Generates a usable vendor token. Run after steps 1-6."
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const primarySecret = (pm.environment.get('vendor_token_client_secret') || '').trim();",
+                      "const legacySecret = (pm.environment.get('vendor_client_secret') || '').trim();",
+                      "const secret = primarySecret || legacySecret;",
+                      "if (!primarySecret && legacySecret) {",
+                      "  pm.environment.set('vendor_token_client_secret', legacySecret);",
+                      "}",
+                      "if (!secret) {",
+                      "  console.warn('vendor_token_client_secret is empty (and vendor_client_secret fallback is empty). If the token client is confidential, this request will fail.');",
+                      "}",
+                      "if (secret) {",
+                      "  pm.request.body.urlencoded.upsert({ key: 'client_secret', value: secret, type: 'text' });",
+                      "} else {",
+                      "  pm.request.body.urlencoded.remove('client_secret');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                      "var json = pm.response.json();",
+                      "pm.environment.set('vendor_access_token', json.access_token);",
+                      "pm.environment.set('vendor_refresh_token', json.refresh_token);"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Flow 2 - Vendor Token Only",
+          "item": [
+            {
+              "name": "7. Generate Vendor Token (Token Endpoint)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/x-www-form-urlencoded"
+                  }
+                ],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "grant_type",
+                      "value": "password",
+                      "type": "text"
+                    },
+                    {
+                      "key": "client_id",
+                      "value": "{{vendor_token_client_id}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "client_secret",
+                      "value": "{{vendor_token_client_secret}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "username",
+                      "value": "{{vendor_username}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{vendor_password}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "scope",
+                      "value": "{{token_scope_default}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{keycloak_base_url}}/realms/{{commerce_realm}}/protocol/openid-connect/token",
+                  "host": [
+                    "{{keycloak_base_url}}"
+                  ],
+                  "path": [
+                    "realms",
+                    "{{commerce_realm}}",
+                    "protocol",
+                    "openid-connect",
+                    "token"
+                  ]
+                },
+                "description": "Generates a usable vendor token. Run after steps 1-6."
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const primarySecret = (pm.environment.get('vendor_token_client_secret') || '').trim();",
+                      "const legacySecret = (pm.environment.get('vendor_client_secret') || '').trim();",
+                      "const secret = primarySecret || legacySecret;",
+                      "if (!primarySecret && legacySecret) {",
+                      "  pm.environment.set('vendor_token_client_secret', legacySecret);",
+                      "}",
+                      "if (!secret) {",
+                      "  console.warn('vendor_token_client_secret is empty (and vendor_client_secret fallback is empty). If the token client is confidential, this request will fail.');",
+                      "}",
+                      "if (secret) {",
+                      "  pm.request.body.urlencoded.upsert({ key: 'client_secret', value: secret, type: 'text' });",
+                      "} else {",
+                      "  pm.request.body.urlencoded.remove('client_secret');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                      "var json = pm.response.json();",
+                      "pm.environment.set('vendor_access_token', json.access_token);",
+                      "pm.environment.set('vendor_refresh_token', json.refresh_token);"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Flow 3 - User Setup and Token (One-Time Setup)",
+          "item": [
+            {
+              "name": "1. Get Keycloak Admin Token",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/x-www-form-urlencoded"
+                  }
+                ],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "grant_type",
+                      "value": "password",
+                      "type": "text"
+                    },
+                    {
+                      "key": "client_id",
+                      "value": "admin-cli",
+                      "type": "text"
+                    },
+                    {
+                      "key": "username",
+                      "value": "{{keycloak_admin_username}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{keycloak_admin_password}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{keycloak_base_url}}/realms/master/protocol/openid-connect/token",
+                  "host": [
+                    "{{keycloak_base_url}}"
+                  ],
+                  "path": [
+                    "realms",
+                    "master",
+                    "protocol",
+                    "openid-connect",
+                    "token"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                      "var json = pm.response.json();",
+                      "pm.environment.set('admin_access_token', json.access_token);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "2. Ensure Commerce Realm Exists",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_access_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"realm\": \"{{commerce_realm}}\",\n  \"enabled\": true\n}"
+                },
+                "url": {
+                  "raw": "{{keycloak_base_url}}/admin/realms",
+                  "host": [
+                    "{{keycloak_base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "realms"
+                  ]
+                },
+                "description": "Creates the realm if missing. Keycloak returns 201 when created, and 409 if it already exists."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 201 or 409', function () { pm.expect([201,409]).to.include(pm.response.code); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "2a. Ensure User Token Client Exists",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_access_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"clientId\": \"{{user_token_client_id}}\",\n  \"enabled\": true,\n  \"protocol\": \"openid-connect\",\n  \"publicClient\": true,\n  \"directAccessGrantsEnabled\": true,\n  \"standardFlowEnabled\": false,\n  \"serviceAccountsEnabled\": false\n}"
+                },
+                "url": {
+                  "raw": "{{keycloak_base_url}}/admin/realms/{{commerce_realm}}/clients",
+                  "host": [
+                    "{{keycloak_base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "realms",
+                    "{{commerce_realm}}",
+                    "clients"
+                  ]
+                },
+                "description": "Creates user token client if missing. Returns 201 when created, 409 when already exists."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 201 or 409', function () { pm.expect([201,409]).to.include(pm.response.code); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "3. Register User (Keycloak Admin API)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_access_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"username\": \"{{new_user_username}}\",\n  \"email\": \"{{new_user_email}}\",\n  \"enabled\": true,\n  \"emailVerified\": true,\n  \"firstName\": \"{{new_user_first_name}}\",\n  \"lastName\": \"{{new_user_last_name}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{keycloak_base_url}}/admin/realms/{{commerce_realm}}/users",
+                  "host": [
+                    "{{keycloak_base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "realms",
+                    "{{commerce_realm}}",
+                    "users"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 201 or 409', function () { pm.expect([201,409]).to.include(pm.response.code); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "4. Resolve User Id by Username",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{keycloak_base_url}}/admin/realms/{{commerce_realm}}/users?username={{new_user_username}}&exact=true",
+                  "host": [
+                    "{{keycloak_base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "realms",
+                    "{{commerce_realm}}",
+                    "users"
+                  ],
+                  "query": [
+                    {
+                      "key": "username",
+                      "value": "{{new_user_username}}"
+                    },
+                    {
+                      "key": "exact",
+                      "value": "true"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                      "var arr = pm.response.json();",
+                      "pm.test('User exists', function () { pm.expect(arr.length).to.be.greaterThan(0); });",
+                      "pm.environment.set('keycloak_user_id', arr[0].id);",
+                      "pm.environment.set('keycloak_user_sub', arr[0].id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "5. Set User Password",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_access_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"type\": \"password\",\n  \"value\": \"{{new_user_password}}\",\n  \"temporary\": false\n}"
+                },
+                "url": {
+                  "raw": "{{keycloak_base_url}}/admin/realms/{{commerce_realm}}/users/{{keycloak_user_id}}/reset-password",
+                  "host": [
+                    "{{keycloak_base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "realms",
+                    "{{commerce_realm}}",
+                    "users",
+                    "{{keycloak_user_id}}",
+                    "reset-password"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 204', function () { pm.response.to.have.status(204); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "8. Generate User Token (Token Endpoint)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/x-www-form-urlencoded"
+                  }
+                ],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "grant_type",
+                      "value": "password",
+                      "type": "text"
+                    },
+                    {
+                      "key": "client_id",
+                      "value": "{{user_token_client_id}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "client_secret",
+                      "value": "{{user_token_client_secret}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "username",
+                      "value": "{{new_user_username}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{new_user_password}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "scope",
+                      "value": "{{token_scope_default}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{keycloak_base_url}}/realms/{{commerce_realm}}/protocol/openid-connect/token",
+                  "host": [
+                    "{{keycloak_base_url}}"
+                  ],
+                  "path": [
+                    "realms",
+                    "{{commerce_realm}}",
+                    "protocol",
+                    "openid-connect",
+                    "token"
+                  ]
+                },
+                "description": "Generates a usable user token. Run after admin setup (steps 1-5)."
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const primarySecret = (pm.environment.get('user_token_client_secret') || '').trim();",
+                      "const legacySecret = (pm.environment.get('user_client_secret') || '').trim();",
+                      "const secret = primarySecret || legacySecret;",
+                      "if (!primarySecret && legacySecret) {",
+                      "  pm.environment.set('user_token_client_secret', legacySecret);",
+                      "}",
+                      "if (!secret) {",
+                      "  console.warn('user_token_client_secret is empty (and user_client_secret fallback is empty). If the token client is confidential, this request will fail.');",
+                      "}",
+                      "if (secret) {",
+                      "  pm.request.body.urlencoded.upsert({ key: 'client_secret', value: secret, type: 'text' });",
+                      "} else {",
+                      "  pm.request.body.urlencoded.remove('client_secret');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                      "var json = pm.response.json();",
+                      "pm.environment.set('user_access_token', json.access_token);",
+                      "pm.environment.set('user_refresh_token', json.refresh_token);"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Flow 4 - User Token Only",
+          "item": [
+            {
+              "name": "8. Generate User Token (Token Endpoint)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/x-www-form-urlencoded"
+                  }
+                ],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "grant_type",
+                      "value": "password",
+                      "type": "text"
+                    },
+                    {
+                      "key": "client_id",
+                      "value": "{{user_token_client_id}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "client_secret",
+                      "value": "{{user_token_client_secret}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "username",
+                      "value": "{{new_user_username}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{new_user_password}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "scope",
+                      "value": "{{token_scope_default}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{keycloak_base_url}}/realms/{{commerce_realm}}/protocol/openid-connect/token",
+                  "host": [
+                    "{{keycloak_base_url}}"
+                  ],
+                  "path": [
+                    "realms",
+                    "{{commerce_realm}}",
+                    "protocol",
+                    "openid-connect",
+                    "token"
+                  ]
+                },
+                "description": "Generates a usable user token. Run after admin setup (steps 1-5)."
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const primarySecret = (pm.environment.get('user_token_client_secret') || '').trim();",
+                      "const legacySecret = (pm.environment.get('user_client_secret') || '').trim();",
+                      "const secret = primarySecret || legacySecret;",
+                      "if (!primarySecret && legacySecret) {",
+                      "  pm.environment.set('user_token_client_secret', legacySecret);",
+                      "}",
+                      "if (!secret) {",
+                      "  console.warn('user_token_client_secret is empty (and user_client_secret fallback is empty). If the token client is confidential, this request will fail.');",
+                      "}",
+                      "if (secret) {",
+                      "  pm.request.body.urlencoded.upsert({ key: 'client_secret', value: secret, type: 'text' });",
+                      "} else {",
+                      "  pm.request.body.urlencoded.remove('client_secret');",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                      "var json = pm.response.json();",
+                      "pm.environment.set('user_access_token', json.access_token);",
+                      "pm.environment.set('user_refresh_token', json.refresh_token);"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "1. Get Keycloak Admin Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "password",
+                  "type": "text"
+                },
+                {
+                  "key": "client_id",
+                  "value": "admin-cli",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{keycloak_admin_username}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{keycloak_admin_password}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{keycloak_base_url}}/realms/master/protocol/openid-connect/token",
+              "host": [
+                "{{keycloak_base_url}}"
+              ],
+              "path": [
+                "realms",
+                "master",
+                "protocol",
+                "openid-connect",
+                "token"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.environment.set('admin_access_token', json.access_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Ensure Commerce Realm Exists",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"realm\": \"{{commerce_realm}}\",\n  \"enabled\": true\n}"
+            },
+            "url": {
+              "raw": "{{keycloak_base_url}}/admin/realms",
+              "host": [
+                "{{keycloak_base_url}}"
+              ],
+              "path": [
+                "admin",
+                "realms"
+              ]
+            },
+            "description": "Creates the realm if missing. Keycloak returns 201 when created, and 409 if it already exists."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201 or 409', function () { pm.expect([201,409]).to.include(pm.response.code); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2a. Ensure Vendor Token Client Exists",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clientId\": \"{{vendor_token_client_id}}\",\n  \"enabled\": true,\n  \"protocol\": \"openid-connect\",\n  \"publicClient\": true,\n  \"directAccessGrantsEnabled\": true,\n  \"standardFlowEnabled\": false,\n  \"serviceAccountsEnabled\": false\n}"
+            },
+            "url": {
+              "raw": "{{keycloak_base_url}}/admin/realms/{{commerce_realm}}/clients",
+              "host": [
+                "{{keycloak_base_url}}"
+              ],
+              "path": [
+                "admin",
+                "realms",
+                "{{commerce_realm}}",
+                "clients"
+              ]
+            },
+            "description": "Creates vendor token client if missing. Returns 201 when created, 409 when already exists."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201 or 409', function () { pm.expect([201,409]).to.include(pm.response.code); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2b. Ensure User Token Client Exists",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clientId\": \"{{user_token_client_id}}\",\n  \"enabled\": true,\n  \"protocol\": \"openid-connect\",\n  \"publicClient\": true,\n  \"directAccessGrantsEnabled\": true,\n  \"standardFlowEnabled\": false,\n  \"serviceAccountsEnabled\": false\n}"
+            },
+            "url": {
+              "raw": "{{keycloak_base_url}}/admin/realms/{{commerce_realm}}/clients",
+              "host": [
+                "{{keycloak_base_url}}"
+              ],
+              "path": [
+                "admin",
+                "realms",
+                "{{commerce_realm}}",
+                "clients"
+              ]
+            },
+            "description": "Creates user token client if missing. Returns 201 when created, 409 when already exists."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201 or 409', function () { pm.expect([201,409]).to.include(pm.response.code); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2c. Diagnose Vendor Token Client Settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{keycloak_base_url}}/admin/realms/{{commerce_realm}}/clients?clientId={{vendor_token_client_id}}",
+              "host": [
+                "{{keycloak_base_url}}"
+              ],
+              "path": [
+                "admin",
+                "realms",
+                "{{commerce_realm}}",
+                "clients"
+              ],
+              "query": [
+                {
+                  "key": "clientId",
+                  "value": "{{vendor_token_client_id}}"
+                }
+              ]
+            },
+            "description": "Checks whether vendor token client is public/confidential and whether direct access grants are enabled."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "var clients = pm.response.json();",
+                  "pm.test('Client exists', function () { pm.expect(clients.length).to.be.greaterThan(0); });",
+                  "var client = clients[0];",
+                  "var isPublic = !!client.publicClient;",
+                  "var directGrants = !!client.directAccessGrantsEnabled;",
+                  "var secretRequired = !isPublic;",
+                  "pm.environment.set('vendor_token_secret_required', String(secretRequired));",
+                  "pm.environment.set('vendor_token_client_public', String(isPublic));",
+                  "pm.environment.set('vendor_token_direct_grants_enabled', String(directGrants));",
+                  "console.info('Vendor client diagnostics', {",
+                  "  clientId: client.clientId,",
+                  "  publicClient: isPublic,",
+                  "  directAccessGrantsEnabled: directGrants,",
+                  "  secretRequired: secretRequired",
+                  "});",
+                  "if (!directGrants) {",
+                  "  console.warn('directAccessGrantsEnabled is false. Password grant token calls will fail.');",
+                  "}",
+                  "var configuredSecret = (pm.environment.get('vendor_token_client_secret') || pm.environment.get('vendor_client_secret') || '').trim();",
+                  "if (secretRequired && !configuredSecret) {",
+                  "  console.warn('Client is confidential but vendor token secret is empty. Set vendor_token_client_secret from Keycloak Credentials tab.');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. Register User (Keycloak Admin API)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{new_user_username}}\",\n  \"email\": \"{{new_user_email}}\",\n  \"enabled\": true,\n  \"emailVerified\": true,\n  \"firstName\": \"{{new_user_first_name}}\",\n  \"lastName\": \"{{new_user_last_name}}\"\n}"
+            },
+            "url": {
+              "raw": "{{keycloak_base_url}}/admin/realms/{{commerce_realm}}/users",
+              "host": [
+                "{{keycloak_base_url}}"
+              ],
+              "path": [
+                "admin",
+                "realms",
+                "{{commerce_realm}}",
+                "users"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201 or 409', function () { pm.expect([201,409]).to.include(pm.response.code); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. Resolve User Id by Username",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{keycloak_base_url}}/admin/realms/{{commerce_realm}}/users?username={{new_user_username}}&exact=true",
+              "host": [
+                "{{keycloak_base_url}}"
+              ],
+              "path": [
+                "admin",
+                "realms",
+                "{{commerce_realm}}",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "username",
+                  "value": "{{new_user_username}}"
+                },
+                {
+                  "key": "exact",
+                  "value": "true"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "var arr = pm.response.json();",
+                  "pm.test('User exists', function () { pm.expect(arr.length).to.be.greaterThan(0); });",
+                  "pm.environment.set('keycloak_user_id', arr[0].id);",
+                  "pm.environment.set('keycloak_user_sub', arr[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5. Set User Password",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"password\",\n  \"value\": \"{{new_user_password}}\",\n  \"temporary\": false\n}"
+            },
+            "url": {
+              "raw": "{{keycloak_base_url}}/admin/realms/{{commerce_realm}}/users/{{keycloak_user_id}}/reset-password",
+              "host": [
+                "{{keycloak_base_url}}"
+              ],
+              "path": [
+                "admin",
+                "realms",
+                "{{commerce_realm}}",
+                "users",
+                "{{keycloak_user_id}}",
+                "reset-password"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 204', function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Tenant (Vendor)",
+      "item": [
+        {
+          "name": "6. Bootstrap First Platform Admin Membership (Development Only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subject\": \"{{keycloak_vendor_user_sub}}\",\n  \"tenantId\": \"{{vendor_tenant_id}}\",\n  \"role\": \"platform_admin\",\n  \"secret\": \"{{dev_bootstrap_secret}}\"\n}"
+            },
+            "url": {
+              "raw": "{{auth_api_base_url}}/api/v1/auth/internal/bootstrap/memberships",
+              "host": [
+                "{{auth_api_base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "internal",
+                "bootstrap",
+                "memberships"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201 or 200', function () { pm.expect([201,200]).to.include(pm.response.code); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7. Generate Vendor Token (Token Endpoint)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "password",
+                  "type": "text"
+                },
+                {
+                  "key": "client_id",
+                  "value": "{{vendor_token_client_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "client_secret",
+                  "value": "{{vendor_token_client_secret}}",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{vendor_username}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{vendor_password}}",
+                  "type": "text"
+                },
+                {
+                  "key": "scope",
+                  "value": "{{token_scope_default}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{keycloak_base_url}}/realms/{{commerce_realm}}/protocol/openid-connect/token",
+              "host": [
+                "{{keycloak_base_url}}"
+              ],
+              "path": [
+                "realms",
+                "{{commerce_realm}}",
+                "protocol",
+                "openid-connect",
+                "token"
+              ]
+            },
+            "description": "Generates a usable vendor token. Run after steps 1-6."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const primarySecret = (pm.environment.get('vendor_token_client_secret') || '').trim();",
+                  "const legacySecret = (pm.environment.get('vendor_client_secret') || '').trim();",
+                  "const secret = primarySecret || legacySecret;",
+                  "if (!primarySecret && legacySecret) {",
+                  "  pm.environment.set('vendor_token_client_secret', legacySecret);",
+                  "}",
+                  "if (!secret) {",
+                  "  console.warn('vendor_token_client_secret is empty (and vendor_client_secret fallback is empty). If the token client is confidential, this request will fail.');",
+                  "}",
+                  "if (secret) {",
+                  "  pm.request.body.urlencoded.upsert({ key: 'client_secret', value: secret, type: 'text' });",
+                  "} else {",
+                  "  pm.request.body.urlencoded.remove('client_secret');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.environment.set('vendor_access_token', json.access_token);",
+                  "pm.environment.set('vendor_refresh_token', json.refresh_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7a. Generate Vendor Token (Elevated Scope)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "password",
+                  "type": "text"
+                },
+                {
+                  "key": "client_id",
+                  "value": "{{vendor_token_client_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "client_secret",
+                  "value": "{{vendor_token_client_secret}}",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{vendor_username}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{vendor_password}}",
+                  "type": "text"
+                },
+                {
+                  "key": "scope",
+                  "value": "{{token_scope_elevated}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{keycloak_base_url}}/realms/{{commerce_realm}}/protocol/openid-connect/token",
+              "host": [
+                "{{keycloak_base_url}}"
+              ],
+              "path": [
+                "realms",
+                "{{commerce_realm}}",
+                "protocol",
+                "openid-connect",
+                "token"
+              ]
+            },
+            "description": "Generates elevated token including products.write. Use only when required."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const primarySecret = (pm.environment.get('vendor_token_client_secret') || '').trim();",
+                  "const legacySecret = (pm.environment.get('vendor_client_secret') || '').trim();",
+                  "const secret = primarySecret || legacySecret;",
+                  "if (!primarySecret && legacySecret) {",
+                  "  pm.environment.set('vendor_token_client_secret', legacySecret);",
+                  "}",
+                  "if (!secret) {",
+                  "  console.warn('vendor_token_client_secret is empty (and vendor_client_secret fallback is empty). If the token client is confidential, this request will fail.');",
+                  "}",
+                  "if (secret) {",
+                  "  pm.request.body.urlencoded.upsert({ key: 'client_secret', value: secret, type: 'text' });",
+                  "} else {",
+                  "  pm.request.body.urlencoded.remove('client_secret');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.environment.set('vendor_access_token', json.access_token);",
+                  "pm.environment.set('vendor_refresh_token', json.refresh_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "9. Assign Tenant Role (Optional, Requires vendor platform_admin Token)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendor_access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subject\": \"{{target_user_sub}}\",\n  \"role\": \"{{target_tenant_role}}\",\n  \"audit\": {\n    \"reasonCode\": \"TENANT_BOOTSTRAP\",\n    \"changeTicketId\": \"CHG-LOCAL-001\",\n    \"approvedBy\": \"{{new_user_username}}\",\n    \"approvedAtUtc\": \"2026-06-13T00:00:00Z\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{auth_api_base_url}}/api/v1/auth/internal/tenants/{{vendor_tenant_id}}/memberships",
+              "host": [
+                "{{auth_api_base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "internal",
+                "tenants",
+                "{{vendor_tenant_id}}",
+                "memberships"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.environment.get('target_user_sub')) {",
+                  "  pm.environment.set('target_user_sub', pm.environment.get('keycloak_user_sub'));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "User",
+      "item": [
+        {
+          "name": "8. Generate User Token (Token Endpoint)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "password",
+                  "type": "text"
+                },
+                {
+                  "key": "client_id",
+                  "value": "{{user_token_client_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "client_secret",
+                  "value": "{{user_token_client_secret}}",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{new_user_username}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{new_user_password}}",
+                  "type": "text"
+                },
+                {
+                  "key": "scope",
+                  "value": "{{token_scope_default}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{keycloak_base_url}}/realms/{{commerce_realm}}/protocol/openid-connect/token",
+              "host": [
+                "{{keycloak_base_url}}"
+              ],
+              "path": [
+                "realms",
+                "{{commerce_realm}}",
+                "protocol",
+                "openid-connect",
+                "token"
+              ]
+            },
+            "description": "Generates a usable user token. Run after admin setup (steps 1-5)."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const primarySecret = (pm.environment.get('user_token_client_secret') || '').trim();",
+                  "const legacySecret = (pm.environment.get('user_client_secret') || '').trim();",
+                  "const secret = primarySecret || legacySecret;",
+                  "if (!primarySecret && legacySecret) {",
+                  "  pm.environment.set('user_token_client_secret', legacySecret);",
+                  "}",
+                  "if (!secret) {",
+                  "  console.warn('user_token_client_secret is empty (and user_client_secret fallback is empty). If the token client is confidential, this request will fail.');",
+                  "}",
+                  "if (secret) {",
+                  "  pm.request.body.urlencoded.upsert({ key: 'client_secret', value: secret, type: 'text' });",
+                  "} else {",
+                  "  pm.request.body.urlencoded.remove('client_secret');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.environment.set('user_access_token', json.access_token);",
+                  "pm.environment.set('user_refresh_token', json.refresh_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "8a. Generate User Token (Elevated Scope)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "password",
+                  "type": "text"
+                },
+                {
+                  "key": "client_id",
+                  "value": "{{user_token_client_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "client_secret",
+                  "value": "{{user_token_client_secret}}",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{new_user_username}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{new_user_password}}",
+                  "type": "text"
+                },
+                {
+                  "key": "scope",
+                  "value": "{{token_scope_elevated}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{keycloak_base_url}}/realms/{{commerce_realm}}/protocol/openid-connect/token",
+              "host": [
+                "{{keycloak_base_url}}"
+              ],
+              "path": [
+                "realms",
+                "{{commerce_realm}}",
+                "protocol",
+                "openid-connect",
+                "token"
+              ]
+            },
+            "description": "Generates elevated token including products.write. Use only when required."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const primarySecret = (pm.environment.get('user_token_client_secret') || '').trim();",
+                  "const legacySecret = (pm.environment.get('user_client_secret') || '').trim();",
+                  "const secret = primarySecret || legacySecret;",
+                  "if (!primarySecret && legacySecret) {",
+                  "  pm.environment.set('user_token_client_secret', legacySecret);",
+                  "}",
+                  "if (!secret) {",
+                  "  console.warn('user_token_client_secret is empty (and user_client_secret fallback is empty). If the token client is confidential, this request will fail.');",
+                  "}",
+                  "if (secret) {",
+                  "  pm.request.body.urlencoded.upsert({ key: 'client_secret', value: secret, type: 'text' });",
+                  "} else {",
+                  "  pm.request.body.urlencoded.remove('client_secret');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.environment.set('user_access_token', json.access_token);",
+                  "pm.environment.set('user_refresh_token', json.refresh_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10. Get My Profile (Optional Validation)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{auth_api_base_url}}/api/v1/auth/me",
+              "host": [
+                "{{auth_api_base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "11. Logout Endpoint (Optional Validation)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": null,\n  \"refreshToken\": \"{{user_refresh_token}}\",\n  \"accessTokenJti\": null\n}"
+            },
+            "url": {
+              "raw": "{{auth_api_base_url}}/api/v1/auth/logout",
+              "host": [
+                "{{auth_api_base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "logout"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -17,6 +17,8 @@ public static class Extensions
 {
     private const string HealthEndpointPath = "/health";
     private const string AlivenessEndpointPath = "/alive";
+    private const string LiveEndpointPath = "/health/live";
+    private const string ReadyEndpointPath = "/health/ready";
 
     extension<TBuilder>(TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
@@ -64,9 +66,9 @@ public static class Extensions
                 .WithTracing(tracing =>
                 {
                     tracing.AddSource(builder.Environment.ApplicationName)
-                        .AddAspNetCoreInstrumentation(tracing =>
+                        .AddAspNetCoreInstrumentation(aspNetTracing =>
                             // Exclude health check requests from tracing
-                            tracing.Filter = context =>
+                            aspNetTracing.Filter = context =>
                                 !context.Request.Path.StartsWithSegments(HealthEndpointPath)
                                 && !context.Request.Path.StartsWithSegments(AlivenessEndpointPath)
                         )
@@ -80,7 +82,7 @@ public static class Extensions
             return builder;
         }
 
-        private TBuilder AddOpenTelemetryExporters()
+        private void AddOpenTelemetryExporters()
         {
             var useOtlpExporter = !string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]);
 
@@ -95,8 +97,6 @@ public static class Extensions
             //    builder.Services.AddOpenTelemetry()
             //       .UseAzureMonitor();
             //}
-
-            return builder;
         }
 
         public TBuilder AddDefaultHealthChecks()
@@ -124,6 +124,25 @@ public static class Extensions
                 Predicate = r => r.Tags.Contains("live")
             });
         }
+
+        return app;
+    }
+
+    public static WebApplication MapStandardHealthEndpoints(this WebApplication app, bool readyUsesReadyTag = false)
+    {
+        app.MapDefaultEndpoints();
+
+        app.MapHealthChecks(LiveEndpointPath, new HealthCheckOptions
+        {
+            Predicate = registration => registration.Tags.Contains("live")
+        });
+
+        app.MapHealthChecks(ReadyEndpointPath, new HealthCheckOptions
+        {
+            Predicate = readyUsesReadyTag
+                ? registration => registration.Tags.Contains("ready")
+                : _ => true
+        });
 
         return app;
     }

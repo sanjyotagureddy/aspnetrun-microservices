@@ -1,3 +1,5 @@
+using ProductPolicyNamesAlias = global::Products.Api.Infrastructure.Security.ProductPolicyNames;
+
 namespace Products.Api.Features.Products.Delete;
 
 internal sealed class DeleteProductEndpoint : IEndpoint
@@ -7,7 +9,8 @@ internal sealed class DeleteProductEndpoint : IEndpoint
         RouteGroupBuilder group = app.MapProductsV1();
 
         group.MapDelete("/{id:guid}", HandleAsync)
-            .WithName(ProductRouteNames.Delete);
+            .WithName(ProductRouteNames.Delete)
+            .RequireAuthorization(ProductPolicyNamesAlias.CatalogWritePolicy);
     }
 
     private static async Task<IResult> HandleAsync(IMediator mediator, Guid id, CancellationToken cancellationToken)

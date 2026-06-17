@@ -6,6 +6,11 @@ IDistributedApplicationBuilder builder = DistributedApplication.CreateBuilder(ar
 // ReSharper disable once EmptyRegion
 #region Persistence
 
+IResourceBuilder<ParameterResource> keycloakAdminPassword = builder.AddParameter("keycloak-admin-password", secret: true);
+IResourceBuilder<ParameterResource> authWebClientSecret = builder.AddParameter("auth-web-client-secret", secret: true);
+IResourceBuilder<ParameterResource> authDevBootstrapEnabled = builder.AddParameter("auth-dev-bootstrap-enabled");
+IResourceBuilder<ParameterResource> authDevBootstrapSharedSecret = builder.AddParameter("auth-dev-bootstrap-shared-secret", secret: true);
+
 IResourceBuilder<ParameterResource> postgresPassword = builder.AddParameter("postgres-password", secret: true);
 IResourceBuilder<ParameterResource> openSearchInitialAdminPassword = builder.AddParameter("opensearch-initial-admin-password", secret: true);
 
@@ -16,9 +21,20 @@ IResourceBuilder<PostgresServerResource> postgresDb = builder.AddPostgres("produ
 
 IResourceBuilder<PostgresDatabaseResource> productDb = postgresDb.AddDatabase("products", "products");
 IResourceBuilder<PostgresDatabaseResource> inventory = postgresDb.AddDatabase("inventory", "inventory");
+IResourceBuilder<PostgresDatabaseResource> authIdentityDb = postgresDb.AddDatabase("auth-identity", "auth_identity");
 IResourceBuilder<KafkaServerResource> messaging = builder.AddKafka("message-broker")
     .WithDataVolume("kafka-data")
     .WithKafkaUI();
+
+IResourceBuilder<RedisResource> authCache = builder.AddRedis("auth-cache")
+    .WithDataVolume("auth-cache-data");
+
+IResourceBuilder<ContainerResource> keycloak = builder.AddContainer("keycloak", "quay.io/keycloak/keycloak")
+    .WithEnvironment("KEYCLOAK_ADMIN", "admin")
+    .WithEnvironment("KEYCLOAK_ADMIN_PASSWORD", keycloakAdminPassword)
+    .WithHttpEndpoint(port: 8080, targetPort: 8080, name: "http")
+    //.WithVolume("keycloak-data", "/opt/keycloak/data")
+    .WithArgs("start-dev");
 
 IResourceBuilder<ContainerResource> openSearch = builder.AddContainer("opensearch", "opensearchproject/opensearch")
     .WithEnvironment("discovery.type", "single-node")
@@ -40,6 +56,31 @@ IResourceBuilder<ContainerResource> openSearchDashboards = builder.AddContainer(
 
 
 
+builder.AddProject<Auth_Api>("auth-api")
+    .WithHttpEndpoint(port: 5000, name: "http")
+    .WithReference(authIdentityDb)
+    .WithReference(authCache)
+    .WithEnvironment("ConnectionStrings__authdb", authIdentityDb.Resource.ConnectionStringExpression)
+    .WithEnvironment("ConnectionStrings__auth-cache", authCache.Resource.ConnectionStringExpression)
+    .WithEnvironment("Auth__Authority", "http://keycloak:8080/realms/commerce")
+    .WithEnvironment("Auth__Issuer", "http://keycloak:8080/realms/commerce")
+    .WithEnvironment("Auth__DiscoveryUrl", "http://keycloak:8080/realms/commerce/.well-known/openid-configuration")
+    .WithEnvironment("Auth__JwksUrl", "http://keycloak:8080/realms/commerce/protocol/openid-connect/certs")
+    .WithEnvironment("Auth__Audience", "auth-api")
+    .WithEnvironment("Auth__WebClientId", "web-app")
+    .WithEnvironment("Auth__WebClientScope", "openid profile email")
+    .WithEnvironment("Auth__WebClientSecret", authWebClientSecret)
+    .WithEnvironment("DevBootstrap__Enabled", authDevBootstrapEnabled)
+    .WithEnvironment("DevBootstrap__SharedSecret", authDevBootstrapSharedSecret)
+    .WithEnvironment("Auth__PkceClients__0__ClientId", "web-app")
+    .WithEnvironment("Auth__PkceClients__0__Scope", "openid profile email")
+    .WithEnvironment("Auth__PkceClients__0__RedirectUris__0", "http://localhost:5173/auth/callback")
+    .WithEnvironment("Auth__PkceClients__0__RedirectUris__1", "http://localhost:3000/auth/callback")
+    .WaitFor(authIdentityDb)
+    .WaitFor(authCache)
+    .WaitFor(keycloak)
+    .WithUrl("/swagger", "Swagger");
+
 IResourceBuilder<ProjectResource> inventoryApi = builder.AddProject<Inventory_Api>("inventory-api")
     .WithReference(inventory)
     .WithEnvironment("ConnectionStrings__inventory", inventory.Resource.ConnectionStringExpression)
@@ -56,11 +97,14 @@ IResourceBuilder<ProjectResource> inventoryApi = builder.AddProject<Inventory_Ap
     .WaitFor(openSearch)
     .WithUrl("/swagger", "Swagger");
 
-builder.AddProject<Products_Api>("products-api")
+IResourceBuilder<ProjectResource> productsApi = builder.AddProject<Products_Api>("products-api")
     .WithReference(productDb)
     .WithReference(messaging)
     .WithReference(inventoryApi)
     .WithEnvironment("ConnectionStrings__productsdb", productDb.Resource.ConnectionStringExpression)
+    .WithEnvironment("Auth__Authority", "http://keycloak:8080/realms/commerce")
+    .WithEnvironment("Auth__Issuer", "http://keycloak:8080/realms/commerce")
+    .WithEnvironment("Auth__Audience", "products-api")
     .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__Enabled", "true")
     .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__Endpoint", "http://localhost:9200")
     .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__AppIndexPrefix", "app-log")
@@ -84,6 +128,10 @@ builder.AddProject<Order_Api>("order-api")
     .WithUrl("/openapi/v1.json", "OpenAPI");
 
 builder.AddProject<Gateway_Yarp>("gateway-yarp")
+    .WithReference(productsApi)
+    .WithEnvironment("Auth__Authority", "http://keycloak:8080/realms/commerce")
+    .WithEnvironment("Auth__Issuer", "http://keycloak:8080/realms/commerce")
+    .WithEnvironment("Auth__Audience", "gateway-yarp")
     .WithUrl("/openapi/v1.json", "OpenAPI");
 
 openSearchDashboards.WithUrl("/", "OpenSearch Dashboards");
