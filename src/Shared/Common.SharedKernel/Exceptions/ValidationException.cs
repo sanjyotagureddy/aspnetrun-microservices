@@ -1,4 +1,4 @@
-﻿namespace Common.SharedKernel.Exceptions;
+namespace Common.SharedKernel.Exceptions;
 
 public sealed class ValidationException : BaseApplicationException
 {
@@ -12,5 +12,6 @@ public sealed class ValidationException : BaseApplicationException
     public ValidationException(string message)
         : base(message)
     {
+        ParamName = string.Empty;
     }
 }

@@ -10,16 +10,21 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Protobuf Include="Protos\greet.proto" GrpcServices="Server" />
+    <Protobuf Include="Protos\discount.proto" GrpcServices="Server" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Dapper" />
     <PackageReference Include="Grpc.AspNetCore" />
+    <PackageReference Include="Microsoft.Data.Sqlite" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
+    <PackageReference Include="Serilog.AspNetCore" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\aspire\aspnetrun-microservices.ServiceDefaults\aspnetrun-microservices.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\..\..\Shared\Common.SharedKernel\Common.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\..\Shared\Common.SharedKernel.Logging\Common.SharedKernel.Logging.csproj" />
   </ItemGroup>
 
 </Project>

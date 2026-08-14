@@ -23,6 +23,8 @@ public class Program
         builder.Services.AddAuthorization();
         builder.Services.AddSwaggerSupport(builder.Configuration, "Inventory API");
         builder.Services.AddInventoryApi(builder.Configuration);
+        builder.Services.AddSingleton<Inventory.Api.Messaging.OrderCreatedIntegrationEventHandler>();
+        builder.Services.AddHostedService<Inventory.Api.Messaging.OrderCreatedConsumer>();
 
         WebApplication app = builder.Build();
 

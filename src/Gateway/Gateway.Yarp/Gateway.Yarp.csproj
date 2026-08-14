@@ -11,12 +11,16 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.Extensions.ServiceDiscovery.Yarp" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
+    <PackageReference Include="Serilog.AspNetCore" />
+    <PackageReference Include="Yarp.ReverseProxy" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\aspire\aspnetrun-microservices.ServiceDefaults\aspnetrun-microservices.ServiceDefaults.csproj" />
     <ProjectReference Include="..\..\Shared\Common.SharedKernel\Common.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\Shared\Common.SharedKernel.Logging\Common.SharedKernel.Logging.csproj" />
   </ItemGroup>
 
 </Project>

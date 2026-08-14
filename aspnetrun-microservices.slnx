@@ -32,6 +32,7 @@
   <Folder Name="/src/3. services/product/">
     <Project Path="src/Services/Product/Products.Api/Products.Api.csproj" />
   </Folder>
+  <Folder Name="/src/Gateway/" />
   <Folder Name="/src/Shared/" />
   <Folder Name="/tests/" />
   <Folder Name="/tests/IntegrationTests/">
@@ -45,6 +46,7 @@
     <Project Path="tests/UnitTests/Common.SharedKernel.Messaging.UnitTests/Common.SharedKernel.Messaging.UnitTests.csproj" />
     <Project Path="tests/UnitTests/Common.SharedKernel.Tests/Common.SharedKernel.Tests.csproj" Id="1a840e40-e1c5-49ea-abd8-a164cbd7b03b" />
     <Project Path="tests/UnitTests/Discount.Grpc.Tests/Discount.Grpc.Tests.csproj" Id="1c656092-b26b-46fd-a39d-732934ac960c" />
+    <Project Path="tests/UnitTests/Gateway.Yarp.Tests/Gateway.Yarp.Tests.csproj" />
     <Project Path="tests/UnitTests/Inventory.Api.Tests/Inventory.Api.Tests.csproj" />
     <Project Path="tests/UnitTests/Order.Api.Tests/Order.Api.Tests.csproj" Id="f9c409d1-c38a-4acd-bda2-c8af72ba2894" />
     <Project Path="tests/UnitTests/Products.Api.Tests/Products.Api.Tests.csproj" Id="9f731c7a-e8bd-458a-afcf-c7392b0faac7" />

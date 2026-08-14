@@ -1,0 +1,286 @@
+{
+  "info": {
+    "_postman_id": "7a3b4c5d-6e7f-8a9b-0c1d-2e3f4a5b6c7d",
+    "name": "aspnetrun-microservices",
+    "description": "Complete Postman collection for aspnetrun-microservices e-Commerce platform routed through YARP API Gateway.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "gateway_url",
+      "value": "http://localhost:58985",
+      "type": "string"
+    },
+    {
+      "key": "userName",
+      "value": "sanjyota",
+      "type": "string"
+    },
+    {
+      "key": "productId",
+      "value": "dd9ea08f-f741-454d-9981-c412872efc4d",
+      "type": "string"
+    },
+    {
+      "key": "orderId",
+      "value": "00000000-0000-0000-0000-000000000001",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Products API",
+      "item": [
+        {
+          "name": "Get Products List",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway_url}}/api/v1/products",
+              "host": ["{{gateway_url}}"],
+              "path": ["api", "v1", "products"]
+            }
+          }
+        },
+        {
+          "name": "Get Product By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway_url}}/api/v1/products/{{productId}}",
+              "host": ["{{gateway_url}}"],
+              "path": ["api", "v1", "products", "{{productId}}"]
+            }
+          }
+        },
+        {
+          "name": "Create Product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Smart Fitness Watch Ultra\",\n  \"description\": \"Next gen fitness tracker with OLED display.\",\n  \"sku\": \"WCH-ULTRA-999\",\n  \"price\": 14999.0,\n  \"currency\": \"INR\",\n  \"category\": \"Wearables\",\n  \"brand\": \"FitTech\",\n  \"stockQuantity\": 100,\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{gateway_url}}/api/v1/products",
+              "host": ["{{gateway_url}}"],
+              "path": ["api", "v1", "products"]
+            }
+          }
+        },
+        {
+          "name": "Update Product",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Smart Fitness Watch Ultra Pro\",\n  \"description\": \"Upgraded fitness tracker with sapphire glass and GPS.\",\n  \"sku\": \"WCH-ULTRA-999\",\n  \"price\": 16999.0,\n  \"currency\": \"INR\",\n  \"category\": \"Wearables\",\n  \"brand\": \"FitTech\",\n  \"stockQuantity\": 150,\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{gateway_url}}/api/v1/products/{{productId}}",
+              "host": ["{{gateway_url}}"],
+              "path": ["api", "v1", "products", "{{productId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Product",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{gateway_url}}/api/v1/products/{{productId}}",
+              "host": ["{{gateway_url}}"],
+              "path": ["api", "v1", "products", "{{productId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Inventory API",
+      "item": [
+        {
+          "name": "Get Stock By Product ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway_url}}/api/v1/inventory/{{productId}}",
+              "host": ["{{gateway_url}}"],
+              "path": ["api", "v1", "inventory", "{{productId}}"]
+            }
+          }
+        },
+        {
+          "name": "Initialize Inventory Stock",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 100\n}"
+            },
+            "url": {
+              "raw": "{{gateway_url}}/api/v1/inventory/{{productId}}/initialize",
+              "host": ["{{gateway_url}}"],
+              "path": ["api", "v1", "inventory", "{{productId}}", "initialize"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cart API",
+      "item": [
+        {
+          "name": "Get Shopping Cart",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway_url}}/api/v1/cart/{{userName}}",
+              "host": ["{{gateway_url}}"],
+              "path": ["api", "v1", "cart", "{{userName}}"]
+            }
+          }
+        },
+        {
+          "name": "Save Shopping Cart (Update)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userName\": \"{{userName}}\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"productName\": \"Smart Fitness Watch Ultra\",\n      \"price\": 14999.0,\n      \"quantity\": 2,\n      \"color\": \"Midnight Black\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{gateway_url}}/api/v1/cart",
+              "host": ["{{gateway_url}}"],
+              "path": ["api", "v1", "cart"]
+            }
+          }
+        },
+        {
+          "name": "Delete Shopping Cart",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{gateway_url}}/api/v1/cart/{{userName}}",
+              "host": ["{{gateway_url}}"],
+              "path": ["api", "v1", "cart", "{{userName}}"]
+            }
+          }
+        },
+        {
+          "name": "Checkout Cart (Kafka Event)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userName\": \"{{userName}}\",\n  \"totalPrice\": 29998.0,\n  \"firstName\": \"Sanjyota\",\n  \"lastName\": \"Gureddy\",\n  \"emailAddress\": \"sanjyota@example.com\",\n  \"addressLine\": \"100 Technology Way\",\n  \"country\": \"India\",\n  \"state\": \"Karnataka\",\n  \"zipCode\": \"560001\",\n  \"cardName\": \"Sanjyota Gureddy\",\n  \"cardNumber\": \"4111222233334444\",\n  \"expiration\": \"12/28\",\n  \"cvv\": \"123\",\n  \"paymentMethod\": 1\n}"
+            },
+            "url": {
+              "raw": "{{gateway_url}}/api/v1/cart/checkout",
+              "host": ["{{gateway_url}}"],
+              "path": ["api", "v1", "cart", "checkout"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Order API",
+      "item": [
+        {
+          "name": "Get User Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway_url}}/api/v1/orders/user/{{userName}}",
+              "host": ["{{gateway_url}}"],
+              "path": ["api", "v1", "orders", "user", "{{userName}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Order By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway_url}}/api/v1/orders/{{orderId}}",
+              "host": ["{{gateway_url}}"],
+              "path": ["api", "v1", "orders", "{{orderId}}"]
+            }
+          }
+        },
+        {
+          "name": "Create Order Direct",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userName\": \"{{userName}}\",\n  \"totalPrice\": 14999.0,\n  \"firstName\": \"Sanjyota\",\n  \"lastName\": \"Gureddy\",\n  \"emailAddress\": \"sanjyota@example.com\",\n  \"addressLine\": \"100 Technology Way\",\n  \"country\": \"India\",\n  \"state\": \"Karnataka\",\n  \"zipCode\": \"560001\",\n  \"cardName\": \"Sanjyota Gureddy\",\n  \"cardNumber\": \"4111222233334444\",\n  \"expiration\": \"12/28\",\n  \"cvv\": \"123\",\n  \"paymentMethod\": 1,\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"productName\": \"Smart Fitness Watch Ultra\",\n      \"price\": 14999.0,\n      \"quantity\": 1\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{gateway_url}}/api/v1/orders",
+              "host": ["{{gateway_url}}"],
+              "path": ["api", "v1", "orders"]
+            }
+          }
+        },
+        {
+          "name": "Cancel Order",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{gateway_url}}/api/v1/orders/{{orderId}}",
+              "host": ["{{gateway_url}}"],
+              "path": ["api", "v1", "orders", "{{orderId}}"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

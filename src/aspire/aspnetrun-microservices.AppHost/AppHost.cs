@@ -1,4 +1,4 @@
-﻿using Projects;
+using Projects;
 
 IDistributedApplicationBuilder builder = DistributedApplication.CreateBuilder(args);
 
@@ -16,9 +16,13 @@ IResourceBuilder<PostgresServerResource> postgresDb = builder.AddPostgres("produ
 
 IResourceBuilder<PostgresDatabaseResource> productDb = postgresDb.AddDatabase("products", "products");
 IResourceBuilder<PostgresDatabaseResource> inventory = postgresDb.AddDatabase("inventory", "inventory");
+IResourceBuilder<PostgresDatabaseResource> orderDb = postgresDb.AddDatabase("orders", "orders");
 IResourceBuilder<KafkaServerResource> messaging = builder.AddKafka("message-broker")
     .WithDataVolume("kafka-data")
     .WithKafkaUI();
+
+IResourceBuilder<RedisResource> cartDb = builder.AddRedis("cartdb")
+    .WithDataVolume("redis-data");
 
 IResourceBuilder<ContainerResource> openSearch = builder.AddContainer("opensearch", "opensearchproject/opensearch")
     .WithEnvironment("discovery.type", "single-node")
@@ -42,6 +46,7 @@ IResourceBuilder<ContainerResource> openSearchDashboards = builder.AddContainer(
 
 IResourceBuilder<ProjectResource> inventoryApi = builder.AddProject<Inventory_Api>("inventory-api")
     .WithReference(inventory)
+    .WithReference(messaging)
     .WithEnvironment("ConnectionStrings__inventory", inventory.Resource.ConnectionStringExpression)
     .WithEnvironment("ConnectionStrings__inventorydb", inventory.Resource.ConnectionStringExpression)
     .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__Enabled", "true")
@@ -53,13 +58,13 @@ IResourceBuilder<ProjectResource> inventoryApi = builder.AddProject<Inventory_Ap
     .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__PayloadIndexPrefix", "payload-log")
     .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__UseDailyIndexes", "true")
     .WaitFor(inventory)
-    .WaitFor(openSearch)
     .WithUrl("/swagger", "Swagger");
 
-builder.AddProject<Products_Api>("products-api")
+IResourceBuilder<ProjectResource> productsApi = builder.AddProject<Products_Api>("products-api")
     .WithReference(productDb)
     .WithReference(messaging)
     .WithReference(inventoryApi)
+    .WithEnvironment("ConnectionStrings__products", productDb.Resource.ConnectionStringExpression)
     .WithEnvironment("ConnectionStrings__productsdb", productDb.Resource.ConnectionStringExpression)
     .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__Enabled", "true")
     .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__Endpoint", "http://localhost:9200")
@@ -70,21 +75,63 @@ builder.AddProject<Products_Api>("products-api")
     .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__PayloadIndexPrefix", "payload-log")
     .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__UseDailyIndexes", "true")
     .WaitFor(productDb)
-    .WaitFor(messaging)
-    .WaitFor(inventoryApi)
-    .WaitFor(openSearch)
     .WithUrl("/swagger", "Swagger");
 
-builder.AddProject<Cart_Api>("cart-api")
-    .WithUrl("/openapi/v1.json", "OpenAPI");
+IResourceBuilder<ProjectResource> discountGrpc = builder.AddProject<Discount_Grpc>("discount-grpc")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__Enabled", "true")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__Endpoint", "http://localhost:9200")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__AppIndexPrefix", "app-log")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__MessagingIndexPrefix", "messaging-log")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__AuditIndexPrefix", "audit-log")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__SecurityIndexPrefix", "security-log")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__PayloadIndexPrefix", "payload-log")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__UseDailyIndexes", "true");
 
-builder.AddProject<Discount_Grpc>("discount-grpc");
+IResourceBuilder<ProjectResource> cartApi = builder.AddProject<Cart_Api>("cart-api")
+    .WithReference(cartDb)
+    .WithReference(discountGrpc)
+    .WithReference(messaging)
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__Enabled", "true")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__Endpoint", "http://localhost:9200")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__AppIndexPrefix", "app-log")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__MessagingIndexPrefix", "messaging-log")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__AuditIndexPrefix", "audit-log")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__SecurityIndexPrefix", "security-log")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__PayloadIndexPrefix", "payload-log")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__UseDailyIndexes", "true")
+    .WaitFor(cartDb)
+    .WithUrl("/swagger", "Swagger");
 
-builder.AddProject<Order_Api>("order-api")
-    .WithUrl("/openapi/v1.json", "OpenAPI");
+IResourceBuilder<ProjectResource> orderApi = builder.AddProject<Order_Api>("order-api")
+    .WithReference(orderDb)
+    .WithReference(messaging)
+    .WithEnvironment("ConnectionStrings__orders", orderDb.Resource.ConnectionStringExpression)
+    .WithEnvironment("ConnectionStrings__ordersdb", orderDb.Resource.ConnectionStringExpression)
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__Enabled", "true")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__Endpoint", "http://localhost:9200")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__AppIndexPrefix", "app-log")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__MessagingIndexPrefix", "messaging-log")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__AuditIndexPrefix", "audit-log")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__SecurityIndexPrefix", "security-log")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__PayloadIndexPrefix", "payload-log")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__UseDailyIndexes", "true")
+    .WaitFor(orderDb)
+    .WithUrl("/swagger", "Swagger");
 
 builder.AddProject<Gateway_Yarp>("gateway-yarp")
-    .WithUrl("/openapi/v1.json", "OpenAPI");
+    .WithReference(productsApi)
+    .WithReference(inventoryApi)
+    .WithReference(cartApi)
+    .WithReference(orderApi)
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__Enabled", "true")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__Endpoint", "http://localhost:9200")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__AppIndexPrefix", "app-log")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__MessagingIndexPrefix", "messaging-log")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__AuditIndexPrefix", "audit-log")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__SecurityIndexPrefix", "security-log")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__PayloadIndexPrefix", "payload-log")
+    .WithEnvironment("Logging__CommonSharedKernel__OpenSearch__UseDailyIndexes", "true")
+    .WithUrl("/openapi/v1.json", "OpenAPI Gateway");
 
 openSearchDashboards.WithUrl("/", "OpenSearch Dashboards");
 
